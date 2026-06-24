@@ -24,3 +24,6 @@ drizzle/meta/
 .idea/
 *.swp
 *.swo
+
+.vercel
+.env*
