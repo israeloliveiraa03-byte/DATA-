@@ -1,0 +1,52 @@
+import { pgTable, uuid, varchar, text, boolean, timestamp, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { researches } from "./researches";
+
+export const widgetTypeEnum = pgEnum("widget_type", ["bar_chart","line_chart","pie_chart","donut_chart","map","number_card","table","text","image","heatmap"]);
+
+export const dashboards = pgTable("dashboards", {
+  id:          uuid("id").primaryKey().defaultRandom(),
+  researchId:  uuid("research_id").notNull().references(() => researches.id, { onDelete: "cascade" }),
+  title:       varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  layout:      jsonb("layout").notNull().default({ columns: 12, rows: [] }),
+  isPublic:    boolean("is_public").notNull().default(false),
+  publicSlug:  varchar("public_slug", { length: 200 }).unique(),
+  theme:       varchar("theme",       { length: 50  }).notNull().default("light"),
+  coverUrl:    text("cover_url"),
+  createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt:   timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const dashboardWidgets = pgTable("dashboard_widgets", {
+  id:          uuid("id").primaryKey().defaultRandom(),
+  dashboardId: uuid("dashboard_id").notNull().references(() => dashboards.id, { onDelete: "cascade" }),
+  type:        widgetTypeEnum("type").notNull(),
+  title:       varchar("title", { length: 300 }),
+  col:         integer("col").notNull().default(0),
+  row:         integer("row").notNull().default(0),
+  width:       integer("width").notNull().default(4),
+  height:      integer("height").notNull().default(3),
+  config:      jsonb("config").notNull().default({}),
+  order:       integer("order").notNull().default(0),
+  createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt:   timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const indicators = pgTable("indicators", {
+  id:         uuid("id").primaryKey().defaultRandom(),
+  researchId: uuid("research_id").notNull().references(() => researches.id, { onDelete: "cascade" }),
+  key:        varchar("key",   { length: 200 }).notNull(),
+  label:      varchar("label", { length: 500 }).notNull(),
+  value:      jsonb("value").notNull().default({}),
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const dashboardsRelations = relations(dashboards, ({ one, many }) => ({
+  research: one(researches, { fields: [dashboards.researchId], references: [researches.id] }),
+  widgets:  many(dashboardWidgets),
+}));
+
+export const dashboardWidgetsRelations = relations(dashboardWidgets, ({ one }) => ({
+  dashboard: one(dashboards, { fields: [dashboardWidgets.dashboardId], references: [dashboards.id] }),
+}));
