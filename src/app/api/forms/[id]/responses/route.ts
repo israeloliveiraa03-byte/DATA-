@@ -12,8 +12,11 @@ const submitSchema = z.object({
   longitude: z.string().optional(),
 });
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const form = await db.query.forms.findFirst({ where: eq(forms.id, params.id) });
+type RouteParams = { params: Promise<{ id: string }> };
+
+export async function POST(request: Request, { params }: RouteParams) {
+  const { id } = await params;
+  const form = await db.query.forms.findFirst({ where: eq(forms.id, id) });
   if (!form) return apiError("Formulário não encontrado", 404);
 
   const session = await auth();
