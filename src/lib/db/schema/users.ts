@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   email:         varchar("email",       { length: 255 }).notNull().unique(),
   name:          varchar("name",        { length: 200 }).notNull(),
   avatarUrl:     text("avatar_url"),
+  image:         text("image"),
   institution:   varchar("institution", { length: 300 }),
   orcid:         varchar("orcid",       { length: 50 }),
   lattesUrl:     text("lattes_url"),
