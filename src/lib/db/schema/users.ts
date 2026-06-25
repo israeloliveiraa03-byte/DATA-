@@ -37,7 +37,7 @@ export const accounts = pgTable("accounts", {
 });
 
 export const sessions = pgTable("sessions", {
-  sessionToken: text("sessionToken").notNull().unique(),
+  sessionToken: text("sessionToken").primaryKey(),
   userId:       uuid("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   expires:      timestamp("expires", { mode: "date" }).notNull(),
 });
