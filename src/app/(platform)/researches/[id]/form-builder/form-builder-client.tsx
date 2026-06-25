@@ -165,7 +165,7 @@ function RightPanel({
   const info = getTypeInfo(field.type);
 
   function update(patch: Partial<Field>) {
-    onUpdate({ ...field, ...patch });
+    onUpdate({ ...field, ...patch } as Field);
   }
 
   function addOption() {
