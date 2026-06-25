@@ -117,8 +117,6 @@ export default async function DashboardPage() {
                   href={`/researches/${r.id}/form-builder`}
                   className="block rounded-xl p-4 transition-all"
                   style={{ border: "1px solid #e8d9c0", background: "#fff" }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#c4a35a")}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = "#e8d9c0")}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
