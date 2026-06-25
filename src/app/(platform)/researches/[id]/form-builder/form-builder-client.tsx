@@ -530,8 +530,9 @@ export function FormBuilderClient({ research }: { research: Research }) {
   const [selectedId,  setSelectedId]  = useState<string | null>(null);
   const [saving,      setSaving]      = useState(false);
   const [savedAt,     setSavedAt]     = useState<string | null>(null);
-  const [formTitle,   setFormTitle]   = useState(research.title);
-  const [cover,       setCover]       = useState("campo");
+  const [formTitle,       setFormTitle]       = useState(research.title);
+  const [formDescription, setFormDescription] = useState(research.description ?? "");
+  const [cover,           setCover]           = useState("campo");
   const [coverImage,  setCoverImage]  = useState<string | null>(null);
   const [showCover,   setShowCover]   = useState(false);
   const dragRef = useRef<number | null>(null);
@@ -690,9 +691,15 @@ export function FormBuilderClient({ research }: { research: Research }) {
               placeholder="Título do formulário"
               onFocus={e => e.currentTarget.style.borderBottomColor = "#c4a35a"}
               onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"} />
-            <p className="text-xs mt-1 font-medium" style={{ color: "#8b7355" }}>
-              {research.description ?? "Sem descrição"}
-            </p>
+            <textarea
+              value={formDescription}
+              onChange={e => setFormDescription(e.target.value)}
+              rows={2}
+              className="w-full text-xs border-none bg-transparent outline-none resize-none mt-1 font-medium"
+              style={{ color: "#8b7355" }}
+              placeholder="Adicione uma descrição para o formulário..."
+              onClick={e => e.stopPropagation()}
+            />
           </div>
 
           {/* Campos */}
