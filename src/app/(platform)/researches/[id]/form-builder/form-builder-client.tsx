@@ -168,15 +168,15 @@ function RightPanel({
     onUpdate({ ...field, ...patch } as Field);
   }
 
-  function addOption() {
+  function addOption() { if (!field) return;
     update({ options: [...field.options, { id: Math.random().toString(36).slice(2, 8), label: `Opção ${field.options.length + 1}` }] });
   }
 
-  function updateOption(id: string, label: string) {
+  function updateOption(id: string, label: string) { if (!field) return;
     update({ options: field.options.map(o => o.id === id ? { ...o, label } : o) });
   }
 
-  function removeOption(id: string) {
+  function removeOption(id: string) { if (!field) return;
     update({ options: field.options.filter(o => o.id !== id) });
   }
 
