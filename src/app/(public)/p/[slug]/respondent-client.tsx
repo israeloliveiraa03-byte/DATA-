@@ -365,7 +365,7 @@ export function RespondentClient({
   const [errors,    setErrors]    = useState<Record<string, string>>({});
 
   // Filtra campos visíveis (ignora seções e instruções para navegação)
-  const questionFields = fields.filter(f => f.type !== "section" && f.type !== "instruction");
+  const questionFields = fields.filter(f => (f.type as string) !== "section" && (f.type as string) !== "instruction");
   const totalSteps     = questionFields.length;
   const currentField   = questionFields[step];
 
