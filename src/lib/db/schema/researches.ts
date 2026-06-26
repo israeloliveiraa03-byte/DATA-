@@ -4,7 +4,28 @@ import { users, organizations } from "./users";
 
 export const researchStatusEnum = pgEnum("research_status", ["draft","active","paused","closed","published"]);
 export const researchThemeEnum  = pgEnum("research_theme",  ["health","education","environment","culture","economy","governance","territory","other"]);
-export const fieldTypeEnum      = pgEnum("field_type",      ["short_text","long_text","number","single_choice","multiple_choice","scale","date","location","image","file","section","matrix"]);
+export const fieldTypeEnum = pgEnum("field_type", [
+  // Básicos
+  "short_text","long_text","single_choice","multiple_choice","scale","yes_no",
+  // Validação
+  "number","email","phone","cpf_cnpj","cep","date","time","date_range",
+  // Escalas
+  "stars","nps","slider","semantic_scale",
+  // Priorização
+  "ranking","points_distribution","card_sorting",
+  // Lógica
+  "conditional","weighted","consent","calculated",
+  // Geográficos
+  "geo_state","geo_city","geo_neighborhood","geo_zone","geo_coords","geo_map","geo_relational",
+  // Coleta
+  "file","image","signature","signature_meta","matrix","observation",
+  "data_table","timeline","availability","location",
+  // Onda 3
+  "audio","photo_annotation","doc_capture","pairwise","equation",
+  "dynamic_consent","field_diary","multi_upload","qr_barcode","bibliography",
+  // Layout
+  "section","instruction",
+]);
 
 export const researches = pgTable("researches", {
   id:             uuid("id").primaryKey().defaultRandom(),
