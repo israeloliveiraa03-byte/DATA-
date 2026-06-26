@@ -1,0 +1,32 @@
+[33m797b0cf[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fix: router unused e field type cast no respondente
+[33mc80df98[m feat: tela do respondente e troca Dashboard por Inicio
+[33mec37fcc[m fix: cards do dashboard apontam para pagina da pesquisa
+[33m8a21664[m feat: pagina da pesquisa com publicacao e teste de formulario
+[33m7fa4f75[m fix: remove alt duplicado no img da capa
+[33m231df0b[m fix: forca rebuild sem cache
+[33mfb6f3bc[m fix: null checks e img warning no form builder
+[33mea41256[m feat: form builder v4 com 50+ tipos de campo em 3 ondas
+[33mc83592d[m fix: descricao do formulario editavel no canvas
+[33mfbb0a48[m feat: form builder v2 com capa, upload de imagem e identidade terrosa
+[33m7569731[m fix: remove event handlers do server component dashboard
+[33m531a9c0[m feat: redesign do dashboard com identidade terrosa
+[33mc35dcc9[m feat: novo design de login com mapa de pontos de coleta
+[33m4831cd9[m feat: redesign da tela de login com identidade visual
+[33md128091[m fix: null check nas funcoes de opcao
+[33md979ccb[m fix: corrige tipagem no RightPanel
+[33m9d7c9cb[m feat: construtor de formularios completo
+[33m0fa9ea2[m feat: pagina de criacao de nova pesquisa
+[33mcc8ab3c[m fix: sessionToken como primaryKey na tabela sessions
+[33me493a4d[m fix: corrige schema accounts e sessions para DrizzleAdapter
+[33m352f6b0[m fix: passa tabelas explicitas para o DrizzleAdapter
+[33m0a5bea1[m trigger: adiciona credenciais Google OAuth
+[33m55a02ba[m trigger: adiciona credenciais Google OAuth
+[33m705a543[m fix: atualiza next para 15.3.6 com patch de seguranca
+[33ma93df14[m fix: atualiza next para 15.3.4
+[33me6fd214[m fix: atualiza next para 15.3.3
+[33m3d42a25[m trigger: forca novo deploy
+[33m265c4ed[m fix: simplifica DrizzleAdapter para usar schema padrao
+[33mcd08887[m fix: adiciona campo image na tabela users para NextAuth
+[33med232cb[m fix: corrige tipagem de params no route handler
+[33m98cc2c9[m fix: atualiza next para 15.1.0 e adiciona .npmrc
+[33m30e7583[m chore: estrutura inicial do projeto Dataº

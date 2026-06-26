@@ -20,7 +20,7 @@ const THEME_MAP: Record<string, string> = {
 };
 
 export function ResearchPageClient({ research }: { research: Research }) {
-  // const router = useRouter();
+  // // const router = useRouter();
   const [status,      setStatus]      = useState(research.status);
   const [copied,      setCopied]      = useState(false);
   const [showQR,      setShowQR]      = useState(false);
