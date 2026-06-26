@@ -597,8 +597,8 @@ function CoverPanel({ cover, coverImage, onSelectCover, onUploadImage }: {
         </button>
         {coverImage && (
           <div className="mt-2 rounded-md overflow-hidden h-12 relative">
-            <img src={coverImage} alt="Capa" // eslint-disable-line @next/next/no-img-element
- alt="Capa" className="w-full h-full object-cover" />
+{/* eslint-disable-next-line @next/next/no-img-element */}
+<img src={coverImage} alt="Capa" className="w-full h-full object-cover" />
             <button onClick={() => onUploadImage("")}
               className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
               <i className="ti ti-x text-white text-xs" />
