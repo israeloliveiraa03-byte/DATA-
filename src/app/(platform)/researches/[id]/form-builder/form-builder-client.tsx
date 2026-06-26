@@ -597,7 +597,8 @@ function CoverPanel({ cover, coverImage, onSelectCover, onUploadImage }: {
         </button>
         {coverImage && (
           <div className="mt-2 rounded-md overflow-hidden h-12 relative">
-            <img src={coverImage} alt="Capa" className="w-full h-full object-cover" />
+            <img src={coverImage} alt="Capa" // eslint-disable-line @next/next/no-img-element
+ alt="Capa" className="w-full h-full object-cover" />
             <button onClick={() => onUploadImage("")}
               className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
               <i className="ti ti-x text-white text-xs" />
@@ -627,10 +628,10 @@ function RightPanel({ field, onUpdate, onDelete, showCover, cover, coverImage, o
 
   const info = getTypeInfo(field.type);
   function update(patch: Partial<Field>) { onUpdate({ ...field, ...patch } as Field); }
-  function addOption() { update({ options: [...field.options, { id: Math.random().toString(36).slice(2,8), label: `Opção ${field.options.length + 1}`, weight: field.options.length + 1 }] }); }
-  function updateOption(id: string, label: string) { update({ options: field.options.map(o => o.id === id ? { ...o, label } : o) }); }
-  function updateWeight(id: string, weight: number) { update({ options: field.options.map(o => o.id === id ? { ...o, weight } : o) }); }
-  function removeOption(id: string) { update({ options: field.options.filter(o => o.id !== id) }); }
+  function addOption() { if (!field) return; update({ options: [...field.options, { id: Math.random().toString(36).slice(2,8), label: `Opção ${field.options.length + 1}`, weight: field.options.length + 1 }] }); }
+  function updateOption(id: string, label: string) { if (!field) return; update({ options: field.options.map(o => o.id === id ? { ...o, label } : o) }); }
+  function updateWeight(id: string, weight: number) { if (!field) return; update({ options: field.options.map(o => o.id === id ? { ...o, weight } : o) }); }
+  function removeOption(id: string) { if (!field) return; update({ options: field.options.filter(o => o.id !== id) }); }
 
   const iS = { border: "1px solid #e8d9c0", background: "#fff", color: "#1a0f00" };
   const iC = "w-full px-2 py-1.5 text-xs rounded border focus:outline-none focus:ring-1";
