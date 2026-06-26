@@ -23,7 +23,7 @@ function FieldInput({
   const inputCls = "w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 transition-shadow";
   const inputStyle = { border: BRD, background: "#fff", color: "#1a0f00", boxShadow: "none" };
 
-  switch (field.type) {
+  switch (field.type as string) {
     case "short_text":
       return (
         <input
