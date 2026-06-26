@@ -114,7 +114,7 @@ export default async function DashboardPage() {
               return (
                 <Link
                   key={r.id}
-                  href={`/researches/${r.id}/form-builder`}
+                  href={`/researches/${r.id}`}
                   className="block rounded-xl p-4 transition-all"
                   style={{ border: "1px solid #e8d9c0", background: "#fff" }}
                 >
