@@ -39,7 +39,7 @@ export function ResponsesClient({
     if (questionFields.length === 0 || responses.length === 0) return;
 
     const headers = ["#", "Data", "Status", "Offline", "Latitude", "Longitude",
-      ...questionFields.map(f => f.label)];
+      ...questionFields.map((f, i) => `P${i+1} — ${f.label}`)];
 
     const rows = responses.map((r, idx) => {
       const data = r.data as Record<string, unknown>;
