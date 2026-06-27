@@ -106,6 +106,11 @@ export function ResearchPageClient({ research }: { research: Research }) {
               style={{ border: BRD, background: "#faf6ef", color: "#5c4a2a" }}>
               <i className="ti ti-forms" /> Formulário
             </Link>
+            <Link href={`/researches/${research.id}/responses`}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors"
+              style={{ border: BRD, background: "#faf6ef", color: "#5c4a2a" }}>
+              <i className="ti ti-table" /> Respostas
+            </Link>
             <Link href={`/researches/${research.id}/dashboard-builder`}
               className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors"
               style={{ border: BRD, background: "#faf6ef", color: "#5c4a2a" }}>
