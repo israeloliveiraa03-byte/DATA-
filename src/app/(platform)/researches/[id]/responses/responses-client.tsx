@@ -35,6 +35,42 @@ export function ResponsesClient({
   const [selectedIdx,   setSelectedIdx]   = useState<number | null>(null);
   const [view,          setView]          = useState<"table" | "cards">("table");
 
+  function exportCSV() {
+    if (questionFields.length === 0 || responses.length === 0) return;
+
+    const headers = ["#", "Data", "Status", "Offline", "Latitude", "Longitude",
+      ...questionFields.map(f => f.label)];
+
+    const rows = responses.map((r, idx) => {
+      const data = r.data as Record<string, unknown>;
+      return [
+        idx + 1,
+        formatDate(r.createdAt),
+        r.completed ? "Completa" : "Incompleta",
+        r.collectedOffline ? "Sim" : "Não",
+        r.latitude ?? "",
+        r.longitude ?? "",
+        ...questionFields.map(f => {
+          const val = data[f.id];
+          if (Array.isArray(val)) return val.join("; ");
+          return val ?? "";
+        }),
+      ];
+    });
+
+    const csv = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `${research.title}-respostas.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Filtra campos visíveis (ignora seção e instrução)
   const questionFields = fields.filter(
     f => (f.type as string) !== "section" && (f.type as string) !== "instruction"
@@ -93,6 +129,7 @@ export function ResponsesClient({
               {view === "table" ? "Ver cards" : "Ver tabela"}
             </button>
             <button
+              onClick={exportCSV}
               className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold"
               style={{ border: BRD, background: "#faf6ef", color: "#5c4a2a" }}>
               <i className="ti ti-download" /> Exportar CSV
