@@ -5,7 +5,6 @@ import Link from "next/link";
 import type { Research } from "@/lib/types";
 
 const BRD = "1px solid #e8d9c0";
-const TS  = { color: "#b07d20", fontSize: "9px" } as const;
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string; dot: string }> = {
   draft:     { label: "Rascunho",  bg: "#fff8ec", color: "#7a3d00", dot: "#b07d20" },

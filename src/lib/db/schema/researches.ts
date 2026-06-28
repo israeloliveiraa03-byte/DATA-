@@ -16,7 +16,7 @@ export const fieldTypeEnum = pgEnum("field_type", [
   // Lógica
   "conditional","weighted","consent","calculated",
   // Geográficos
-  "geo_state","geo_city","geo_neighborhood","geo_zone","geo_coords","geo_map","geo_relational",
+  "geo_region","geo_state","geo_mesoregion","geo_microregion","geo_city","geo_district","geo_neighborhood","geo_zone","geo_coords","geo_map","geo_relational",
   // Coleta
   "file","image","signature","signature_meta","matrix","observation",
   "data_table","timeline","availability","location",
