@@ -635,11 +635,12 @@ function RightPanel({ field, onUpdate, onDelete, showCover, cover, coverImage, o
   );
 
   const info = getTypeInfo(field.type);
-  function update(patch: Partial<Field>) { onUpdate({ ...field, ...patch } as Field); }
-  function addOption() { update({ options: [...field.options, { id: Math.random().toString(36).slice(2,8), label: `Opção ${field.options.length + 1}`, weight: field.options.length + 1 }] }); }
-  function updateOption(id: string, label: string) { update({ options: field.options.map(o => o.id === id ? { ...o, label } : o) }); }
-  function updateWeight(id: string, weight: number) { update({ options: field.options.map(o => o.id === id ? { ...o, weight } : o) }); }
-  function removeOption(id: string) { update({ options: field.options.filter(o => o.id !== id) }); }
+  const f = field;
+  function update(patch: Partial<Field>) { onUpdate({ ...f, ...patch } as Field); }
+  function addOption() { update({ options: [...f.options, { id: Math.random().toString(36).slice(2,8), label: `Opção ${f.options.length + 1}`, weight: f.options.length + 1 }] }); }
+  function updateOption(id: string, label: string) { update({ options: f.options.map(o => o.id === id ? { ...o, label } : o) }); }
+  function updateWeight(id: string, weight: number) { update({ options: f.options.map(o => o.id === id ? { ...o, weight } : o) }); }
+  function removeOption(id: string) { update({ options: f.options.filter(o => o.id !== id) }); }
 
   const iS = { border: "1px solid #e8d9c0", background: "#fff", color: "#1a0f00" };
   const iC = "w-full px-2 py-1.5 text-xs rounded border focus:outline-none focus:ring-1";
