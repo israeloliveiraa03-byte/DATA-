@@ -8,18 +8,15 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  // Tenta achar por ID ou por slug
-  let research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
+  // Detecta se é UUID ou slug
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+  const research = await db.query.researches.findFirst({
+    where: isUuid ? eq(researches.id, id) : eq(researches.slug, id),
   });
-  if (!research) {
-    research = await db.query.researches.findFirst({
-      where: eq(researches.slug, id),
-    });
-  }
 
   if (!research) {
-    return Response.json({ found: false, searchedFor: id });
+    return Response.json({ found: false, searchedFor: id, searchedBy: isUuid ? "id" : "slug" });
   }
 
   const form = await db.query.forms.findFirst({
