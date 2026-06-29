@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Research } from "@/lib/types";
 
@@ -1009,6 +1009,27 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
   const dragRef = useRef<number | null>(null);
 
   const selectedField = fields.find(f => f.id === selectedId) ?? null;
+
+  // Carrega os campos salvos da API ao montar (fonte confiável, evita perder dados)
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/researches/${research.id}/form`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const data = json?.data ?? json;
+        if (!data || !Array.isArray(data.fields) || data.fields.length === 0) return;
+        if (cancel) return;
+        const hydrated = hydrateFields(data.fields as SavedField[]);
+        // Só sobrescreve se o estado atual estiver vazio (não apaga trabalho em progresso)
+        setFields(prev => prev.length === 0 ? hydrated : prev);
+        if (data.title) setFormTitle((t: string) => t || data.title);
+      } catch { /* silencioso */ }
+    })();
+    return () => { cancel = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const coverStyle = coverImage
     ? { backgroundImage: `url(${coverImage})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { background: COVER_PRESETS.find(p => p.id === cover)?.style ?? COVER_PRESETS[0].style };
