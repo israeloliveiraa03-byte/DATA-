@@ -107,7 +107,11 @@ export async function POST(
       },
     }));
 
-    await db.insert(formFields).values(fieldsToInsert);
+    try {
+      await db.insert(formFields).values(fieldsToInsert);
+    } catch (err) {
+      return apiError("Erro ao salvar campos: " + String(err), 500);
+    }
   }
 
   return apiSuccess({ formId: form.id, fieldCount: rawFields.length });

@@ -20,7 +20,8 @@ type FieldType =
   // Lógica e cálculo
   | "conditional" | "weighted" | "calculated" | "consent"
   // Geográficos
-  | "geo_state" | "geo_city" | "geo_neighborhood" | "geo_zone"
+  | "geo_region" | "geo_state" | "geo_mesoregion" | "geo_microregion"
+  | "geo_city" | "geo_district" | "geo_neighborhood" | "geo_zone"
   | "geo_coords" | "geo_map" | "geo_relational"
   // Coleta estruturada
   | "observation" | "data_table" | "timeline" | "availability"
@@ -143,8 +144,12 @@ const FIELD_TYPES: FieldGroup[] = [
   {
     group: "Geográficos",
     items: [
+      { type: "geo_region",       label: "Região (5 grandes)",   icon: "ti-map-pin",      color: "#0d9e75", bg: "#e1f5ee" },
       { type: "geo_state",        label: "Estado (UF)",          icon: "ti-map",          color: "#0d9e75", bg: "#e1f5ee" },
+      { type: "geo_mesoregion",   label: "Mesorregião (IBGE)",   icon: "ti-topology-ring",color: "#0d9e75", bg: "#e1f5ee" },
+      { type: "geo_microregion",  label: "Microrregião (IBGE)",  icon: "ti-topology-star",color: "#0d9e75", bg: "#e1f5ee" },
       { type: "geo_city",         label: "Município",            icon: "ti-building",     color: "#0d9e75", bg: "#e1f5ee" },
+      { type: "geo_district",     label: "Distrito",             icon: "ti-map-pins",     color: "#0d9e75", bg: "#e1f5ee" },
       { type: "geo_neighborhood", label: "Bairro",               icon: "ti-home",         color: "#0d9e75", bg: "#e1f5ee" },
       { type: "geo_zone",         label: "Zona da cidade",       icon: "ti-layout-grid",  color: "#0d9e75", bg: "#e1f5ee" },
       { type: "geo_coords",       label: "Lat / Long (GPS)",     icon: "ti-crosshair",    color: "#0d9e75", bg: "#e1f5ee" },
@@ -419,9 +424,13 @@ function FieldPreview({ field }: { field: Field }) {
   );
 
   // Geográficos
+  if (field.type === "geo_region")       return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-map-pin"/>Selecione a região...</div>;
   if (field.type === "geo_state")        return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-map"/>Selecione o estado...</div>;
-  if (field.type === "geo_city")         return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-building"/>Selecione o município...</div>;
-  if (field.type === "geo_neighborhood") return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-home"/>Selecione o bairro...</div>;
+  if (field.type === "geo_mesoregion")   return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-topology-ring"/>Mesorregião (carrega do estado)...</div>;
+  if (field.type === "geo_microregion")  return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-topology-star"/>Microrregião (carrega do estado)...</div>;
+  if (field.type === "geo_city")         return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-building"/>Município (carrega do estado)...</div>;
+  if (field.type === "geo_district")     return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-map-pins"/>Distrito (carrega do município)...</div>;
+  if (field.type === "geo_neighborhood") return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-home"/>Digite o bairro...</div>;
   if (field.type === "geo_zone")         return (
     <div className="flex flex-wrap gap-1 mt-1">
       {field.zoneOptions.map((z, i) => (
@@ -597,8 +606,7 @@ function CoverPanel({ cover, coverImage, onSelectCover, onUploadImage }: {
         </button>
         {coverImage && (
           <div className="mt-2 rounded-md overflow-hidden h-12 relative">
-{/* eslint-disable-next-line @next/next/no-img-element */}
-<img src={coverImage} alt="Capa" className="w-full h-full object-cover" />
+            <img src={coverImage} alt="Capa" className="w-full h-full object-cover" />
             <button onClick={() => onUploadImage("")}
               className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
               <i className="ti ti-x text-white text-xs" />
@@ -628,10 +636,10 @@ function RightPanel({ field, onUpdate, onDelete, showCover, cover, coverImage, o
 
   const info = getTypeInfo(field.type);
   function update(patch: Partial<Field>) { onUpdate({ ...field, ...patch } as Field); }
-  function addOption() { if (!field) return; update({ options: [...field.options, { id: Math.random().toString(36).slice(2,8), label: `Opção ${field.options.length + 1}`, weight: field.options.length + 1 }] }); }
-  function updateOption(id: string, label: string) { if (!field) return; update({ options: field.options.map(o => o.id === id ? { ...o, label } : o) }); }
-  function updateWeight(id: string, weight: number) { if (!field) return; update({ options: field.options.map(o => o.id === id ? { ...o, weight } : o) }); }
-  function removeOption(id: string) { if (!field) return; update({ options: field.options.filter(o => o.id !== id) }); }
+  function addOption() { update({ options: [...field.options, { id: Math.random().toString(36).slice(2,8), label: `Opção ${field.options.length + 1}`, weight: field.options.length + 1 }] }); }
+  function updateOption(id: string, label: string) { update({ options: field.options.map(o => o.id === id ? { ...o, label } : o) }); }
+  function updateWeight(id: string, weight: number) { update({ options: field.options.map(o => o.id === id ? { ...o, weight } : o) }); }
+  function removeOption(id: string) { update({ options: field.options.filter(o => o.id !== id) }); }
 
   const iS = { border: "1px solid #e8d9c0", background: "#fff", color: "#1a0f00" };
   const iC = "w-full px-2 py-1.5 text-xs rounded border focus:outline-none focus:ring-1";
@@ -954,14 +962,45 @@ function RightPanel({ field, onUpdate, onDelete, showCover, cover, coverImage, o
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function FormBuilderClient({ research }: { research: Research }) {
+// ─── Conversão de campos salvos do banco para o formato do construtor ─────────
+interface SavedForm { id: string; title: string; description: string | null; }
+interface SavedField {
+  id: string; type: string; label: string; description: string | null;
+  placeholder: string | null; required: boolean; order: number;
+  config: unknown;
+}
+
+function hydrateFields(saved: SavedField[]): Field[] {
+  return saved.map(sf => {
+    const cfg = (sf.config ?? {}) as Record<string, unknown>;
+    const base = newField(sf.type as FieldType);
+    return {
+      ...base,
+      id:           sf.id,
+      type:         sf.type as FieldType,
+      label:        sf.label || base.label,
+      description:  sf.description ?? "",
+      required:     Boolean(sf.required),
+      placeholder:  (sf.placeholder ?? cfg.placeholder as string) ?? "",
+      options:      Array.isArray(cfg.options) ? cfg.options as Field["options"] : base.options,
+      scaleMin:     (cfg.min as number) ?? base.scaleMin,
+      scaleMax:     (cfg.max as number) ?? base.scaleMax,
+      scaleLabel:   (cfg.label as string) ?? base.scaleLabel,
+      matrixRows:   Array.isArray(cfg.matrixRows) ? cfg.matrixRows as string[] : base.matrixRows,
+      matrixCols:   Array.isArray(cfg.matrixCols) ? cfg.matrixCols as string[] : base.matrixCols,
+      rankingItems: Array.isArray(cfg.rankingItems) ? cfg.rankingItems as string[] : base.rankingItems,
+    };
+  });
+}
+
+export function FormBuilderClient({ research, savedForm, savedFields }: { research: Research; savedForm?: SavedForm | null; savedFields?: SavedField[] }) {
   const router = useRouter();
-  const [fields,          setFields]          = useState<Field[]>([]);
+  const [fields,          setFields]          = useState<Field[]>(() => hydrateFields(savedFields ?? []));
   const [selectedId,      setSelectedId]      = useState<string | null>(null);
   const [saving,          setSaving]          = useState(false);
   const [savedAt,         setSavedAt]         = useState<string | null>(null);
-  const [formTitle,       setFormTitle]       = useState(research.title);
-  const [formDescription, setFormDescription] = useState(research.description ?? "");
+  const [formTitle,       setFormTitle]       = useState(savedForm?.title ?? research.title);
+  const [formDescription, setFormDescription] = useState(savedForm?.description ?? research.description ?? "");
   const [cover,           setCover]           = useState("campo");
   const [coverImage,      setCoverImage]      = useState<string | null>(null);
   const [showCover,       setShowCover]       = useState(false);
@@ -990,11 +1029,18 @@ export function FormBuilderClient({ research }: { research: Research }) {
   const save = useCallback(async () => {
     setSaving(true);
     try {
-      await fetch(`/api/researches/${research.id}/form`, {
+      const res = await fetch(`/api/researches/${research.id}/form`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: formTitle, description: formDescription, fields }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert("Erro ao salvar: " + (data?.error || res.status + " — verifique os campos"));
+        return;
+      }
       setSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+    } catch (err) {
+      alert("Erro de conexão ao salvar: " + String(err));
     } finally { setSaving(false); }
   }, [research.id, formTitle, formDescription, fields]);
 
