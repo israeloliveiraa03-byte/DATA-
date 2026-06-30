@@ -1093,7 +1093,8 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
             {savedAt && <span className="text-xs flex items-center gap-1" style={{ color: "#8b7355" }}><i className="ti ti-check" style={{ color: "#0d9e75" }} /> Salvo às {savedAt}</span>}
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md"
+            <button onClick={() => window.open(`/p/${research.slug}?preview=true`, "_blank")}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md"
               style={{ border: BRD, background: "#fff", color: "#5c4a2a" }}>
               <i className="ti ti-eye" /> Preview
             </button>

@@ -38,9 +38,12 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 
 ## Bugs ativos / bloqueadores conhecidos
 
-- Página de respondente `/p/[slug]` retornando 404
-- Preview de formulário não funcional
 - Confusão entre UUID e slug causando erros de roteamento (causa raiz já identificada)
+
+## Bugs recém-resolvidos
+
+- ~~Página de respondente `/p/[slug]` retornando 404~~ — causa raiz: `page.tsx` da rota tinha sido apagado por engano no commit `b975c5c`. Recriado e commitado (`bf4ff28`).
+- ~~Preview de formulário não funcional~~ — botão "Preview" no form-builder (`form-builder-client.tsx`) não tinha `onClick`. Agora abre `/p/[slug]?preview=true` em nova aba.
 
 ## Erros recorrentes a evitar
 
