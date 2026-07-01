@@ -16,7 +16,7 @@ type Note = { id: string; title: string; body: string; tags: string[]; public: b
 type ProfileType = "researcher" | "institution";
 type ActiveTab = "perfil" | "notas" | "privacidade";
 
-const BRD = "1px solid #e8d9c0";
+const BRD = "1px solid #e8d8be";
 
 function Toggle({ value, onChange, accent }: { value: boolean; onChange: () => void; accent: string }) {
   return (
@@ -135,7 +135,7 @@ export function ProfileClient({ user }: { user: User }) {
   const accent = color;
   const accentLight = color + "15";
 
-  const iStyle = { border: BRD, background: "#faf6ef", color: "#111", fontFamily: "Inter, sans-serif" };
+  const iStyle = { border: BRD, background: "#fbf3e7", color: "#111", fontFamily: "Inter, sans-serif" };
   const iCls = "w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-all";
 
   const LINKS = [
@@ -144,38 +144,38 @@ export function ProfileClient({ user }: { user: User }) {
     { label: "Google Scholar", logo: <ScholarLogo />, bg: "#fff", border: BRD, val: scholar, set: setScholar, ph: "scholar.google.com/citations?user=...", connected: !!scholar },
     { label: "ResearchGate", logo: <span style={{ fontSize:"12px", fontWeight:900, fontFamily:"Georgia,serif", color:"#fff" }}>RG</span>, bg: "#00d0af", border: "#00b89a", val: researchgate, set: setResearchgate, ph: "researchgate.net/profile/...", connected: !!researchgate },
     { label: "LinkedIn", logo: <LinkedInLogo />, bg: "#0077B5", border: "#006097", val: linkedin, set: setLinkedin, ph: "linkedin.com/in/...", connected: !!linkedin },
-    { label: "Site pessoal", logo: <i className="ti ti-world" style={{ color:"#8b7355", fontSize:"16px" }} />, bg: "#faf6ef", border: "#e8d9c0", val: website, set: setWebsite, ph: "seuperfil.com.br", connected: !!website },
+    { label: "Site pessoal", logo: <i className="ti ti-world" style={{ color:"#a06d28", fontSize:"16px" }} />, bg: "#fbf3e7", border: "#e8d8be", val: website, set: setWebsite, ph: "seuperfil.com.br", connected: !!website },
   ];
 
   return (
-    <div className="flex-1 overflow-auto" style={{ background: "#f0ebe3" }}>
+    <div className="flex-1 overflow-auto" style={{ background: "#f3e4cb" }}>
       <div style={{ maxWidth: "940px", margin: "0 auto", background: "#fff", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
 
         {/* ── CAPA ── */}
-        <div style={{ position: "relative", height: "200px", overflow: "hidden", background: "#faf6ef", borderBottom: BRD }}>
+        <div style={{ position: "relative", height: "200px", overflow: "hidden", background: "#fbf3e7", borderBottom: BRD }}>
           {coverImage
             ? <img src={coverImage} alt="Capa" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             : (
               <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 940 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                 <defs>
-                  <pattern id="pg" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M 38 0 L 0 0 0 38" fill="none" stroke="#d4b880" strokeWidth="0.6"/></pattern>
-                  <linearGradient id="pfr" x1="0" y1="0" x2="1" y2="0"><stop offset="55%" stopColor="#faf6ef" stopOpacity="0"/><stop offset="100%" stopColor="#faf6ef" stopOpacity="0.95"/></linearGradient>
-                  <linearGradient id="pfb" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stopColor="#faf6ef" stopOpacity="0"/><stop offset="100%" stopColor="#faf6ef" stopOpacity="1"/></linearGradient>
+                  <pattern id="pg" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M 38 0 L 0 0 0 38" fill="none" stroke="#d9bb8c" strokeWidth="0.6"/></pattern>
+                  <linearGradient id="pfr" x1="0" y1="0" x2="1" y2="0"><stop offset="55%" stopColor="#fbf3e7" stopOpacity="0"/><stop offset="100%" stopColor="#fbf3e7" stopOpacity="0.95"/></linearGradient>
+                  <linearGradient id="pfb" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stopColor="#fbf3e7" stopOpacity="0"/><stop offset="100%" stopColor="#fbf3e7" stopOpacity="1"/></linearGradient>
                 </defs>
                 <rect width="940" height="200" fill="url(#pg)"/>
-                <path d="M0 120 Q180 90 360 110 T720 100 T940 108" fill="none" stroke="#c4a35a" strokeWidth="1.2" opacity="0.35"/>
-                <path d="M0 155 Q180 125 360 145 T720 135 T940 142" fill="none" stroke="#c4a35a" strokeWidth="0.8" opacity="0.22"/>
+                <path d="M0 120 Q180 90 360 110 T720 100 T940 108" fill="none" stroke="#d2a05c" strokeWidth="1.2" opacity="0.35"/>
+                <path d="M0 155 Q180 125 360 145 T720 135 T940 142" fill="none" stroke="#d2a05c" strokeWidth="0.8" opacity="0.22"/>
                 <line x1="90" y1="55" x2="300" y2="90" stroke="#1a56db" strokeWidth="1.5" strokeDasharray="8 5" opacity="0.5"/>
                 <line x1="300" y1="90" x2="520" y2="42" stroke={accent} strokeWidth="1.5" strokeDasharray="8 5" opacity="0.55"/>
-                <line x1="520" y1="42" x2="720" y2="105" stroke="#0a6e45" strokeWidth="1.5" strokeDasharray="8 5" opacity="0.5"/>
+                <line x1="520" y1="42" x2="720" y2="105" stroke="#3a5430" strokeWidth="1.5" strokeDasharray="8 5" opacity="0.5"/>
                 <line x1="300" y1="90" x2="500" y2="160" stroke="#534ab7" strokeWidth="1.2" strokeDasharray="6 4" opacity="0.38"/>
-                <line x1="720" y1="105" x2="860" y2="58" stroke="#0d9e75" strokeWidth="1" strokeDasharray="5 4" opacity="0.32"/>
+                <line x1="720" y1="105" x2="860" y2="58" stroke="#4c6b3c" strokeWidth="1" strokeDasharray="5 4" opacity="0.32"/>
                 <circle cx="90"  cy="55"  r="15" fill="none" stroke="#1a56db" strokeWidth="2.2"/><circle cx="90"  cy="55"  r="5.5" fill="#1a56db"/>
                 <circle cx="300" cy="90"  r="15" fill="none" stroke={accent} strokeWidth="2.2"/><circle cx="300" cy="90"  r="5.5" fill={accent}/>
-                <circle cx="520" cy="42"  r="15" fill="none" stroke="#0a6e45" strokeWidth="2.2"/><circle cx="520" cy="42"  r="5.5" fill="#0a6e45"/>
-                <circle cx="720" cy="105" r="13" fill="none" stroke="#0d9e75" strokeWidth="2"/><circle cx="720" cy="105" r="4.5" fill="#0d9e75"/>
+                <circle cx="520" cy="42"  r="15" fill="none" stroke="#3a5430" strokeWidth="2.2"/><circle cx="520" cy="42"  r="5.5" fill="#3a5430"/>
+                <circle cx="720" cy="105" r="13" fill="none" stroke="#4c6b3c" strokeWidth="2"/><circle cx="720" cy="105" r="4.5" fill="#4c6b3c"/>
                 <circle cx="500" cy="160" r="11" fill="none" stroke="#534ab7" strokeWidth="2"/><circle cx="500" cy="160" r="4" fill="#534ab7"/>
-                <circle cx="860" cy="58"  r="9"  fill="none" stroke="#8b7355" strokeWidth="1.8" opacity="0.55"/><circle cx="860" cy="58" r="3" fill="#8b7355" opacity="0.45"/>
+                <circle cx="860" cy="58"  r="9"  fill="none" stroke="#a06d28" strokeWidth="1.8" opacity="0.55"/><circle cx="860" cy="58" r="3" fill="#a06d28" opacity="0.45"/>
                 <circle cx="300" cy="90" r="22" fill="none" stroke={accent} strokeWidth="1" opacity="0.1">
                   <animate attributeName="r" values="15;30;15" dur="3s" repeatCount="indefinite"/>
                   <animate attributeName="opacity" values="0.1;0.02;0.1" dur="3s" repeatCount="indefinite"/>
@@ -190,7 +190,7 @@ export function ProfileClient({ user }: { user: User }) {
             {(["researcher","institution"] as ProfileType[]).map(t => (
               <button key={t} onClick={() => setProfileType(t)}
                 className="px-3 py-1.5 text-xs font-bold transition-all"
-                style={{ background: profileType === t ? accent : "transparent", color: profileType === t ? "#fff" : "#8b7355", fontFamily: "Inter, sans-serif", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                style={{ background: profileType === t ? accent : "transparent", color: profileType === t ? "#fff" : "#a06d28", fontFamily: "Inter, sans-serif", letterSpacing: "0.04em", textTransform: "uppercase" }}>
                 {t === "researcher" ? "Pesquisador" : "Instituição"}
               </button>
             ))}
@@ -207,7 +207,7 @@ export function ProfileClient({ user }: { user: User }) {
             )}
             <button onClick={() => coverRef.current?.click()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-              style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "#5c4a2a", backdropFilter: "blur(8px)" }}>
+              style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "#5c3f13", backdropFilter: "blur(8px)" }}>
               <i className="ti ti-photo text-xs" /> Imagem de capa
             </button>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
@@ -216,7 +216,7 @@ export function ProfileClient({ user }: { user: User }) {
               {PALETTE.map(p => (
                 <button key={p.id} onClick={() => setColor(p.color)} title={p.label}
                   className="transition-transform hover:scale-125"
-                  style={{ width: "16px", height: "16px", borderRadius: "50%", background: p.color, border: color === p.color ? "2px solid #0a1628" : "2px solid transparent", boxShadow: color === p.color ? "0 0 0 1px rgba(10,22,40,0.15)" : "none" }} />
+                  style={{ width: "16px", height: "16px", borderRadius: "50%", background: p.color, border: color === p.color ? "2px solid #0f172a" : "2px solid transparent", boxShadow: color === p.color ? "0 0 0 1px rgba(15,23,42,0.15)" : "none" }} />
               ))}
             </div>
           </div>
@@ -229,10 +229,10 @@ export function ProfileClient({ user }: { user: User }) {
             <div
               onClick={() => photoRef.current?.click()}
               className="flex items-center justify-center cursor-pointer"
-              style={{ width: "88px", height: "88px", borderRadius: "20px", border: "4px solid #fff", background: photo ? "transparent" : `linear-gradient(135deg, ${accent}, #534ab7)`, boxShadow: `0 0 0 1px rgba(176,125,32,0.2), 0 4px 20px rgba(0,0,0,0.12)`, overflow: "hidden", position: "relative" }}>
+              style={{ width: "88px", height: "88px", borderRadius: "20px", border: "4px solid #fff", background: photo ? "transparent" : `linear-gradient(135deg, ${accent}, #534ab7)`, boxShadow: `0 0 0 1px rgba(196,138,66,0.2), 0 4px 20px rgba(0,0,0,0.12)`, overflow: "hidden", position: "relative" }}>
               {photo
                 ? <img src={photo} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <span style={{ fontFamily: "Lora, Georgia, serif", fontSize: "32px", fontWeight: 700, color: "#fff" }}>{name?.[0]?.toUpperCase() ?? "P"}</span>
+                : <span style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "32px", fontWeight: 700, color: "#fff" }}>{name?.[0]?.toUpperCase() ?? "P"}</span>
               }
               <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                 style={{ background: "rgba(0,0,0,0.35)", borderRadius: "16px" }}>
@@ -265,7 +265,7 @@ export function ProfileClient({ user }: { user: User }) {
         {/* ── IDENTIDADE HEADER ── */}
         <div className="px-8 pt-3 pb-4" style={{ borderBottom: BRD }}>
           <div className="flex items-center gap-2 mb-1.5">
-            <h1 style={{ fontFamily: "Lora, Georgia, serif", fontSize: "22px", fontWeight: 700, color: "#111827", letterSpacing: "-0.3px" }}>
+            <h1 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "22px", fontWeight: 700, color: "#111827", letterSpacing: "-0.3px" }}>
               {name || "Seu nome"}
             </h1>
             <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -291,10 +291,10 @@ export function ProfileClient({ user }: { user: User }) {
                 Lattes
               </div>
             )}
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "#fff8ec", color: "#7a3d00", border: BRD }}>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "#fbf3e7", color: "#7a5218", border: BRD }}>
               <i className="ti ti-notebook" style={{ fontSize: "10px" }} /> {notes.length} notas
             </div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "#fff8ec", color: "#7a3d00", border: BRD }}>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "#fbf3e7", color: "#7a5218", border: BRD }}>
               <i className="ti ti-clipboard-list" style={{ fontSize: "10px" }} /> 1 pesquisa
             </div>
           </div>
@@ -309,7 +309,7 @@ export function ProfileClient({ user }: { user: User }) {
               <div key={s.label} className="flex items-center gap-4">
                 {i > 0 && <div style={{ width: "1px", height: "28px", background: BRD.replace("1px solid ", "") }} />}
                 <div>
-                  <p style={{ fontFamily: "Lora, Georgia, serif", fontSize: "20px", fontWeight: 700, color: "#111827", lineHeight: 1 }}>{s.val}</p>
+                  <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "20px", fontWeight: 700, color: "#111827", lineHeight: 1 }}>{s.val}</p>
                   <p style={{ fontSize: "9px", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: "2px" }}>{s.label}</p>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export function ProfileClient({ user }: { user: User }) {
               {/* Identidade */}
               <div className="rounded-xl p-5" style={{ border: BRD, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <p className="text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: accent, fontSize: "9px" }}>
-                  Identidade <span style={{ flex: 1, height: "1px", background: "#e8d9c0", display: "inline-block" }} />
+                  Identidade <span style={{ flex: 1, height: "1px", background: "#e8d8be", display: "inline-block" }} />
                 </p>
                 {[
                   { label: "Nome completo", val: name, set: setName, ph: "Seu nome completo" },
@@ -361,7 +361,7 @@ export function ProfileClient({ user }: { user: User }) {
                     <label className="block text-xs font-semibold mb-1.5" style={{ color: "#4b5563" }}>{f.label}</label>
                     <input value={f.val} onChange={e => f.set(e.target.value)} className={iCls} style={iStyle} placeholder={f.ph}
                       onFocus={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${accent}18`; e.currentTarget.style.background = "#fff"; }}
-                      onBlur={e => { e.currentTarget.style.borderColor = "#e8d9c0"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "#faf6ef"; }} />
+                      onBlur={e => { e.currentTarget.style.borderColor = "#e8d8be"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "#fbf3e7"; }} />
                   </div>
                 ))}
                 <div>
@@ -369,7 +369,7 @@ export function ProfileClient({ user }: { user: User }) {
                   <textarea value={bio} onChange={e => setBio(e.target.value)} rows={5} className={iCls + " resize-none"} style={iStyle}
                     placeholder="Descreva sua trajetória, áreas de interesse e experiência em pesquisa de campo..."
                     onFocus={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${accent}18`; e.currentTarget.style.background = "#fff"; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = "#e8d9c0"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "#faf6ef"; }} />
+                    onBlur={e => { e.currentTarget.style.borderColor = "#e8d8be"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "#fbf3e7"; }} />
                   <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>Máximo 500 caracteres · Visível no perfil público</p>
                 </div>
               </div>
@@ -380,7 +380,7 @@ export function ProfileClient({ user }: { user: User }) {
                 {/* Links */}
                 <div className="rounded-xl p-5" style={{ border: BRD, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                   <p className="text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: accent, fontSize: "9px" }}>
-                    Links acadêmicos <span style={{ flex: 1, height: "1px", background: "#e8d9c0", display: "inline-block" }} />
+                    Links acadêmicos <span style={{ flex: 1, height: "1px", background: "#e8d8be", display: "inline-block" }} />
                   </p>
                   {LINKS.map(link => (
                     <div key={link.label} className="flex items-center gap-2.5 mb-2.5">
@@ -390,10 +390,10 @@ export function ProfileClient({ user }: { user: User }) {
                       </div>
                       <input value={link.val} onChange={e => link.set(e.target.value)}
                         className="flex-1 px-3 py-2 rounded-lg text-xs border focus:outline-none transition-all"
-                        style={{ border: BRD, background: "#faf6ef", color: "#111", fontFamily: "Inter, sans-serif" }}
+                        style={{ border: BRD, background: "#fbf3e7", color: "#111", fontFamily: "Inter, sans-serif" }}
                         placeholder={link.ph}
                         onFocus={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${accent}18`; e.currentTarget.style.background = "#fff"; }}
-                        onBlur={e => { e.currentTarget.style.borderColor = "#e8d9c0"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "#faf6ef"; }} />
+                        onBlur={e => { e.currentTarget.style.borderColor = "#e8d8be"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "#fbf3e7"; }} />
                       {link.connected && (
                         <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <i className="ti ti-check" style={{ color: "#fff", fontSize: "9px" }} />
@@ -405,7 +405,7 @@ export function ProfileClient({ user }: { user: User }) {
 
                 {/* Preview */}
                 <div className="rounded-xl p-4 relative overflow-hidden" style={{ background: "#fff", border: `1.5px solid ${accent}40` }}>
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: `linear-gradient(90deg, #b07d20, #534ab7, #0d9e75)` }} />
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: `linear-gradient(90deg, #c48a42, #534ab7, #4c6b3c)` }} />
                   <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "100px", height: "100px", borderRadius: "50%", background: `radial-gradient(circle, ${accent}18, transparent)` }} />
                   <p className="text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5" style={{ color: accent, fontSize: "9px" }}>
                     <i className="ti ti-eye" /> Preview do perfil público
@@ -414,11 +414,11 @@ export function ProfileClient({ user }: { user: User }) {
                     <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: `linear-gradient(135deg, ${accent}, #534ab7)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
                       {photo
                         ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        : <span style={{ fontFamily: "Lora, Georgia, serif", fontSize: "15px", fontWeight: 700, color: "#fff" }}>{name?.[0]?.toUpperCase() ?? "P"}</span>
+                        : <span style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "15px", fontWeight: 700, color: "#fff" }}>{name?.[0]?.toUpperCase() ?? "P"}</span>
                       }
                     </div>
                     <div>
-                      <p style={{ fontSize: "13px", fontWeight: 700, color: "#111827", fontFamily: "Lora, Georgia, serif" }}>{name || "Seu nome"}</p>
+                      <p style={{ fontSize: "13px", fontWeight: 700, color: "#111827", fontFamily: "var(--font-serif), Georgia, serif" }}>{name || "Seu nome"}</p>
                       <p style={{ fontSize: "11px", color: "#4b5563", marginTop: "1px" }}>{cargo || "Cargo"}{institution ? ` · ${institution}` : ""}</p>
                     </div>
                   </div>
@@ -434,8 +434,8 @@ export function ProfileClient({ user }: { user: User }) {
               {/* Stats */}
               <div className="col-span-2 grid grid-cols-4 gap-3">
                 {[
-                  { icon: "ti-clipboard-list", bg: "#fff8ec", color: accent,    val: "1",             label: "Pesquisas" },
-                  { icon: "ti-notebook",       bg: "#ecfdf5", color: "#0d9e75", val: String(notes.length), label: "Notas técnicas" },
+                  { icon: "ti-clipboard-list", bg: "#fbf3e7", color: accent,    val: "1",             label: "Pesquisas" },
+                  { icon: "ti-notebook",       bg: "#ecfdf5", color: "#4c6b3c", val: String(notes.length), label: "Notas técnicas" },
                   { icon: "ti-users",          bg: "#eff6ff", color: "#1a56db", val: "0",             label: "Colaborações" },
                   { icon: "ti-eye",            bg: "#f5f3ff", color: "#534ab7", val: "—",             label: "Visualizações" },
                 ].map(s => (
@@ -445,7 +445,7 @@ export function ProfileClient({ user }: { user: User }) {
                       <i className={`ti ${s.icon}`} style={{ color: s.color, fontSize: "18px" }} />
                     </div>
                     <div>
-                      <p style={{ fontFamily: "Lora, Georgia, serif", fontSize: "22px", fontWeight: 700, color: "#111827", lineHeight: 1 }}>{s.val}</p>
+                      <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "22px", fontWeight: 700, color: "#111827", lineHeight: 1 }}>{s.val}</p>
                       <p style={{ fontSize: "10px", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "2px" }}>{s.label}</p>
                     </div>
                   </div>
@@ -459,7 +459,7 @@ export function ProfileClient({ user }: { user: User }) {
             <div>
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="text-sm font-bold" style={{ color: "#111827", fontFamily: "Lora, Georgia, serif" }}>Notas metodológicas</p>
+                  <p className="text-sm font-bold" style={{ color: "#111827", fontFamily: "var(--font-serif), Georgia, serif" }}>Notas metodológicas</p>
                   <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>Orientações sobre como conduzir pesquisas em contextos específicos</p>
                 </div>
                 <button onClick={openNewNote} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold" style={{ background: accent, color: "#fff", fontFamily: "Inter, sans-serif" }}>
@@ -467,9 +467,9 @@ export function ProfileClient({ user }: { user: User }) {
                 </button>
               </div>
               {notes.length === 0 ? (
-                <div className="text-center py-16 rounded-xl" style={{ border: "2px dashed #e8d9c0", background: "#faf6ef" }}>
-                  <i className="ti ti-notebook text-4xl block mb-3" style={{ color: "#d4b880" }} />
-                  <p className="text-sm font-semibold mb-1" style={{ color: "#111827", fontFamily: "Lora, Georgia, serif" }}>Nenhuma nota ainda</p>
+                <div className="text-center py-16 rounded-xl" style={{ border: "2px dashed #e8d8be", background: "#fbf3e7" }}>
+                  <i className="ti ti-notebook text-4xl block mb-3" style={{ color: "#d9bb8c" }} />
+                  <p className="text-sm font-semibold mb-1" style={{ color: "#111827", fontFamily: "var(--font-serif), Georgia, serif" }}>Nenhuma nota ainda</p>
                   <p className="text-xs mb-4" style={{ color: "#9ca3af" }}>Publique orientações para outros pesquisadores</p>
                   <button onClick={openNewNote} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold" style={{ background: accent, color: "#fff" }}>
                     <i className="ti ti-plus" /> Criar primeira nota
@@ -482,8 +482,8 @@ export function ProfileClient({ user }: { user: User }) {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1.5">
-                            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#111827", fontFamily: "Lora, Georgia, serif" }}>{note.title}</h3>
-                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: note.public ? "#ecfdf5" : "#faf6ef", color: note.public ? "#065f46" : "#8b7355", border: BRD }}>
+                            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#111827", fontFamily: "var(--font-serif), Georgia, serif" }}>{note.title}</h3>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: note.public ? "#ecfdf5" : "#fbf3e7", color: note.public ? "#065f46" : "#a06d28", border: BRD }}>
                               {note.public ? "Pública" : "Privada"}
                             </span>
                           </div>
@@ -496,8 +496,8 @@ export function ProfileClient({ user }: { user: User }) {
                           </div>
                         </div>
                         <div className="flex gap-1.5 flex-shrink-0">
-                          <button onClick={() => openEditNote(note)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ border: BRD, background: "#faf6ef", color: "#8b7355" }}><i className="ti ti-pencil text-xs" /></button>
-                          <button onClick={() => deleteNote(note.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ border: BRD, background: "#faf6ef", color: "#c0392b" }}><i className="ti ti-trash text-xs" /></button>
+                          <button onClick={() => openEditNote(note)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ border: BRD, background: "#fbf3e7", color: "#a06d28" }}><i className="ti ti-pencil text-xs" /></button>
+                          <button onClick={() => deleteNote(note.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ border: BRD, background: "#fbf3e7", color: "#c0392b" }}><i className="ti ti-trash text-xs" /></button>
                         </div>
                       </div>
                     </div>
@@ -526,9 +526,9 @@ export function ProfileClient({ user }: { user: User }) {
                   </div>
                 ))}
               </div>
-              <div className="rounded-lg p-3 flex items-start gap-2 mt-4" style={{ background: "#fff8ec", border: `1px solid ${accent}30` }}>
+              <div className="rounded-lg p-3 flex items-start gap-2 mt-4" style={{ background: "#fbf3e7", border: `1px solid ${accent}30` }}>
                 <i className="ti ti-shield-check flex-shrink-0 mt-0.5" style={{ color: accent, fontSize: "16px" }} />
-                <p className="text-xs leading-relaxed" style={{ color: "#5c4a2a" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "#5c3f13" }}>
                   Seus dados são tratados em conformidade com a <strong>LGPD</strong>. Você controla tudo que é visível publicamente.
                 </p>
               </div>
@@ -542,10 +542,10 @@ export function ProfileClient({ user }: { user: User }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.4)" }} onClick={() => setNoteModal(false)}>
           <div className="w-full max-w-lg rounded-2xl p-6 shadow-2xl" style={{ background: "#fff", border: BRD }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111827", fontFamily: "Lora, Georgia, serif" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111827", fontFamily: "var(--font-serif), Georgia, serif" }}>
                 {editNote ? "Editar nota" : "Nova nota metodológica"}
               </h3>
-              <button onClick={() => setNoteModal(false)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ border: BRD, color: "#8b7355" }}>
+              <button onClick={() => setNoteModal(false)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ border: BRD, color: "#a06d28" }}>
                 <i className="ti ti-x text-xs" />
               </button>
             </div>
@@ -572,7 +572,7 @@ export function ProfileClient({ user }: { user: User }) {
               </div>
             </div>
             <div className="flex gap-2 mt-5">
-              <button onClick={() => setNoteModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ border: BRD, background: "#faf6ef", color: "#5c4a2a", fontFamily: "Inter, sans-serif" }}>Cancelar</button>
+              <button onClick={() => setNoteModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13", fontFamily: "Inter, sans-serif" }}>Cancelar</button>
               <button onClick={saveNote} disabled={!noteTitle || !noteBody} className="flex-1 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50" style={{ background: accent, color: "#fff", fontFamily: "Inter, sans-serif" }}>
                 {editNote ? "Salvar alterações" : "Publicar nota"}
               </button>

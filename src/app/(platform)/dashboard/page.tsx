@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { researches } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
+import { ResearchStatusBadge } from "@/components/ui/badge";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -22,43 +23,35 @@ export default async function DashboardPage() {
     { val: myResearches.filter(r => r.status === "published").length, label: "Publicadas", icon: "ti-world"          },
   ];
 
-  const statusMap: Record<string, { label: string; bg: string; color: string }> = {
-    draft:     { label: "Rascunho",  bg: "#fff8ec", color: "#7a3d00" },
-    active:    { label: "Ativa",     bg: "#e1f5ee", color: "#0a6e45" },
-    paused:    { label: "Pausada",   bg: "#faeeda", color: "#854f0b" },
-    closed:    { label: "Encerrada", bg: "#fdf0ef", color: "#8b2a1a" },
-    published: { label: "Publicada", bg: "#e8f0fe", color: "#1041b2" },
-  };
+  const progressMap: Record<string, string> = { published: "100%", closed: "100%", active: "65%", paused: "40%", draft: "20%" };
+  const statusCopy: Record<string, string> = { draft: "Em construção", active: "Coletando dados", paused: "Pausada", closed: "Encerrada", published: "Dashboard público" };
 
   const firstName = session?.user?.name?.split(" ")[0] ?? "pesquisador";
 
   return (
-    <div className="flex-1 overflow-auto" style={{ background: "#fff" }}>
+    <div className="flex-1 overflow-auto bg-white">
       <div className="p-6 max-w-5xl mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-7">
           <div>
-            {/* Eyebrow */}
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest"
-              style={{ background: "#fff8ec", border: "1px solid #d4b880", color: "#5c4a2a" }}>
-              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#b07d20" }} />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest bg-brand-50 border border-brand-200 text-brand-700">
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-brand-500" />
               Painel de controle
             </div>
-            <h1 className="text-2xl font-bold" style={{ color: "#0a1628", fontFamily: "Georgia, serif", letterSpacing: "-0.4px" }}>
+            <h1 className="font-serif font-semibold text-2xl text-slate-900" style={{ letterSpacing: "-0.4px" }}>
               Olá, {firstName} 👋
             </h1>
-            <p className="text-sm font-medium mt-0.5" style={{ color: "#5c4a2a" }}>
+            <p className="text-sm font-medium mt-0.5 text-slate-500">
               Gerencie suas pesquisas e visualize resultados.
             </p>
           </div>
 
           <Link
             href="/researches/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold transition-colors"
-            style={{ background: "#b07d20", color: "#fff", border: "1.5px solid #8b5e0a" }}
+            className="btn-elevate inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700 transition-colors"
           >
-            <i className="ti ti-plus" />
+            <i className="ti ti-plus" aria-hidden="true" />
             Nova pesquisa
           </Link>
         </div>
@@ -66,15 +59,14 @@ export default async function DashboardPage() {
         {/* Métricas */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-7">
           {stats.map(stat => (
-            <div key={stat.label} className="rounded-lg p-4"
-              style={{ background: "#faf6ef", border: "1px solid #e8d9c0" }}>
+            <div key={stat.label} className="rounded-xl p-4 border border-slate-200 bg-white shadow-xs">
               <div className="flex items-center justify-between mb-2">
-                <i className={`ti ${stat.icon} text-base`} style={{ color: "#b07d20" }} />
+                <i className={`ti ${stat.icon} text-base text-brand-600`} aria-hidden="true" />
               </div>
-              <p className="text-2xl font-bold" style={{ color: "#0a1628", fontFamily: "Georgia, serif" }}>
+              <p className="font-serif font-semibold text-2xl text-slate-900">
                 {stat.val}
               </p>
-              <p className="text-xs font-semibold mt-0.5" style={{ color: "#5c4a2a" }}>
+              <p className="text-xs font-semibold mt-0.5 text-slate-500">
                 {stat.label}
               </p>
             </div>
@@ -84,80 +76,71 @@ export default async function DashboardPage() {
         {/* Pesquisas recentes */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: "#b07d20" }} />
-            <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: "#5c4a2a", fontSize: "10px" }}>
+            <div className="w-3 h-3 rounded-full bg-brand-500" />
+            <h2 className="font-bold uppercase tracking-widest text-slate-500" style={{ fontSize: "10px" }}>
               Pesquisas recentes
             </h2>
           </div>
-          <Link href="/researches" className="text-xs font-semibold" style={{ color: "#b07d20" }}>
+          <Link href="/researches" className="text-xs font-semibold text-brand-600 hover:text-brand-700">
             Ver todas →
           </Link>
         </div>
 
         {myResearches.length === 0 ? (
-          <div className="text-center py-16 rounded-xl" style={{ border: "2px dashed #d4b880", background: "#faf6ef" }}>
-            <i className="ti ti-clipboard-list text-3xl block mb-3" style={{ color: "#d4b880" }} />
-            <p className="text-sm font-semibold mb-1" style={{ color: "#5c4a2a" }}>Nenhuma pesquisa ainda</p>
-            <p className="text-xs mb-5" style={{ color: "#8b7355" }}>Crie sua primeira pesquisa para começar a coletar dados</p>
+          <div className="text-center py-16 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
+            <i className="ti ti-clipboard-list text-3xl block mb-3 text-slate-300" aria-hidden="true" />
+            <p className="text-sm font-semibold mb-1 text-slate-600">Nenhuma pesquisa ainda</p>
+            <p className="text-xs mb-5 text-slate-400">Crie sua primeira pesquisa para começar a coletar dados</p>
             <Link
               href="/researches/new"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold"
-              style={{ background: "#b07d20", color: "#fff" }}
+              className="btn-elevate inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700"
             >
-              <i className="ti ti-plus" /> Criar primeira pesquisa
+              <i className="ti ti-plus" aria-hidden="true" /> Criar primeira pesquisa
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {myResearches.map(r => {
-              const s = statusMap[r.status] ?? statusMap.draft;
-              return (
-                <Link
-                  key={r.id}
-                  href={`/researches/${r.id}`}
-                  className="block rounded-xl p-4 transition-all"
-                  style={{ border: "1px solid #e8d9c0", background: "#fff" }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate" style={{ color: "#0a1628" }}>{r.title}</p>
-                      {r.cityName && (
-                        <p className="text-xs font-medium mt-0.5 flex items-center gap-1" style={{ color: "#8b7355" }}>
-                          <i className="ti ti-map-pin text-xs" style={{ color: "#b07d20" }} />
-                          {r.cityName}
-                        </p>
-                      )}
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0"
-                      style={{ background: s.bg, color: s.color }}>
-                      {s.label}
-                    </span>
+            {myResearches.map(r => (
+              <Link
+                key={r.id}
+                href={`/researches/${r.id}`}
+                className="block rounded-xl p-4 border border-slate-200 bg-white shadow-xs transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-brand-200"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold truncate text-slate-900">{r.title}</p>
+                    {r.cityName && (
+                      <p className="text-xs font-medium mt-0.5 flex items-center gap-1 text-slate-500">
+                        <i className="ti ti-map-pin text-xs text-brand-500" aria-hidden="true" />
+                        {r.cityName}
+                      </p>
+                    )}
                   </div>
+                  <ResearchStatusBadge status={r.status} />
+                </div>
 
-                  {/* Barra de progresso decorativa */}
-                  <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: "#f0e8d8" }}>
-                    <div className="h-full rounded-full" style={{ width: r.status === "published" ? "100%" : r.status === "active" ? "65%" : r.status === "closed" ? "100%" : "20%", background: "#b07d20" }} />
-                  </div>
+                {/* Barra de progresso decorativa */}
+                <div className="mt-3 h-1 rounded-full overflow-hidden bg-slate-100">
+                  <div className="h-full rounded-full bg-brand-500" style={{ width: progressMap[r.status] ?? "20%" }} />
+                </div>
 
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs font-medium" style={{ color: "#8b7355" }}>
-                      {r.status === "draft" ? "Em construção" : r.status === "active" ? "Coletando dados" : r.status === "published" ? "Dashboard público" : "Encerrada"}
-                    </p>
-                    <i className="ti ti-arrow-right text-xs" style={{ color: "#b07d20" }} />
-                  </div>
-                </Link>
-              );
-            })}
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-xs font-medium text-slate-500">
+                    {statusCopy[r.status] ?? "Rascunho"}
+                  </p>
+                  <i className="ti ti-arrow-right text-xs text-brand-500" aria-hidden="true" />
+                </div>
+              </Link>
+            ))}
           </div>
         )}
 
         {/* Dica rápida */}
-        <div className="mt-6 p-4 rounded-xl flex items-start gap-3"
-          style={{ background: "#fff8ec", border: "1px solid #d4b880" }}>
-          <i className="ti ti-bulb text-lg flex-shrink-0 mt-0.5" style={{ color: "#b07d20" }} />
+        <div className="mt-6 p-4 rounded-xl flex items-start gap-3 bg-brand-50 border border-brand-200">
+          <i className="ti ti-bulb text-lg flex-shrink-0 mt-0.5 text-brand-600" aria-hidden="true" />
           <div>
-            <p className="text-xs font-bold mb-0.5" style={{ color: "#5c4a2a" }}>Dica</p>
-            <p className="text-xs font-medium leading-relaxed" style={{ color: "#7a5c20" }}>
+            <p className="text-xs font-bold mb-0.5 text-brand-800">Dica</p>
+            <p className="text-xs font-medium leading-relaxed text-brand-700">
               Após criar uma pesquisa, adicione campos no construtor de formulários e compartilhe o link com seus respondentes.
             </p>
           </div>

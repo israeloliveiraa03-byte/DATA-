@@ -34,9 +34,9 @@ function FieldInput({
   allFields: FormField[];
 }) {
   const cfg = (field.config ?? {}) as Record<string, unknown>;
-  const BRD = "1px solid #e8d9c0";
+  const BRD = "1px solid #e8d8be";
   const inputCls = "w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 transition-shadow";
-  const inputStyle = { border: BRD, background: "#fff", color: "#1a0f00", boxShadow: "none" };
+  const inputStyle = { border: BRD, background: "#fff", color: "#3d2a0d", boxShadow: "none" };
 
   switch (field.type as string) {
     case "short_text":
@@ -48,8 +48,8 @@ function FieldInput({
           placeholder={cfg.placeholder as string || "Sua resposta..."}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -62,8 +62,8 @@ function FieldInput({
           rows={4}
           className={inputCls + " resize-none"}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -76,8 +76,8 @@ function FieldInput({
           placeholder={cfg.placeholder as string || "0"}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -90,8 +90,8 @@ function FieldInput({
           placeholder="seu@email.com"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -104,8 +104,8 @@ function FieldInput({
           placeholder="(00) 00000-0000"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -117,8 +117,8 @@ function FieldInput({
           onChange={e => onChange(e.target.value)}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -130,8 +130,8 @@ function FieldInput({
           onChange={e => onChange(e.target.value)}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -144,9 +144,9 @@ function FieldInput({
               onClick={() => onChange(opt)}
               className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
               style={{
-                border: value === opt ? "2px solid #b07d20" : BRD,
-                background: value === opt ? "#fff8ec" : "#fff",
-                color: value === opt ? "#7a3d00" : "#5c4a2a",
+                border: value === opt ? "2px solid #c48a42" : BRD,
+                background: value === opt ? "#fbf3e7" : "#fff",
+                color: value === opt ? "#7a5218" : "#5c3f13",
               }}
             >
               {opt}
@@ -167,16 +167,16 @@ function FieldInput({
               onClick={() => onChange(opt.id)}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
               style={{
-                border: value === opt.id ? "2px solid #b07d20" : BRD,
-                background: value === opt.id ? "#fff8ec" : "#fff",
-                color: "#1a0f00",
+                border: value === opt.id ? "2px solid #c48a42" : BRD,
+                background: value === opt.id ? "#fbf3e7" : "#fff",
+                color: "#3d2a0d",
               }}
             >
               <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-                style={{ border: value === opt.id ? "5px solid #b07d20" : "2px solid #c4a35a" }} />
+                style={{ border: value === opt.id ? "5px solid #c48a42" : "2px solid #d2a05c" }} />
               <span className="flex-1">{opt.label}</span>
               {field.type === "weighted" && opt.weight !== undefined && (
-                <span className="text-xs font-bold" style={{ color: "#b07d20" }}>{opt.weight}pts</span>
+                <span className="text-xs font-bold" style={{ color: "#c48a42" }}>{opt.weight}pts</span>
               )}
             </button>
           ))}
@@ -200,13 +200,13 @@ function FieldInput({
                 }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
                 style={{
-                  border: isSelected ? "2px solid #b07d20" : BRD,
-                  background: isSelected ? "#fff8ec" : "#fff",
-                  color: "#1a0f00",
+                  border: isSelected ? "2px solid #c48a42" : BRD,
+                  background: isSelected ? "#fbf3e7" : "#fff",
+                  color: "#3d2a0d",
                 }}
               >
                 <div className="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center"
-                  style={{ border: isSelected ? "none" : "2px solid #c4a35a", background: isSelected ? "#b07d20" : "transparent" }}>
+                  style={{ border: isSelected ? "none" : "2px solid #d2a05c", background: isSelected ? "#c48a42" : "transparent" }}>
                   {isSelected && <i className="ti ti-check text-white text-xs" />}
                 </div>
                 {opt.label}
@@ -230,14 +230,14 @@ function FieldInput({
                 onClick={() => onChange(n)}
                 className="w-11 h-11 rounded-xl text-sm font-bold transition-all"
                 style={{
-                  border: value === n ? "2px solid #b07d20" : BRD,
-                  background: value === n ? "#b07d20" : "#fff",
-                  color: value === n ? "#fff" : "#5c4a2a",
+                  border: value === n ? "2px solid #c48a42" : BRD,
+                  background: value === n ? "#c48a42" : "#fff",
+                  color: value === n ? "#fff" : "#5c3f13",
                 }}
               >{n}</button>
             ))}
           </div>
-          {label && <p className="text-xs mt-2" style={{ color: "#8b7355" }}>{label}</p>}
+          {label && <p className="text-xs mt-2" style={{ color: "#a06d28" }}>{label}</p>}
         </div>
       );
     }
@@ -250,7 +250,7 @@ function FieldInput({
           {Array.from({ length: max }, (_, i) => i + 1).map(n => (
             <button key={n} onClick={() => onChange(n)} className="text-3xl transition-transform hover:scale-110">
               <i className={`ti ti-star${current >= n ? "-filled" : ""}`}
-                style={{ color: current >= n ? "#b07d20" : "#e8d9c0" }} />
+                style={{ color: current >= n ? "#c48a42" : "#e8d8be" }} />
             </button>
           ))}
         </div>
@@ -268,16 +268,16 @@ function FieldInput({
                 onClick={() => onChange(n)}
                 className="w-10 h-10 rounded-lg text-sm font-bold transition-all"
                 style={{
-                  border: current === n ? "2px solid #b07d20" : BRD,
-                  background: current === n ? (n <= 6 ? "#c0392b" : n <= 8 ? "#b07d20" : "#0d9e75") : "#fff",
-                  color: current === n ? "#fff" : "#5c4a2a",
+                  border: current === n ? "2px solid #c48a42" : BRD,
+                  background: current === n ? (n <= 6 ? "#c0392b" : n <= 8 ? "#c48a42" : "#4c6b3c") : "#fff",
+                  color: current === n ? "#fff" : "#5c3f13",
                 }}
               >{n}</button>
             ))}
           </div>
           <div className="flex justify-between mt-2">
             <span className="text-xs font-medium" style={{ color: "#c0392b" }}>Muito improvável</span>
-            <span className="text-xs font-medium" style={{ color: "#0d9e75" }}>Muito provável</span>
+            <span className="text-xs font-medium" style={{ color: "#4c6b3c" }}>Muito provável</span>
           </div>
         </div>
       );
@@ -296,12 +296,12 @@ function FieldInput({
             value={current}
             onChange={e => onChange(Number(e.target.value))}
             className="w-full accent-current"
-            style={{ accentColor: "#b07d20" }}
+            style={{ accentColor: "#c48a42" }}
           />
           <div className="flex justify-between mt-1">
-            <span className="text-xs" style={{ color: "#8b7355" }}>{min}</span>
-            <span className="text-sm font-bold" style={{ color: "#b07d20" }}>{current}</span>
-            <span className="text-xs" style={{ color: "#8b7355" }}>{max}</span>
+            <span className="text-xs" style={{ color: "#a06d28" }}>{min}</span>
+            <span className="text-sm font-bold" style={{ color: "#c48a42" }}>{current}</span>
+            <span className="text-xs" style={{ color: "#a06d28" }}>{max}</span>
           </div>
         </div>
       );
@@ -314,7 +314,7 @@ function FieldInput({
       return (
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: "#5c4a2a", minWidth: "90px" }}>{left}</span>
+            <span className="text-xs font-medium" style={{ color: "#5c3f13", minWidth: "90px" }}>{left}</span>
             <div className="flex-1 flex gap-1">
               {[1, 2, 3, 4, 5].map(n => (
                 <button
@@ -322,14 +322,14 @@ function FieldInput({
                   onClick={() => onChange(n)}
                   className="flex-1 h-11 rounded-lg text-sm font-bold transition-all"
                   style={{
-                    border: current === n ? "2px solid #b07d20" : BRD,
-                    background: current === n ? "#b07d20" : "#fff",
-                    color: current === n ? "#fff" : "#5c4a2a",
+                    border: current === n ? "2px solid #c48a42" : BRD,
+                    background: current === n ? "#c48a42" : "#fff",
+                    color: current === n ? "#fff" : "#5c3f13",
                   }}
                 >{n}</button>
               ))}
             </div>
-            <span className="text-xs font-medium text-right" style={{ color: "#5c4a2a", minWidth: "90px" }}>{right}</span>
+            <span className="text-xs font-medium text-right" style={{ color: "#5c3f13", minWidth: "90px" }}>{right}</span>
           </div>
         </div>
       );
@@ -352,8 +352,8 @@ function FieldInput({
           placeholder="000.000.000-00"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
     }
@@ -363,13 +363,13 @@ function FieldInput({
       return (
         <div className="flex gap-2">
           <div className="flex-1">
-            <p className="text-xs mb-1" style={{ color: "#8b7355" }}>Início</p>
+            <p className="text-xs mb-1" style={{ color: "#a06d28" }}>Início</p>
             <input type="date" value={(range.start as string) ?? ""}
               onChange={e => onChange({ ...range, start: e.target.value })}
               className={inputCls} style={inputStyle} />
           </div>
           <div className="flex-1">
-            <p className="text-xs mb-1" style={{ color: "#8b7355" }}>Fim</p>
+            <p className="text-xs mb-1" style={{ color: "#a06d28" }}>Fim</p>
             <input type="date" value={(range.end as string) ?? ""}
               onChange={e => onChange({ ...range, end: e.target.value })}
               className={inputCls} style={inputStyle} />
@@ -393,14 +393,14 @@ function FieldInput({
         <div className="flex flex-col gap-2">
           {ordered.map((item, i) => (
             <div key={item} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium"
-              style={{ border: BRD, background: "#fff", color: "#1a0f00" }}>
+              style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ background: "#fff8ec", color: "#b07d20", border: "1px solid #e8d9c0" }}>{i + 1}</span>
+                style={{ background: "#fbf3e7", color: "#c48a42", border: "1px solid #e8d8be" }}>{i + 1}</span>
               <span className="flex-1">{item}</span>
-              <button onClick={() => move(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#b07d20" }}>
+              <button onClick={() => move(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#c48a42" }}>
                 <i className="ti ti-chevron-up" />
               </button>
-              <button onClick={() => move(i, 1)} disabled={i === ordered.length - 1} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#b07d20" }}>
+              <button onClick={() => move(i, 1)} disabled={i === ordered.length - 1} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#c48a42" }}>
                 <i className="ti ti-chevron-down" />
               </button>
             </div>
@@ -417,12 +417,12 @@ function FieldInput({
       const remaining = total - used;
       return (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold" style={{ color: remaining < 0 ? "#c0392b" : "#b07d20" }}>
+          <p className="text-xs font-semibold" style={{ color: remaining < 0 ? "#c0392b" : "#c48a42" }}>
             {remaining} de {total} pontos restantes
           </p>
           {options.map(opt => (
             <div key={opt.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ border: BRD, background: "#fff" }}>
-              <span className="flex-1 text-sm font-medium" style={{ color: "#1a0f00" }}>{opt.label}</span>
+              <span className="flex-1 text-sm font-medium" style={{ color: "#3d2a0d" }}>{opt.label}</span>
               <input
                 type="number"
                 min={0}
@@ -446,7 +446,7 @@ function FieldInput({
         <div className="flex flex-col gap-2">
           {items.map(item => (
             <div key={item} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ border: BRD, background: "#fff" }}>
-              <span className="flex-1 text-sm font-medium" style={{ color: "#1a0f00" }}>{item}</span>
+              <span className="flex-1 text-sm font-medium" style={{ color: "#3d2a0d" }}>{item}</span>
               <select
                 value={(assigned[item] as string) ?? ""}
                 onChange={e => onChange({ ...assigned, [item]: e.target.value })}
@@ -472,13 +472,13 @@ function FieldInput({
               onClick={() => onChange(zone)}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
               style={{
-                border: value === zone ? "2px solid #b07d20" : BRD,
-                background: value === zone ? "#fff8ec" : "#fff",
-                color: "#1a0f00",
+                border: value === zone ? "2px solid #c48a42" : BRD,
+                background: value === zone ? "#fbf3e7" : "#fff",
+                color: "#3d2a0d",
               }}
             >
               <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-                style={{ border: value === zone ? "5px solid #b07d20" : "2px solid #c4a35a" }} />
+                style={{ border: value === zone ? "5px solid #c48a42" : "2px solid #d2a05c" }} />
               {zone}
             </button>
           ))}
@@ -498,20 +498,20 @@ function FieldInput({
               <tr>
                 <th className="p-2 text-left"></th>
                 {cols.map(col => (
-                  <th key={col} className="p-2 text-center text-xs font-semibold" style={{ color: "#5c4a2a" }}>{col}</th>
+                  <th key={col} className="p-2 text-center text-xs font-semibold" style={{ color: "#5c3f13" }}>{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map(row => (
                 <tr key={row} style={{ borderTop: BRD }}>
-                  <td className="p-2 pr-3 text-xs font-medium" style={{ color: "#5c4a2a" }}>{row}</td>
+                  <td className="p-2 pr-3 text-xs font-medium" style={{ color: "#5c3f13" }}>{row}</td>
                   {cols.map(col => (
                     <td key={col} className="p-2 text-center">
                       <button
                         onClick={() => onChange({ ...answersByRow, [row]: col })}
                         className="w-4 h-4 rounded-full mx-auto flex items-center justify-center"
-                        style={{ border: answersByRow[row] === col ? "5px solid #b07d20" : "2px solid #c4a35a" }}
+                        style={{ border: answersByRow[row] === col ? "5px solid #c48a42" : "2px solid #d2a05c" }}
                       />
                     </td>
                   ))}
@@ -585,8 +585,8 @@ function FieldInput({
           placeholder="Digite o nome do bairro..."
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
       );
 
@@ -606,13 +606,13 @@ function FieldInput({
               });
             }}
             className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold"
-            style={{ border: "2px solid #b07d20", background: "#fff8ec", color: "#7a3d00" }}
+            style={{ border: "2px solid #c48a42", background: "#fbf3e7", color: "#7a5218" }}
           >
             <i className="ti ti-crosshair" /> Capturar minha localização (GPS)
           </button>
           {value && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
-              style={{ border: BRD, background: "#e1f5ee", color: "#0a6e45" }}>
+              style={{ border: BRD, background: "#eaf0e4", color: "#3a5430" }}>
               <i className="ti ti-check" /> {value as string}
             </div>
           )}
@@ -623,8 +623,8 @@ function FieldInput({
             placeholder="Ou digite: -15.7801, -47.9292"
             className={inputCls}
             style={{ ...inputStyle, fontSize: "12px" }}
-            onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-            onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+            onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+            onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
           />
         </div>
       );
@@ -632,17 +632,17 @@ function FieldInput({
     case "file":
       return (
         <label className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl cursor-pointer transition-colors"
-          style={{ border: "2px dashed #d4b880", background: "#faf6ef" }}>
-          <i className="ti ti-upload text-2xl" style={{ color: "#b07d20" }} />
-          <span className="text-sm font-semibold" style={{ color: "#5c4a2a" }}>Clique para selecionar arquivo</span>
-          <span className="text-xs" style={{ color: "#8b7355" }}>ou arraste e solte aqui</span>
+          style={{ border: "2px dashed #d9bb8c", background: "#fbf3e7" }}>
+          <i className="ti ti-upload text-2xl" style={{ color: "#c48a42" }} />
+          <span className="text-sm font-semibold" style={{ color: "#5c3f13" }}>Clique para selecionar arquivo</span>
+          <span className="text-xs" style={{ color: "#a06d28" }}>ou arraste e solte aqui</span>
           <input type="file" className="hidden" onChange={e => onChange(e.target.files?.[0]?.name ?? null)} />
         </label>
       );
 
     default:
       return (
-        <div className="px-4 py-3 rounded-xl text-sm" style={{ border: BRD, background: "#faf6ef", color: "#8b7355" }}>
+        <div className="px-4 py-3 rounded-xl text-sm" style={{ border: BRD, background: "#fbf3e7", color: "#a06d28" }}>
           Campo em desenvolvimento
         </div>
       );
@@ -698,11 +698,11 @@ function CepField({
           placeholder="00000-000"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
         {loading && (
-          <i className="ti ti-loader-2 animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#b07d20" }} />
+          <i className="ti ti-loader-2 animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#c48a42" }} />
         )}
       </div>
 
@@ -713,11 +713,11 @@ function CepField({
       )}
 
       {resolved && (
-        <div className="mt-2 px-4 py-3 rounded-xl text-xs" style={{ background: "#e1f5ee", border: "1px solid #a0d4b8", color: "#0a6e45" }}>
+        <div className="mt-2 px-4 py-3 rounded-xl text-xs" style={{ background: "#eaf0e4", border: "1px solid #a0d4b8", color: "#3a5430" }}>
           <p className="flex items-center gap-1.5 font-bold mb-1">
             <i className="ti ti-map-pin-check" /> Endereço localizado
           </p>
-          <p style={{ color: "#0a6e45" }}>
+          <p style={{ color: "#3a5430" }}>
             {resolved.logradouro && `${resolved.logradouro}, `}
             {resolved.bairro && `${resolved.bairro} — `}
             {resolved.localidade}/{resolved.uf}
@@ -764,9 +764,9 @@ function IbgeCascadeField({
       <div>
         <input type="text" value={(value as string) ?? ""} onChange={e => onChange(e.target.value)}
           placeholder={`Digite a ${placeholder}...`} className={inputCls} style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"} />
-        <p className="text-xs mt-1.5" style={{ color: "#8b7355" }}>
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"} />
+        <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
           Dica: se houver um campo de estado antes, selecione-o para carregar a lista.
         </p>
       </div>
@@ -775,8 +775,8 @@ function IbgeCascadeField({
 
   if (loading) return (
     <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={inputStyle}>
-      <i className="ti ti-loader-2 animate-spin" style={{ color: "#b07d20" }} />
-      <span style={{ color: "#8b7355" }}>Carregando {placeholder}s de {selectedUF}...</span>
+      <i className="ti ti-loader-2 animate-spin" style={{ color: "#c48a42" }} />
+      <span style={{ color: "#a06d28" }}>Carregando {placeholder}s de {selectedUF}...</span>
     </div>
   );
 
@@ -786,7 +786,7 @@ function IbgeCascadeField({
         <option value="">Selecione a {placeholder}...</option>
         {items.map(i => <option key={i} value={i}>{i}</option>)}
       </select>
-      <p className="text-xs mt-1.5" style={{ color: "#8b7355" }}>
+      <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
         Nome oficial do IBGE para a {placeholder} — em alguns estados coincide com o nome do município-sede.
       </p>
     </div>
@@ -838,15 +838,15 @@ function GeoDistrictField({
       <div>
         <input type="text" value={(value as string) ?? ""} onChange={e => onChange(e.target.value)}
           placeholder="Digite o nome do distrito..." className={inputCls} style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"} />
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"} />
         {!selectedCity && (
-          <p className="text-xs mt-1.5" style={{ color: "#8b7355" }}>
+          <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
             Dica: selecione o estado e o município antes para carregar os distritos.
           </p>
         )}
         {selectedCity && manual && (
-          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "#b07d20" }}>
+          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
             ← Voltar para a lista de distritos
           </button>
         )}
@@ -856,8 +856,8 @@ function GeoDistrictField({
 
   if (loading) return (
     <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={inputStyle}>
-      <i className="ti ti-loader-2 animate-spin" style={{ color: "#b07d20" }} />
-      <span style={{ color: "#8b7355" }}>Carregando distritos de {selectedCity}...</span>
+      <i className="ti ti-loader-2 animate-spin" style={{ color: "#c48a42" }} />
+      <span style={{ color: "#a06d28" }}>Carregando distritos de {selectedCity}...</span>
     </div>
   );
 
@@ -867,7 +867,7 @@ function GeoDistrictField({
         <option value="">Selecione o distrito...</option>
         {districts.map(d => <option key={d} value={d}>{d}</option>)}
       </select>
-      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "#b07d20" }}>
+      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
         Não encontrou? Digite manualmente
       </button>
     </div>
@@ -916,16 +916,16 @@ function GeoCityField({
           placeholder="Digite o nome do município..."
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
         />
         {selectedUF && manual && (
-          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "#b07d20" }}>
+          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
             ← Voltar para a lista de municípios de {selectedUF}
           </button>
         )}
         {!selectedUF && (
-          <p className="text-xs mt-1.5" style={{ color: "#8b7355" }}>
+          <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
             Dica: se houver um campo de estado antes, selecione-o para carregar a lista de municípios.
           </p>
         )}
@@ -937,8 +937,8 @@ function GeoCityField({
     <div>
       {loading ? (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={inputStyle}>
-          <i className="ti ti-loader-2 animate-spin" style={{ color: "#b07d20" }} />
-          <span style={{ color: "#8b7355" }}>Carregando municípios de {selectedUF}...</span>
+          <i className="ti ti-loader-2 animate-spin" style={{ color: "#c48a42" }} />
+          <span style={{ color: "#a06d28" }}>Carregando municípios de {selectedUF}...</span>
         </div>
       ) : (
         <select
@@ -951,7 +951,7 @@ function GeoCityField({
           {cities.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       )}
-      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "#b07d20" }}>
+      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
         Não encontrou? Digite manualmente
       </button>
     </div>
@@ -969,7 +969,7 @@ function SignatureField({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasStroke, setHasStroke] = useState(false);
-  const BRD = "1px solid #e8d9c0";
+  const BRD = "1px solid #e8d8be";
 
   function pos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect();
@@ -998,7 +998,7 @@ function SignatureField({
     const { x, y } = pos(e, canvas);
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
-    ctx.strokeStyle = "#1a0f00";
+    ctx.strokeStyle = "#3d2a0d";
     ctx.lineTo(x, y);
     ctx.stroke();
     setHasStroke(true);
@@ -1050,13 +1050,13 @@ function SignatureField({
         onTouchEnd={finish}
       />
       <div className="flex items-center justify-between mt-2">
-        <p className="text-xs" style={{ color: "#8b7355" }}>
+        <p className="text-xs" style={{ color: "#a06d28" }}>
           {captureMetadata ? "Assine acima — hora e localização serão registradas" : "Assine no espaço acima"}
         </p>
         <button onClick={clear} className="text-xs font-semibold" style={{ color: "#c0392b" }}>Limpar</button>
       </div>
       {signedDataUrl && (
-        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#0a6e45" }}>
+        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#3a5430" }}>
           <i className="ti ti-check" /> Assinatura capturada
         </p>
       )}
@@ -1125,21 +1125,21 @@ export function RespondentClient({
     } finally { setSubmitting(false); }
   }
 
-  const BRD = "1px solid #e8d9c0";
+  const BRD = "1px solid #e8d8be";
   const progress = totalSteps > 0 ? ((step) / totalSteps) * 100 : 0;
 
   // Tela de sucesso
   if (submitted) return (
-    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "#faf6ef" }}>
+    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "#fbf3e7" }}>
       <div className="text-center max-w-sm">
         <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
-          style={{ background: "#e1f5ee", border: "2px solid #a0d4b8" }}>
-          <i className="ti ti-check text-4xl" style={{ color: "#0d9e75" }} />
+          style={{ background: "#eaf0e4", border: "2px solid #a0d4b8" }}>
+          <i className="ti ti-check text-4xl" style={{ color: "#4c6b3c" }} />
         </div>
-        <h1 className="text-2xl font-bold mb-2" style={{ color: "#0a1628", fontFamily: "Georgia, serif" }}>
+        <h1 className="text-2xl font-bold mb-2" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif" }}>
           {isPreview ? "Prévia concluída!" : "Resposta enviada!"}
         </h1>
-        <p className="text-sm mb-6" style={{ color: "#5c4a2a" }}>
+        <p className="text-sm mb-6" style={{ color: "#5c3f13" }}>
           {isPreview
             ? "Esta era uma prévia do formulário. As respostas não foram salvas."
             : "Obrigado pela sua participação. Sua resposta foi registrada com sucesso."}
@@ -1147,19 +1147,19 @@ export function RespondentClient({
 
         <button onClick={() => { setSubmitted(false); setStep(0); setAnswers({}); setErrors({}); }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={{ background: "#b07d20", color: "#fff" }}>
+          style={{ background: "#c48a42", color: "#fff" }}>
           <i className="ti ti-refresh" />
           {isPreview ? "Reiniciar prévia" : "Enviar outra resposta"}
         </button>
 
         {!isPreview && (
-          <p className="mt-4 text-xs" style={{ color: "#8b7355" }}>
+          <p className="mt-4 text-xs" style={{ color: "#a06d28" }}>
             Você pode registrar uma nova resposta sem recarregar a página.
           </p>
         )}
 
-        <div className="mt-6 text-xs" style={{ color: "#b8a080" }}>
-          Powered by <span style={{ color: "#b07d20", fontFamily: "Georgia, serif", fontWeight: 700 }}>Dataº</span>
+        <div className="mt-6 text-xs" style={{ color: "#d9bb8c" }}>
+          Powered by <span style={{ color: "#c48a42", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
         </div>
       </div>
     </div>
@@ -1167,13 +1167,13 @@ export function RespondentClient({
 
   // Formulário vazio
   if (!form || totalSteps === 0) return (
-    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "#faf6ef" }}>
+    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "#fbf3e7" }}>
       <div className="text-center max-w-sm">
-        <i className="ti ti-forms text-4xl block mb-3" style={{ color: "#d4b880" }} />
-        <h1 className="text-xl font-bold mb-2" style={{ color: "#0a1628", fontFamily: "Georgia, serif" }}>
+        <i className="ti ti-forms text-4xl block mb-3" style={{ color: "#d9bb8c" }} />
+        <h1 className="text-xl font-bold mb-2" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif" }}>
           Formulário em construção
         </h1>
-        <p className="text-sm" style={{ color: "#5c4a2a" }}>
+        <p className="text-sm" style={{ color: "#5c3f13" }}>
           Este formulário ainda não tem perguntas adicionadas.
         </p>
       </div>
@@ -1181,12 +1181,12 @@ export function RespondentClient({
   );
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: "#faf6ef" }}>
+    <div className="min-h-dvh flex flex-col" style={{ background: "#fbf3e7" }}>
 
       {/* Banner de prévia */}
       {isPreview && (
         <div className="flex items-center justify-center gap-2 py-2 text-xs font-bold"
-          style={{ background: "#fff8ec", borderBottom: BRD, color: "#7a3d00" }}>
+          style={{ background: "#fbf3e7", borderBottom: BRD, color: "#7a5218" }}>
           <i className="ti ti-eye" /> Modo de prévia — as respostas não serão salvas
         </div>
       )}
@@ -1195,15 +1195,15 @@ export function RespondentClient({
       <header className="px-4 py-3 flex items-center justify-between"
         style={{ background: "#fff", borderBottom: BRD }}>
         <DataLogo className="text-sm" />
-        <div className="text-xs font-medium" style={{ color: "#8b7355" }}>
+        <div className="text-xs font-medium" style={{ color: "#a06d28" }}>
           {step + 1} de {totalSteps}
         </div>
       </header>
 
       {/* Barra de progresso */}
-      <div className="h-1" style={{ background: "#e8d9c0" }}>
+      <div className="h-1" style={{ background: "#e8d8be" }}>
         <div className="h-full transition-all duration-500 rounded-r-full"
-          style={{ width: `${progress}%`, background: "#b07d20" }} />
+          style={{ width: `${progress}%`, background: "#c48a42" }} />
       </div>
 
       {/* Conteúdo */}
@@ -1213,31 +1213,31 @@ export function RespondentClient({
           {/* Capa e título (só no primeiro campo) */}
           {step === 0 && (
             <div className="mb-8 text-center">
-              <h1 className="text-2xl font-bold mb-2" style={{ color: "#0a1628", fontFamily: "Georgia, serif", letterSpacing: "-0.4px" }}>
+              <h1 className="text-2xl font-bold mb-2" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif", letterSpacing: "-0.4px" }}>
                 {research.title}
               </h1>
               {research.description && (
-                <p className="text-sm" style={{ color: "#5c4a2a" }}>{research.description}</p>
+                <p className="text-sm" style={{ color: "#5c3f13" }}>{research.description}</p>
               )}
             </div>
           )}
 
           {/* Campo atual */}
           {currentField && (
-            <div className="rounded-2xl p-6" style={{ background: "#fff", border: BRD, boxShadow: "0 2px 12px rgba(176,125,32,0.06)" }}>
+            <div className="rounded-2xl p-6" style={{ background: "#fff", border: BRD, boxShadow: "0 2px 12px rgba(196,138,66,0.06)" }}>
               {/* Número da pergunta */}
               <div className="flex items-start gap-3 mb-4">
                 <span className="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0"
-                  style={{ background: "#fff8ec", color: "#b07d20", border: BRD }}>
+                  style={{ background: "#fbf3e7", color: "#c48a42", border: BRD }}>
                   P{step + 1}
                 </span>
                 <div className="flex-1">
-                  <p className="text-base font-bold leading-snug" style={{ color: "#0a1628" }}>
+                  <p className="text-base font-bold leading-snug" style={{ color: "#0f172a" }}>
                     {currentField.label}
                     {currentField.required && <span className="text-red-500 ml-1">*</span>}
                   </p>
                   {currentField.description && (
-                    <p className="text-xs mt-1" style={{ color: "#8b7355" }}>{currentField.description}</p>
+                    <p className="text-xs mt-1" style={{ color: "#a06d28" }}>{currentField.description}</p>
                   )}
                 </div>
               </div>
@@ -1264,13 +1264,13 @@ export function RespondentClient({
           <div className="flex items-center justify-between mt-5">
             <button onClick={prev} disabled={step === 0}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-30"
-              style={{ border: BRD, background: "#fff", color: "#5c4a2a" }}>
+              style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
               <i className="ti ti-arrow-left" /> Anterior
             </button>
 
             <button onClick={next} disabled={submitting}
               className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-              style={{ background: "#b07d20", color: "#fff" }}>
+              style={{ background: "#c48a42", color: "#fff" }}>
               {submitting ? (
                 <><i className="ti ti-loader-2 animate-spin" /> Enviando...</>
               ) : step === totalSteps - 1 ? (
@@ -1282,8 +1282,8 @@ export function RespondentClient({
           </div>
 
           {/* Rodapé */}
-          <p className="text-center text-xs mt-6" style={{ color: "#b8a080" }}>
-            Powered by <span style={{ color: "#b07d20", fontFamily: "Georgia, serif", fontWeight: 700 }}>Dataº</span>
+          <p className="text-center text-xs mt-6" style={{ color: "#d9bb8c" }}>
+            Powered by <span style={{ color: "#c48a42", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
             {research.allowAnonymous && " · Respostas anônimas"}
           </p>
         </div>
