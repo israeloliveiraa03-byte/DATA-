@@ -1,6 +1,7 @@
 import { signIn } from "@/lib/auth";
 import type { Metadata } from "next";
 import { DataLogo } from "@/components/layout/data-logo";
+import { BRAZIL_MAP_PATH } from "@/components/layout/brazil-map-outline";
 
 export const metadata: Metadata = { title: "Entrar — Dataº" };
 
@@ -11,7 +12,7 @@ export default function LoginPage() {
       {/* ── Lado esquerdo ── */}
       <div className="hidden lg:flex flex-col justify-between flex-1 p-10 relative overflow-hidden bg-slate-900">
 
-        {/* Rede de dados de fundo */}
+        {/* Malha do território + rede de conhecimento irradiando do logo */}
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <defs>
             <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
@@ -20,43 +21,49 @@ export default function LoginPage() {
           </defs>
           <rect width="600" height="800" fill="url(#grid)"/>
 
-          {/* Ponto A — azul */}
-          <circle cx="160" cy="260" r="30" fill="#4785f7" opacity="0.1">
-            <animate attributeName="r" values="18;34;18" dur="2.8s" repeatCount="indefinite"/>
+          {/* Contorno oficial do Brasil (malha IBGE) — ver src/components/layout/brazil-map-outline.tsx */}
+          <g transform="translate(120,200) scale(0.82)" opacity="0.4">
+            <path d={BRAZIL_MAP_PATH} fill="#1a56db" fillOpacity="0.05" stroke="#4785f7" strokeWidth="1.2" strokeLinejoin="round"/>
+          </g>
+
+          {/* Conectivos do núcleo Dataº (º do logo) até nós sobre o território */}
+          <line x1="70" y1="50" x2="330.5" y2="525.6" stroke="#4785f7" strokeWidth="1" strokeDasharray="6 4" opacity="0.3"/>
+          <line x1="70" y1="50" x2="232.3" y2="249.0" stroke="#0d9e75" strokeWidth="1" strokeDasharray="6 4" opacity="0.3"/>
+          <line x1="70" y1="50" x2="473.1" y2="432.6" stroke="#ba7517" strokeWidth="1" strokeDasharray="6 4" opacity="0.3"/>
+          <line x1="70" y1="50" x2="180.3" y2="289.5" stroke="#534ab7" strokeWidth="1" strokeDasharray="6 4" opacity="0.3"/>
+          <line x1="70" y1="50" x2="296.8" y2="490.3" stroke="#0d9e75" strokeWidth="0.8" strokeDasharray="6 4" opacity="0.22"/>
+
+          {/* Nós pulsando sobre o território */}
+          <circle cx="330.5" cy="525.6" r="26" fill="#4785f7" opacity="0.1">
+            <animate attributeName="r" values="16;30;16" dur="2.8s" repeatCount="indefinite"/>
             <animate attributeName="opacity" values="0.1;0.02;0.1" dur="2.8s" repeatCount="indefinite"/>
           </circle>
-          <circle cx="160" cy="260" r="9" fill="#4785f7" opacity="0.9"/>
-          <circle cx="160" cy="260" r="4" fill="#fff"/>
+          <circle cx="330.5" cy="525.6" r="7" fill="#4785f7" opacity="0.9"/>
+          <circle cx="330.5" cy="525.6" r="3" fill="#fff"/>
 
-          {/* Ponto B — teal */}
-          <circle cx="340" cy="200" r="30" fill="#0d9e75" opacity="0.12">
-            <animate attributeName="r" values="18;34;18" dur="3.2s" repeatCount="indefinite"/>
+          <circle cx="232.3" cy="249.0" r="26" fill="#0d9e75" opacity="0.12">
+            <animate attributeName="r" values="16;30;16" dur="3.2s" repeatCount="indefinite"/>
             <animate attributeName="opacity" values="0.12;0.03;0.12" dur="3.2s" repeatCount="indefinite"/>
           </circle>
-          <circle cx="340" cy="200" r="9" fill="#0d9e75" opacity="0.9"/>
-          <circle cx="340" cy="200" r="4" fill="#fff"/>
+          <circle cx="232.3" cy="249.0" r="7" fill="#0d9e75" opacity="0.9"/>
+          <circle cx="232.3" cy="249.0" r="3" fill="#fff"/>
 
-          {/* Ponto C — roxo */}
-          <circle cx="490" cy="300" r="30" fill="#534ab7" opacity="0.1">
-            <animate attributeName="r" values="18;34;18" dur="3.6s" repeatCount="indefinite"/>
+          <circle cx="473.1" cy="432.6" r="26" fill="#ba7517" opacity="0.1">
+            <animate attributeName="r" values="16;30;16" dur="3.6s" repeatCount="indefinite"/>
             <animate attributeName="opacity" values="0.1;0.02;0.1" dur="3.6s" repeatCount="indefinite"/>
           </circle>
-          <circle cx="490" cy="300" r="9" fill="#534ab7" opacity="0.9"/>
-          <circle cx="490" cy="300" r="4" fill="#fff"/>
+          <circle cx="473.1" cy="432.6" r="7" fill="#ba7517" opacity="0.9"/>
+          <circle cx="473.1" cy="432.6" r="3" fill="#fff"/>
 
-          {/* Pontos menores */}
-          <circle cx="260" cy="400" r="6" fill="#4785f7" opacity="0.55"/><circle cx="260" cy="400" r="2.5" fill="#fff"/>
-          <circle cx="90"  cy="460" r="6" fill="#0d9e75" opacity="0.55"/><circle cx="90"  cy="460" r="2.5" fill="#fff"/>
-          <circle cx="530" cy="430" r="6" fill="#534ab7" opacity="0.55"/><circle cx="530" cy="430" r="2.5" fill="#fff"/>
-          <circle cx="400" cy="480" r="5" fill="#4785f7" opacity="0.4"/> <circle cx="400" cy="480" r="2"   fill="#fff"/>
-          <circle cx="200" cy="520" r="5" fill="#0d9e75" opacity="0.4"/> <circle cx="200" cy="520" r="2"   fill="#fff"/>
+          <circle cx="180.3" cy="289.5" r="20" fill="#534ab7" opacity="0.1">
+            <animate attributeName="r" values="12;22;12" dur="3.1s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.1;0.02;0.1" dur="3.1s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="180.3" cy="289.5" r="5.5" fill="#534ab7" opacity="0.85"/>
+          <circle cx="180.3" cy="289.5" r="2.5" fill="#fff"/>
 
-          {/* Linhas conectoras */}
-          <line x1="160" y1="260" x2="340" y2="200" stroke="#4785f7" strokeWidth="1.2" strokeDasharray="6 4" opacity="0.35"/>
-          <line x1="340" y1="200" x2="490" y2="300" stroke="#534ab7" strokeWidth="1.2" strokeDasharray="6 4" opacity="0.35"/>
-          <line x1="160" y1="260" x2="260" y2="400" stroke="#0d9e75" strokeWidth="1"   strokeDasharray="6 4" opacity="0.3"/>
-          <line x1="490" y1="300" x2="530" y2="430" stroke="#0d9e75" strokeWidth="0.9" strokeDasharray="6 4" opacity="0.25"/>
-          <line x1="260" y1="400" x2="400" y2="480" stroke="#4785f7" strokeWidth="0.8" strokeDasharray="6 4" opacity="0.25"/>
+          <circle cx="296.8" cy="490.3" r="5" fill="#0d9e75" opacity="0.4"/>
+          <circle cx="296.8" cy="490.3" r="2" fill="#fff"/>
         </svg>
 
         {/* Conteúdo */}
@@ -126,7 +133,7 @@ export default function LoginPage() {
 
           {/* Google */}
           <form action={async () => { "use server"; await signIn("google", { redirectTo: "/dashboard" }); }}>
-            <button type="submit" className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-md text-sm font-semibold transition-colors border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:border-slate-300">
+            <button type="submit" className="btn-elevate w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:border-brand-200">
               <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -146,7 +153,7 @@ export default function LoginPage() {
 
           {/* ORCID */}
           <form action={async () => { "use server"; await signIn("orcid", { redirectTo: "/dashboard" }); }}>
-            <button type="submit" className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-md text-sm font-semibold transition-colors border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:border-slate-300">
+            <button type="submit" className="btn-elevate w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:border-brand-200">
               <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 text-xs font-black"
                 style={{ background: "#1b4001", color: "#A6CE39" }}>
                 ID
