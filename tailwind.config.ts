@@ -9,26 +9,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primária — tom sério e institucional (chrome, ações, links, foco)
+        // Primária — argila/terracota, tom institucional inspirado na malha do IBGE
+        // (chrome, ações, links, foco). Ver "Identidade visual" no CLAUDE.md.
         brand: {
-          50:  "#e8f0fe",
-          100: "#d1e0fd",
-          200: "#a3c2fb",
-          300: "#75a3f9",
-          400: "#4785f7",
-          500: "#1a56db",
-          600: "#1041b2",
-          700: "#0c318a",
-          800: "#082161",
-          900: "#041039",
+          50:  "#fbf3e7",
+          100: "#f3e4cb",
+          200: "#e8d8be",
+          300: "#d9bb8c",
+          400: "#d2a05c",
+          500: "#c48a42",
+          600: "#a06d28",
+          700: "#7a5218",
+          800: "#5c3f13",
+          900: "#3d2a0d",
         },
         // Acentos de dados — reservados a gráficos, indicadores e badges de status
         teal: {
-          50:  "#e1f5ee",
-          100: "#c3ebdd",
-          500: "#0d9e75",
-          600: "#0a7a5a",
-          700: "#075e45",
+          50:  "#eaf0e4",
+          100: "#d3e1c4",
+          500: "#4c6b3c",
+          600: "#3a5430",
+          700: "#2c4025",
         },
         amber: {
           50:  "#faeeda",
@@ -56,7 +57,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
+        serif: ["var(--font-serif)", "Fraunces", "Georgia", "serif"],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       borderRadius: {
@@ -79,10 +81,10 @@ const config: Config = {
         sm:   "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
         md:   "0 4px 12px rgba(15, 23, 42, 0.08)",
         lg:   "0 12px 32px rgba(15, 23, 42, 0.10)",
-        glow: "0 0 0 1px rgba(26, 86, 219, 0.08), 0 8px 24px rgba(26, 86, 219, 0.12)",
+        glow: "0 0 0 1px rgba(196, 138, 66, 0.10), 0 8px 24px rgba(196, 138, 66, 0.14)",
       },
       backgroundImage: {
-        "brand-glow": "radial-gradient(circle at 30% 20%, rgba(26, 86, 219, 0.14), transparent 55%)",
+        "brand-glow": "radial-gradient(circle at 30% 20%, rgba(196, 138, 66, 0.16), transparent 55%)",
       },
       keyframes: {
         "fade-in":    { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },

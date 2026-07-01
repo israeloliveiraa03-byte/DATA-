@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --brand-500: #1a56db;
-  --brand-600: #1041b2;
-  --brand-50:  #e8f0fe;
-  --teal-500:  #0d9e75;
-  --teal-50:   #e1f5ee;
+  --brand-500: #c48a42;
+  --brand-600: #a06d28;
+  --brand-50:  #fbf3e7;
+  --teal-500:  #4c6b3c;
+  --teal-50:   #eaf0e4;
   --bg-app:    #f8fafc;
   --border:    #e2e8f0;
   --border-md: #cbd5e1;
@@ -44,10 +44,23 @@ body { min-height: 100dvh; line-height: 1.5; }
 }
 .btn-elevate:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(22, 23, 26, 0.10), 0 14px 32px rgba(43, 84, 184, 0.14);
+  box-shadow: 0 6px 14px rgba(22, 23, 26, 0.10), 0 14px 32px rgba(196, 138, 66, 0.16);
 }
 .btn-elevate:active {
   transform: translateY(0);
+}
+
+/* Relevo 3D do wordmark "Dataº" em destaques grandes (hero, login) — ver
+   DataLogo `depth` e seção "Identidade visual" do CLAUDE.md. Camadas em tons
+   de argila simulam extrusão e funcionam tanto sobre fundo claro quanto escuro. */
+.logo-depth {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 0 #a06d28,
+    0 3px 0 #8a5d20,
+    0 4px 0 #74501c,
+    0 6px 8px rgba(28, 27, 24, 0.35),
+    0 12px 20px rgba(28, 27, 24, 0.22);
 }
 
 @media (prefers-reduced-motion: reduce) {

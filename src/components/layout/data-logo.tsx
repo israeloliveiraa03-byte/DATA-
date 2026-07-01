@@ -4,13 +4,21 @@ interface DataLogoProps {
   className?: string;
   markClassName?: string;
   animated?: boolean;
+  /** Relevo 3D no wordmark (Fraunces + text-shadow em camadas) — usar em destaques grandes (hero, login), não no chrome pequeno (sidebar/topbar). */
+  depth?: boolean;
 }
 
 // ─── Marca "Dataº" — o "º" vira um pequeno nó de rede, com conexões
 // pulsando pra fora, representando dados conectados. ─────────────────────────
-export function DataLogo({ className, markClassName, animated = true }: DataLogoProps) {
+export function DataLogo({ className, markClassName, animated = true, depth = false }: DataLogoProps) {
   return (
-    <span className={cn("inline-flex items-baseline font-bold tracking-tight text-slate-900", className)}>
+    <span
+      className={cn(
+        "inline-flex items-baseline font-bold tracking-tight text-slate-900",
+        depth && "font-serif font-semibold logo-depth",
+        className,
+      )}
+    >
       Data
       <svg
         viewBox="0 0 34 34"
