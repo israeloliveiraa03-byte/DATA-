@@ -8,6 +8,15 @@ type AnswerValue = string | string[] | number | boolean | Record<string, unknown
 type Answers = Record<string, AnswerValue>;
 type Opt = { id: string; label: string; weight?: number };
 
+const UFS_BY_REGIAO: Record<string, string[]> = {
+  "Norte":         ["AC","AP","AM","PA","RO","RR","TO"],
+  "Nordeste":      ["AL","BA","CE","MA","PB","PE","PI","RN","SE"],
+  "Centro-Oeste":  ["DF","GO","MT","MS"],
+  "Sudeste":       ["ES","MG","RJ","SP"],
+  "Sul":           ["PR","RS","SC"],
+};
+const ALL_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 // ─── Componentes de campo ─────────────────────────────────────────────────────
 
 function FieldInput({
@@ -523,7 +532,10 @@ function FieldInput({
         />
       );
 
-    case "geo_state":
+    case "geo_state": {
+      const regionField = allFields.find(f => (f.type as string) === "geo_region");
+      const selectedRegion = regionField ? (allAnswers[regionField.id] as string) : "";
+      const ufs = selectedRegion ? (UFS_BY_REGIAO[selectedRegion] ?? ALL_UFS) : ALL_UFS;
       return (
         <select
           value={(value as string) ?? ""}
@@ -532,11 +544,12 @@ function FieldInput({
           style={inputStyle}
         >
           <option value="">Selecione o estado...</option>
-          {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf => (
+          {ufs.map(uf => (
             <option key={uf} value={uf}>{uf}</option>
           ))}
         </select>
       );
+    }
 
     case "geo_region":
       return (
@@ -767,10 +780,15 @@ function IbgeCascadeField({
   );
 
   return (
-    <select value={(value as string) ?? ""} onChange={e => onChange(e.target.value)} className={inputCls} style={inputStyle}>
-      <option value="">Selecione a {placeholder}...</option>
-      {items.map(i => <option key={i} value={i}>{i}</option>)}
-    </select>
+    <div>
+      <select value={(value as string) ?? ""} onChange={e => onChange(e.target.value)} className={inputCls} style={inputStyle}>
+        <option value="">Selecione a {placeholder}...</option>
+        {items.map(i => <option key={i} value={i}>{i}</option>)}
+      </select>
+      <p className="text-xs mt-1.5" style={{ color: "#8b7355" }}>
+        Nome oficial do IBGE para a {placeholder} — em alguns estados coincide com o nome do município-sede.
+      </p>
+    </div>
   );
 }
 
