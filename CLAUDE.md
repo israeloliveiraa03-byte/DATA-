@@ -104,10 +104,40 @@ Direção: sério e moderno, inspirado em produtos institucionais (Ripple — in
 - **Tokens**: `tailwind.config.ts` — cores `brand` (primária), `teal/amber/coral/purple` (acentos de dado), `chart-1..6` (séries de gráfico), sombras e animações customizadas.
 - **Logo**: `src/components/layout/data-logo.tsx` — o "º" de "Dataº" é um SVG com pequenos nós pulsando conectados por linhas, representando dados conectados. Usar `<DataLogo />` em vez de escrever "Data<span>º</span>" à mão.
 - **Componentes-base**: `src/components/ui/` (`button.tsx`, `badge.tsx`, `card.tsx`, `input.tsx`) — usar esses em vez de estilo inline em páginas novas.
+- **Botões e sombreamento**:
+  - Botões primários e cards de ação (ex.: login social, CTAs) usam sombra em camadas: repouso equivalente a `shadow-sm` (`0 2px 6px rgba(22,23,26,0.06), 0 6px 16px rgba(22,23,26,0.05)`); no hover, elevar com `-translate-y-0.5` e sombra maior (`0 6px 14px rgba(22,23,26,0.10), 0 14px 32px rgba(43,84,184,0.14)` — usa o azul brand em baixa opacidade). No `:active`, voltar a `translate-y-0`.
+  - Transição suave em todo botão/card interativo: `transition-all` com curva `cubic-bezier(0.2,0.8,0.2,1)`, ~250ms.
+  - Cards de conteúdo (features, métricas) têm sombra sutil em repouso (`shadow-xs`) e ganham `shadow-md` + leve elevação no hover; borda muda para a cor de acento apenas no hover.
+  - Cantos moderadamente arredondados (`rounded-xl`/`rounded-2xl`), nunca pill em botões de ação.
+  - Respeitar sempre `prefers-reduced-motion` (elevação/animação desativadas — já tratado em `globals.css`).
 - **Central de design**: `/design-system` (link na sidebar, grupo "Produto") — referência viva de cores, tipografia, botões, badges, cards e movimento. Ajustar tokens ali reflete no resto do produto.
 - **Reskin ainda pendente** (fora do escopo da leva de 2026-06-30, feito só no chrome global + login): páginas de conteúdo já existentes — dashboard, lista de pesquisas, form-builder, perfil, respondente (exceto header), territorio, landing page — ainda usam estilo inline com a paleta antiga. Migrar aos poucos, sem quebrar o que funciona.
 
-## Repositório
+## Mapa do Brasil (elemento visual)
+
+O contorno do Brasil usado como elemento visual (login e telas territoriais) deve vir da malha **oficial do IBGE**, nunca desenhado à mão.
+
+- **Fonte oficial**: API de malhas do IBGE — `https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo+json&qualidade=intermediaria`. A mesma API já usada nos campos geográficos (mesorregião/microrregião/município) pode fornecer malhas por UF, região, etc.
+- **Como gerar (estático, para login/landing)**: script Node que baixa o GeoJSON, projeta lon/lat para SVG (Y invertido — latitude cresce para cima), simplifica ~1 a cada 5 pontos e descarta anéis com menos de ~40 pontos (remove ilhotas/ruído). Salvar o resultado como asset/componente SVG estático. **Não** buscar da rede em runtime na tela de login — o mapa ali é decorativo e deve carregar instantâneo.
+- **Mapas interativos dentro da plataforma** (dashboards, territórios, resultados): usar a malha do IBGE ao vivo com MapLibre/Leaflet — isso é pós-MVP, alinhado ao stack futuro (PostGIS + MapLibre).
+- **Conexão com o logo**: do `º` do `<DataLogo />` partem conectivos (linhas azuis, cor brand) até nós posicionados sobre o mapa — a narrativa é o núcleo Dataº irradiando conhecimento para o território. Os nós podem ter pulso sutil; respeitar `prefers-reduced-motion`.
+- **Nunca** aproximar o contorno do Brasil manualmente em SVG — fica geograficamente impreciso. Sempre partir da malha oficial.
+
+## Linguagem interna do projeto (terminologia)
+
+Manter consistência de vocabulário em toda a interface, textos e código. O registro é **técnico-institucional**, não comercial/casual.
+
+- **Infraestrutura de conhecimento**, não "ferramenta de formulários" nem "app de survey".
+- **Instrumento** (ou "instrumento de coleta") para o formulário de pesquisa; **respondente** para quem preenche; **coleta** para o ato de responder em campo.
+- **Entidade** para os objetos de conhecimento (município, comunidade, escola, território) — com **identificador persistente** (ex.: COM-000245). Entidades são **vivas/versionadas**.
+- **Pesquisa** = projeto independente (equipe, metodologia, permissões próprias). Nunca confundir Pesquisa, Entidade e Conhecimento — são camadas separadas.
+- **Georreferenciamento** e **malha territorial** (termos do IBGE); citar **SIRGAS 2000** e **setor censitário** quando couber, pois são a linguagem oficial.
+- **Comunidades tradicionais** como **agentes/coautores produtores de dados**, nunca "sujeitos de pesquisa" nem "objetos de estudo".
+- **Dataº Território** = nome próprio do programa social (acesso gratuito para comunidades tradicionais).
+- Conformidade sempre referida como **LGPD** / **Lei nº 13.709/2018**.
+- Evitar jargão de marketing ("solução completa", "revolucionário"); preferir descrição funcional e precisa.
+
+
 
 - GitHub: usuário `israeloliveiraa03-byte`, repositório `DATA-`
 - Rota de debug: `/api/debug-form/[id]` para queries diretas de campos no banco
