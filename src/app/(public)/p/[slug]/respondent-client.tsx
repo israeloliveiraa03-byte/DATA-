@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { Research, Form, FormField } from "@/lib/types";
 
 // ─── Tipos de resposta ────────────────────────────────────────────────────────
-type AnswerValue = string | string[] | number | boolean | null;
+type AnswerValue = string | string[] | number | boolean | Record<string, unknown> | Record<string, unknown>[] | null;
 type Answers = Record<string, AnswerValue>;
+type Opt = { id: string; label: string; weight?: number };
 
 // ─── Componentes de campo ─────────────────────────────────────────────────────
 
@@ -144,24 +145,29 @@ function FieldInput({
         </div>
       );
 
-    case "single_choice": {
-      const options = (cfg.options as Array<{ value: string; label: string }>) ?? [];
+    case "single_choice":
+    case "weighted":
+    case "consent": {
+      const options = (cfg.options as Opt[]) ?? [];
       return (
         <div className="flex flex-col gap-2">
           {options.map(opt => (
             <button
-              key={opt.value}
-              onClick={() => onChange(opt.value)}
+              key={opt.id}
+              onClick={() => onChange(opt.id)}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
               style={{
-                border: value === opt.value ? "2px solid #b07d20" : BRD,
-                background: value === opt.value ? "#fff8ec" : "#fff",
+                border: value === opt.id ? "2px solid #b07d20" : BRD,
+                background: value === opt.id ? "#fff8ec" : "#fff",
                 color: "#1a0f00",
               }}
             >
               <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-                style={{ border: value === opt.value ? "5px solid #b07d20" : "2px solid #c4a35a" }} />
-              {opt.label}
+                style={{ border: value === opt.id ? "5px solid #b07d20" : "2px solid #c4a35a" }} />
+              <span className="flex-1">{opt.label}</span>
+              {field.type === "weighted" && opt.weight !== undefined && (
+                <span className="text-xs font-bold" style={{ color: "#b07d20" }}>{opt.weight}pts</span>
+              )}
             </button>
           ))}
         </div>
@@ -169,18 +175,18 @@ function FieldInput({
     }
 
     case "multiple_choice": {
-      const options = (cfg.options as Array<{ value: string; label: string }>) ?? [];
+      const options = (cfg.options as Opt[]) ?? [];
       const selected = (value as string[]) ?? [];
       return (
         <div className="flex flex-col gap-2">
           {options.map(opt => {
-            const isSelected = selected.includes(opt.value);
+            const isSelected = selected.includes(opt.id);
             return (
               <button
-                key={opt.value}
+                key={opt.id}
                 onClick={() => {
-                  if (isSelected) onChange(selected.filter(v => v !== opt.value));
-                  else onChange([...selected, opt.value]);
+                  if (isSelected) onChange(selected.filter(v => v !== opt.id));
+                  else onChange([...selected, opt.id]);
                 }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
                 style={{
@@ -266,6 +272,256 @@ function FieldInput({
         </div>
       );
     }
+
+    case "slider": {
+      const min = (cfg.min as number) ?? 1;
+      const max = (cfg.max as number) ?? 5;
+      const current = (value as number) ?? min;
+      return (
+        <div className="px-1">
+          <input
+            type="range"
+            min={min}
+            max={max}
+            value={current}
+            onChange={e => onChange(Number(e.target.value))}
+            className="w-full accent-current"
+            style={{ accentColor: "#b07d20" }}
+          />
+          <div className="flex justify-between mt-1">
+            <span className="text-xs" style={{ color: "#8b7355" }}>{min}</span>
+            <span className="text-sm font-bold" style={{ color: "#b07d20" }}>{current}</span>
+            <span className="text-xs" style={{ color: "#8b7355" }}>{max}</span>
+          </div>
+        </div>
+      );
+    }
+
+    case "semantic_scale": {
+      const left  = (cfg.semanticLeft as string)  || "Discordo totalmente";
+      const right = (cfg.semanticRight as string) || "Concordo totalmente";
+      const current = value as number;
+      return (
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium" style={{ color: "#5c4a2a", minWidth: "90px" }}>{left}</span>
+            <div className="flex-1 flex gap-1">
+              {[1, 2, 3, 4, 5].map(n => (
+                <button
+                  key={n}
+                  onClick={() => onChange(n)}
+                  className="flex-1 h-11 rounded-lg text-sm font-bold transition-all"
+                  style={{
+                    border: current === n ? "2px solid #b07d20" : BRD,
+                    background: current === n ? "#b07d20" : "#fff",
+                    color: current === n ? "#fff" : "#5c4a2a",
+                  }}
+                >{n}</button>
+              ))}
+            </div>
+            <span className="text-xs font-medium text-right" style={{ color: "#5c4a2a", minWidth: "90px" }}>{right}</span>
+          </div>
+        </div>
+      );
+    }
+
+    case "cpf_cnpj": {
+      function formatCpfCnpj(raw: string) {
+        const d = raw.replace(/\D/g, "").slice(0, 14);
+        if (d.length <= 11) {
+          return d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        }
+        return d.replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1/$2").replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+      }
+      return (
+        <input
+          type="text"
+          inputMode="numeric"
+          value={(value as string) ?? ""}
+          onChange={e => onChange(formatCpfCnpj(e.target.value))}
+          placeholder="000.000.000-00"
+          className={inputCls}
+          style={inputStyle}
+          onFocus={e => e.currentTarget.style.borderColor = "#b07d20"}
+          onBlur={e => e.currentTarget.style.borderColor = "#e8d9c0"}
+        />
+      );
+    }
+
+    case "date_range": {
+      const range = (value as Record<string, unknown>) ?? {};
+      return (
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <p className="text-xs mb-1" style={{ color: "#8b7355" }}>Início</p>
+            <input type="date" value={(range.start as string) ?? ""}
+              onChange={e => onChange({ ...range, start: e.target.value })}
+              className={inputCls} style={inputStyle} />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs mb-1" style={{ color: "#8b7355" }}>Fim</p>
+            <input type="date" value={(range.end as string) ?? ""}
+              onChange={e => onChange({ ...range, end: e.target.value })}
+              className={inputCls} style={inputStyle} />
+          </div>
+        </div>
+      );
+    }
+
+    case "ranking": {
+      const items = (cfg.rankingItems as string[]) ?? [];
+      const order = ((value as string[]) ?? items).filter(i => items.includes(i));
+      const ordered = [...order, ...items.filter(i => !order.includes(i))];
+      function move(i: number, dir: -1 | 1) {
+        const next = [...ordered];
+        const j = i + dir;
+        if (j < 0 || j >= next.length) return;
+        [next[i], next[j]] = [next[j], next[i]];
+        onChange(next);
+      }
+      return (
+        <div className="flex flex-col gap-2">
+          {ordered.map((item, i) => (
+            <div key={item} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium"
+              style={{ border: BRD, background: "#fff", color: "#1a0f00" }}>
+              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                style={{ background: "#fff8ec", color: "#b07d20", border: "1px solid #e8d9c0" }}>{i + 1}</span>
+              <span className="flex-1">{item}</span>
+              <button onClick={() => move(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#b07d20" }}>
+                <i className="ti ti-chevron-up" />
+              </button>
+              <button onClick={() => move(i, 1)} disabled={i === ordered.length - 1} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#b07d20" }}>
+                <i className="ti ti-chevron-down" />
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case "points_distribution": {
+      const options = (cfg.options as Opt[]) ?? [];
+      const total = (cfg.totalPoints as number) ?? 100;
+      const dist = (value as Record<string, unknown>) ?? {};
+      const used = options.reduce((sum, o) => sum + (Number(dist[o.id]) || 0), 0);
+      const remaining = total - used;
+      return (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold" style={{ color: remaining < 0 ? "#c0392b" : "#b07d20" }}>
+            {remaining} de {total} pontos restantes
+          </p>
+          {options.map(opt => (
+            <div key={opt.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ border: BRD, background: "#fff" }}>
+              <span className="flex-1 text-sm font-medium" style={{ color: "#1a0f00" }}>{opt.label}</span>
+              <input
+                type="number"
+                min={0}
+                max={total}
+                value={Number(dist[opt.id]) || 0}
+                onChange={e => onChange({ ...dist, [opt.id]: Math.max(0, Number(e.target.value)) })}
+                className="w-16 px-2 py-1 rounded-lg text-sm text-center border"
+                style={inputStyle}
+              />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case "card_sorting": {
+      const categories = (cfg.cardCategories as string[]) ?? [];
+      const items = (cfg.cardItems as string[]) ?? [];
+      const assigned = (value as Record<string, unknown>) ?? {};
+      return (
+        <div className="flex flex-col gap-2">
+          {items.map(item => (
+            <div key={item} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ border: BRD, background: "#fff" }}>
+              <span className="flex-1 text-sm font-medium" style={{ color: "#1a0f00" }}>{item}</span>
+              <select
+                value={(assigned[item] as string) ?? ""}
+                onChange={e => onChange({ ...assigned, [item]: e.target.value })}
+                className="px-2 py-1.5 rounded-lg text-sm border"
+                style={inputStyle}
+              >
+                <option value="">Categorizar...</option>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case "geo_zone": {
+      const zones = (cfg.zoneOptions as string[]) ?? [];
+      return (
+        <div className="flex flex-col gap-2">
+          {zones.map(zone => (
+            <button
+              key={zone}
+              onClick={() => onChange(zone)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
+              style={{
+                border: value === zone ? "2px solid #b07d20" : BRD,
+                background: value === zone ? "#fff8ec" : "#fff",
+                color: "#1a0f00",
+              }}
+            >
+              <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
+                style={{ border: value === zone ? "5px solid #b07d20" : "2px solid #c4a35a" }} />
+              {zone}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    case "matrix":
+    case "observation": {
+      const rows = (cfg.matrixRows as string[]) ?? [];
+      const cols = (cfg.matrixCols as string[]) ?? [];
+      const answersByRow = (value as Record<string, unknown>) ?? {};
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                <th className="p-2 text-left"></th>
+                {cols.map(col => (
+                  <th key={col} className="p-2 text-center text-xs font-semibold" style={{ color: "#5c4a2a" }}>{col}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row} style={{ borderTop: BRD }}>
+                  <td className="p-2 pr-3 text-xs font-medium" style={{ color: "#5c4a2a" }}>{row}</td>
+                  {cols.map(col => (
+                    <td key={col} className="p-2 text-center">
+                      <button
+                        onClick={() => onChange({ ...answersByRow, [row]: col })}
+                        className="w-4 h-4 rounded-full mx-auto flex items-center justify-center"
+                        style={{ border: answersByRow[row] === col ? "5px solid #b07d20" : "2px solid #c4a35a" }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    case "signature":
+    case "signature_meta":
+      return (
+        <SignatureField
+          value={value}
+          onChange={onChange}
+          captureMetadata={field.type === "signature_meta"}
+        />
+      );
 
     case "geo_state":
       return (
@@ -679,6 +935,112 @@ function GeoCityField({
       <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "#b07d20" }}>
         Não encontrou? Digite manualmente
       </button>
+    </div>
+  );
+}
+
+// ─── Campo de assinatura (canvas) ─────────────────────────────────────────────
+function SignatureField({
+  value, onChange, captureMetadata,
+}: {
+  value: AnswerValue;
+  onChange: (val: AnswerValue) => void;
+  captureMetadata: boolean;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [drawing, setDrawing] = useState(false);
+  const [hasStroke, setHasStroke] = useState(false);
+  const BRD = "1px solid #e8d9c0";
+
+  function pos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect();
+    const p = "touches" in e ? e.touches[0] : e;
+    return { x: p.clientX - rect.left, y: p.clientY - rect.top };
+  }
+
+  function start(e: React.MouseEvent | React.TouchEvent) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { x, y } = pos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setDrawing(true);
+  }
+
+  function draw(e: React.MouseEvent | React.TouchEvent) {
+    if (!drawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    e.preventDefault();
+    const { x, y } = pos(e, canvas);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#1a0f00";
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasStroke(true);
+  }
+
+  function finish() {
+    if (!drawing) return;
+    setDrawing(false);
+    const canvas = canvasRef.current;
+    if (!canvas || !hasStroke) return;
+    const dataUrl = canvas.toDataURL("image/png");
+    if (captureMetadata) {
+      const meta: Record<string, unknown> = { dataUrl, signedAt: new Date().toISOString() };
+      navigator.geolocation?.getCurrentPosition(p => {
+        onChange({ ...meta, latitude: p.coords.latitude, longitude: p.coords.longitude });
+      }, () => onChange(meta));
+      onChange(meta);
+    } else {
+      onChange(dataUrl);
+    }
+  }
+
+  function clear() {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasStroke(false);
+    onChange(null);
+  }
+
+  const signedDataUrl = captureMetadata
+    ? ((value as Record<string, unknown>)?.dataUrl as string | undefined)
+    : (value as string | undefined);
+
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        width={480}
+        height={160}
+        className="w-full rounded-xl touch-none"
+        style={{ border: BRD, background: "#fff" }}
+        onMouseDown={start}
+        onMouseMove={draw}
+        onMouseUp={finish}
+        onMouseLeave={finish}
+        onTouchStart={start}
+        onTouchMove={draw}
+        onTouchEnd={finish}
+      />
+      <div className="flex items-center justify-between mt-2">
+        <p className="text-xs" style={{ color: "#8b7355" }}>
+          {captureMetadata ? "Assine acima — hora e localização serão registradas" : "Assine no espaço acima"}
+        </p>
+        <button onClick={clear} className="text-xs font-semibold" style={{ color: "#c0392b" }}>Limpar</button>
+      </div>
+      {signedDataUrl && (
+        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#0a6e45" }}>
+          <i className="ti ti-check" /> Assinatura capturada
+        </p>
+      )}
     </div>
   );
 }
