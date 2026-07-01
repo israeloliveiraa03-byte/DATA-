@@ -38,12 +38,17 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 
 ## Bugs ativos / bloqueadores conhecidos
 
-- Confusão entre UUID e slug causando erros de roteamento (causa raiz já identificada)
+Nenhum no momento. Próxima pendência conhecida (não bloqueadora): 24 dos 47 tipos de campo do enum `field_type` ainda caem no placeholder "Campo em desenvolvimento" na tela do respondente (`respondent-client.tsx`) — ver seção "Tipos de campo pendentes" abaixo.
 
 ## Bugs recém-resolvidos
 
 - ~~Página de respondente `/p/[slug]` retornando 404~~ — causa raiz: `page.tsx` da rota tinha sido apagado por engano no commit `b975c5c`. Recriado e commitado (`bf4ff28`).
 - ~~Preview de formulário não funcional~~ — botão "Preview" no form-builder (`form-builder-client.tsx`) não tinha `onClick`. Agora abre `/p/[slug]?preview=true` em nova aba.
+- ~~Confusão entre UUID e slug causando erros de roteamento~~ — auditoria completa (2026-06-30) em todos os `Link`/`fetch` que constroem URLs de pesquisa não encontrou nenhuma mistura entre `researches.id` e `researches.slug`. Era sintoma do bug do `page.tsx` apagado, já corrigido.
+
+## Tipos de campo pendentes na tela do respondente
+
+`respondent-client.tsx` implementa 23 dos 47 tipos de `field_type` (`researches.ts:7-28`). Faltam: cpf_cnpj, date_range, slider, semantic_scale, ranking, points_distribution, card_sorting, conditional, weighted, consent, calculated, geo_zone, geo_map, geo_relational, image, signature, signature_meta, matrix, observation, data_table, timeline, availability, location, audio, photo_annotation, doc_capture, pairwise, equation, dynamic_consent, field_diary, multi_upload, qr_barcode, bibliography. Degrada bem (mostra "Campo em desenvolvimento", não quebra o formulário).
 
 ## Erros recorrentes a evitar
 
