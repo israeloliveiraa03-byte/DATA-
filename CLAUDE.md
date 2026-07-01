@@ -38,17 +38,29 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 
 ## Bugs ativos / bloqueadores conhecidos
 
-Nenhum no momento. Próxima pendência conhecida (não bloqueadora): 24 dos 47 tipos de campo do enum `field_type` ainda caem no placeholder "Campo em desenvolvimento" na tela do respondente (`respondent-client.tsx`) — ver seção "Tipos de campo pendentes" abaixo.
+Nenhum no momento. Testado ao vivo por Israel em 2026-06-30 na Pesquisa Gênesis (`pesquisa-genesis-mqy406bg`) — cascata geográfica e seleção de opções confirmadas funcionando.
 
 ## Bugs recém-resolvidos
 
-- ~~Página de respondente `/p/[slug]` retornando 404~~ — causa raiz: `page.tsx` da rota tinha sido apagado por engano no commit `b975c5c`. Recriado e commitado (`bf4ff28`).
-- ~~Preview de formulário não funcional~~ — botão "Preview" no form-builder (`form-builder-client.tsx`) não tinha `onClick`. Agora abre `/p/[slug]?preview=true` em nova aba.
-- ~~Confusão entre UUID e slug causando erros de roteamento~~ — auditoria completa (2026-06-30) em todos os `Link`/`fetch` que constroem URLs de pesquisa não encontrou nenhuma mistura entre `researches.id` e `researches.slug`. Era sintoma do bug do `page.tsx` apagado, já corrigido.
+- ~~Página de respondente `/p/[slug]` retornando 404~~ — causa raiz: `page.tsx` da rota tinha sido apagado por engano no commit `b975c5c`. Recriado (`bf4ff28`).
+- ~~Preview de formulário não funcional~~ — botão "Preview" no form-builder não tinha `onClick`. Agora abre `/p/[slug]?preview=true` em nova aba (`4a0af11`).
+- ~~Confusão entre UUID e slug causando erros de roteamento~~ — auditoria completa não encontrou mistura entre `researches.id` e `researches.slug`. Era sintoma do bug do `page.tsx` apagado.
+- ~~Bug crítico de dados em single_choice/multiple_choice~~ — form-builder salva opções como `{id,label,weight}`, mas o respondente lia `opt.value` (sempre `undefined`): toda resposta gravava `undefined` e todas as opções apareciam marcadas ao mesmo tempo (era o que parecia ser "bug do sim/não"). Corrigido para `opt.id` (`c659432`).
+- ~~Cascata Região → Estado não filtrava~~ — campo de estado mostrava as 27 UFs sempre, ignorando a região escolhida. Agora usa mapa estático região→UF (`2425da1`).
+- ~~"Confusão" entre microrregião e município (ex: Alagoas)~~ — não era bug de dados: o nome oficial IBGE de várias microrregiões é igual ao do município-sede (ex: "Maceió", "Arapiraca"). Adicionada nota explicativa abaixo do campo.
 
-## Tipos de campo pendentes na tela do respondente
+## Tipos de campo implementados na tela do respondente (2026-06-30)
 
-`respondent-client.tsx` implementa 23 dos 47 tipos de `field_type` (`researches.ts:7-28`). Faltam: cpf_cnpj, date_range, slider, semantic_scale, ranking, points_distribution, card_sorting, conditional, weighted, consent, calculated, geo_zone, geo_map, geo_relational, image, signature, signature_meta, matrix, observation, data_table, timeline, availability, location, audio, photo_annotation, doc_capture, pairwise, equation, dynamic_consent, field_diary, multi_upload, qr_barcode, bibliography. Degrada bem (mostra "Campo em desenvolvimento", não quebra o formulário).
+`respondent-client.tsx` foi ampliado de 23 para 35 dos 47 tipos de `field_type` (`researches.ts:7-28`): cpf_cnpj, date_range, slider, semantic_scale, ranking, points_distribution, card_sorting, weighted, consent, geo_zone, matrix, observation, signature, signature_meta — todos usando as mesmas chaves de config que o form-builder já salva (`options`, `matrixRows/Cols`, `rankingItems`, `totalPoints`, `cardCategories/Items`, `semanticLeft/Right`, `zoneOptions`).
+
+## Tipos de campo ainda pendentes (precisam de decisão de Israel antes de implementar)
+
+- `geo_map` — precisa de lib de mapa (Leaflet/MapLibre = dependência nova a decidir)
+- `geo_relational` — depende do Catálogo Global de Entidades, que ainda não existe
+- `data_table`, `availability` — o form-builder ainda não tem editor de configuração pra eles (só mockup visual); precisa definir a estrutura de dados antes
+- `conditional` — é lógica de exibição condicional entre perguntas, não um tipo de resposta; o builder também não tem editor da condição ainda
+- Onda 3 (audio, photo_annotation, doc_capture, pairwise, equation, dynamic_consent, field_diary, multi_upload, qr_barcode, bibliography) — marcados `dev: true` no form-builder, nem são selecionáveis lá ainda
+- `calculated`, `image`, `location` — nem aparecem como selecionáveis no form-builder hoje
 
 ## Erros recorrentes a evitar
 
