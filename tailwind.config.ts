@@ -9,6 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Primária — tom sério e institucional (chrome, ações, links, foco)
         brand: {
           50:  "#e8f0fe",
           100: "#d1e0fd",
@@ -21,6 +22,7 @@ const config: Config = {
           800: "#082161",
           900: "#041039",
         },
+        // Acentos de dados — reservados a gráficos, indicadores e badges de status
         teal: {
           50:  "#e1f5ee",
           100: "#c3ebdd",
@@ -43,6 +45,15 @@ const config: Config = {
           500: "#534ab7",
           600: "#3c3489",
         },
+        // Paleta de séries pra gráficos multi-categoria (inspirada no amCharts)
+        chart: {
+          1: "#1a56db",
+          2: "#0d9e75",
+          3: "#ba7517",
+          4: "#534ab7",
+          5: "#c0392b",
+          6: "#0891b2",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
@@ -62,6 +73,24 @@ const config: Config = {
         base: ["14px", { lineHeight: "22px" }],
         lg:   ["16px", { lineHeight: "24px" }],
         xl:   ["18px", { lineHeight: "28px" }],
+      },
+      boxShadow: {
+        xs:   "0 1px 2px rgba(15, 23, 42, 0.04)",
+        sm:   "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
+        md:   "0 4px 12px rgba(15, 23, 42, 0.08)",
+        lg:   "0 12px 32px rgba(15, 23, 42, 0.10)",
+        glow: "0 0 0 1px rgba(26, 86, 219, 0.08), 0 8px 24px rgba(26, 86, 219, 0.12)",
+      },
+      backgroundImage: {
+        "brand-glow": "radial-gradient(circle at 30% 20%, rgba(26, 86, 219, 0.14), transparent 55%)",
+      },
+      keyframes: {
+        "fade-in":    { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        "pulse-soft": { "0%, 100%": { opacity: "1", transform: "scale(1)" }, "50%": { opacity: "0.55", transform: "scale(0.82)" } },
+      },
+      animation: {
+        "fade-in":    "fade-in 0.4s ease-out both",
+        "pulse-soft": "pulse-soft 2.4s ease-in-out infinite",
       },
     },
   },

@@ -8,8 +8,11 @@
   --brand-50:  #e8f0fe;
   --teal-500:  #0d9e75;
   --teal-50:   #e1f5ee;
-  --border:    rgba(0, 0, 0, 0.08);
-  --border-md: rgba(0, 0, 0, 0.12);
+  --bg-app:    #f8fafc;
+  --border:    #e2e8f0;
+  --border-md: #cbd5e1;
+  --ink:       #0f172a;
+  --ink-muted: #64748b;
   --radius-sm: 6px;
   --radius:    8px;
   --radius-md: 10px;

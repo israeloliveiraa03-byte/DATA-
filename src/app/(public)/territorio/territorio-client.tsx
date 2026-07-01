@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { DataLogo } from "@/components/layout/data-logo";
 
 const COMMUNITY_TYPES = [
   "Comunidade quilombola",
@@ -161,8 +162,8 @@ export function TerritorioClient() {
 
       {/* Header */}
       <header style={{ background: "#fff", borderBottom: BRD, padding: "16px 48px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: "22px", fontWeight: 700, color: "#111", textDecoration: "none" }}>
-          Data<span style={{ color: "#b07d20" }}>º</span>
+        <Link href="/" style={{ textDecoration: "none" }}>
+          <DataLogo className="text-2xl" />
         </Link>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5c4a2a", background: "#fff8ec", border: "1px solid #d4b880", borderRadius: "3px", padding: "3px 10px" }}>
           <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#b07d20", display: "inline-block" }} />

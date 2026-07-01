@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { DataLogo } from "@/components/layout/data-logo";
 
 export const metadata: Metadata = {
   title: "Dataº — Plataforma de pesquisa de campo",
@@ -61,10 +62,8 @@ export default function LandingPage() {
         {/* Topbar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", zIndex: 2 }}>
           <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: "28px", fontWeight: 700, color: "#111" }}>
-              Data<span style={{ color: "#b07d20" }}>º</span>
-            </div>
-            <span style={{ display: "block", width: "24px", height: "2.5px", background: "#b07d20", marginTop: "3px", borderRadius: "2px" }} />
+            <DataLogo className="text-3xl" />
+            <span style={{ display: "block", width: "24px", height: "2.5px", background: "#1a56db", marginTop: "3px", borderRadius: "2px" }} />
           </div>
           <nav style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             {["Funcionalidades", "Rede", "Território"].map(l => (
@@ -250,9 +249,7 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer style={{ background: "#111", padding: "28px 48px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: "18px", fontWeight: 700, color: "#f0e6d0" }}>
-            Data<span style={{ color: "#c4a35a" }}>º</span>
-          </div>
+          <DataLogo className="text-lg text-white" animated={false} />
           <div style={{ fontSize: "9px", color: "rgba(240,230,208,0.4)", marginTop: "3px" }}>© 2026 Dataº · Em conformidade com a LGPD</div>
         </div>
         <div style={{ display: "flex", gap: "20px" }}>

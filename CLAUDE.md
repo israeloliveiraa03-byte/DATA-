@@ -96,11 +96,16 @@ Hierarquia: País → Estado → Município → Território → Comunidade → E
 - Dataº é infraestrutura, não ferramenta de formulário. O diferencial são entidades de conhecimento permanentes ligadas a territórios — posiciona comunidades tradicionais como produtoras de conhecimento, não sujeitos de pesquisa.
 - O maior risco é execução e gestão de escopo, não obsolescência conceitual. Validação focada do MVP antes de expandir escopo é crítico.
 - Blockchain entra depois do MVP — rastreabilidade via hash resolve a maior parte da necessidade de auditabilidade científica sem a complexidade do blockchain agora.
-- Passe de design unificado vem depois da funcionalidade — identidade visual já está definida e aprovada, mas intencionalmente adiada.
 
-## Identidade visual (aplicar somente quando solicitado — design vem depois da funcionalidade)
+## Identidade visual (redesenhada em 2026-06-30 — substitui a paleta terrosa anterior)
 
-Paleta "afro-tecnológica terrosa": fundo areia `#F7F2E8`, areia `#E8D8BE`, barro `#C48A42`, terra `#7A5B3A`, verde floresta `#4C6B3C`, azul dados `#355FC7`, preto `#1C1B18`. Tipografia: Fraunces ou Cormorant Garamond (títulos) + Inter (corpo). Stack de design system: shadcn/ui, Framer Motion, Lucide, next-themes, React Aria, WCAG 2.2 AA.
+Direção: sério e moderno, inspirado em produtos institucionais (Ripple — infraestrutura financeira, base clara, grid consistente) + amCharts (cor viva pontual para dados/gráficos, seções modulares). Fundo base slate claro/branco, texto em slate, azul `brand` como cor primária de chrome/ação (não trocar por outra cor sem motivo), acentos teal/âmbar/coral/roxo **reservados a gráficos, indicadores e status** — nunca em navegação/chrome. Tipografia: Inter em tudo (sem serifada — não usar mais Georgia). Cantos moderadamente arredondados (não pill-shaped), sombras sutis (`shadow-xs/sm/md`) em vez de só bordas, movimento discreto (`animate-fade-in`, `animate-pulse-soft`), sempre respeitando `prefers-reduced-motion` (já tratado globalmente em `globals.css`).
+
+- **Tokens**: `tailwind.config.ts` — cores `brand` (primária), `teal/amber/coral/purple` (acentos de dado), `chart-1..6` (séries de gráfico), sombras e animações customizadas.
+- **Logo**: `src/components/layout/data-logo.tsx` — o "º" de "Dataº" é um SVG com pequenos nós pulsando conectados por linhas, representando dados conectados. Usar `<DataLogo />` em vez de escrever "Data<span>º</span>" à mão.
+- **Componentes-base**: `src/components/ui/` (`button.tsx`, `badge.tsx`, `card.tsx`, `input.tsx`) — usar esses em vez de estilo inline em páginas novas.
+- **Central de design**: `/design-system` (link na sidebar, grupo "Produto") — referência viva de cores, tipografia, botões, badges, cards e movimento. Ajustar tokens ali reflete no resto do produto.
+- **Reskin ainda pendente** (fora do escopo da leva de 2026-06-30, feito só no chrome global + login): páginas de conteúdo já existentes — dashboard, lista de pesquisas, form-builder, perfil, respondente (exceto header), territorio, landing page — ainda usam estilo inline com a paleta antiga. Migrar aos poucos, sem quebrar o que funciona.
 
 ## Repositório
 

@@ -7,7 +7,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   const session = await auth();
   if (!session?.user) redirect("/login");
   return (
-    <div className="min-h-dvh flex flex-col bg-white">
+    <div className="min-h-dvh flex flex-col bg-slate-50">
       <PlatformTopbar user={session.user} />
       <div className="flex flex-1">
         <PlatformSidebar />

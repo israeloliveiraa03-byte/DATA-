@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Research, Form, FormField } from "@/lib/types";
+import { DataLogo } from "@/components/layout/data-logo";
 
 // ─── Tipos de resposta ────────────────────────────────────────────────────────
 type AnswerValue = string | string[] | number | boolean | Record<string, unknown> | Record<string, unknown>[] | null;
@@ -1193,9 +1194,7 @@ export function RespondentClient({
       {/* Header */}
       <header className="px-4 py-3 flex items-center justify-between"
         style={{ background: "#fff", borderBottom: BRD }}>
-        <div className="text-sm font-bold" style={{ color: "#0a1628", fontFamily: "Georgia, serif" }}>
-          Data<span style={{ color: "#b07d20" }}>º</span>
-        </div>
+        <DataLogo className="text-sm" />
         <div className="text-xs font-medium" style={{ color: "#8b7355" }}>
           {step + 1} de {totalSteps}
         </div>

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Research } from "@/lib/types";
+import { DataLogo } from "@/components/layout/data-logo";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -1080,9 +1081,8 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
         {/* TOPBAR */}
         <header className="h-12 flex items-center justify-between px-4 flex-shrink-0 z-50"
           style={{ background: "#faf6ef", borderBottom: BRD }}>
-          <button onClick={() => router.push("/dashboard")} className="text-lg font-bold tracking-tight"
-            style={{ color: "#0a1628", fontFamily: "Georgia, serif" }}>
-            Data<span style={{ color: "#b07d20" }}>º</span>
+          <button onClick={() => router.push("/dashboard")}>
+            <DataLogo className="text-lg" />
           </button>
           <div className="flex items-center gap-2">
             <input value={formTitle} onChange={e => setFormTitle(e.target.value)}
