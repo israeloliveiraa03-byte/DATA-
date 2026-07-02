@@ -1,0 +1,56 @@
+import { db } from "@/lib/db";
+import { dashboards, dashboardWidgets, researches, forms, formFields, responses, users } from "@/lib/db/schema";
+import { eq, and, asc } from "drizzle-orm";
+import { apiSuccess, apiError } from "@/lib/utils";
+import { computeWidgetData } from "@/lib/dashboard/aggregate";
+import type { SupportedWidgetType } from "@/lib/dashboard/types";
+
+// Rota pública — nunca expõe respostas cruas, só o resultado já agregado por widget
+// (mesmo o widget de tabela: os valores já vêm resolvidos, não a linha de resposta bruta).
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params;
+
+  const dashboard = await db.query.dashboards.findFirst({
+    where: and(eq(dashboards.publicSlug, slug), eq(dashboards.isPublic, true)),
+  });
+  if (!dashboard) return apiError("Dashboard não encontrado", 404);
+
+  const research = await db.query.researches.findFirst({ where: eq(researches.id, dashboard.researchId) });
+  if (!research) return apiError("Dashboard não encontrado", 404);
+
+  const owner = await db.query.users.findFirst({ where: eq(users.id, research.ownerId) });
+
+  const form = await db.query.forms.findFirst({ where: eq(forms.researchId, research.id) });
+  const fields = form
+    ? await db.query.formFields.findMany({ where: eq(formFields.formId, form.id), orderBy: asc(formFields.order) })
+    : [];
+  const allResponses = form
+    ? await db.query.responses.findMany({ where: eq(responses.formId, form.id) })
+    : [];
+
+  const widgets = await db.query.dashboardWidgets.findMany({
+    where: eq(dashboardWidgets.dashboardId, dashboard.id),
+    orderBy: asc(dashboardWidgets.order),
+  });
+
+  const widgetsWithData = widgets.map(w => ({
+    id: w.id, type: w.type as SupportedWidgetType, title: w.title,
+    col: w.col, row: w.row, width: w.width, height: w.height,
+    // Config exposto só pra escolher qual valor mostrar (ex.: soma x média) — nunca dados de resposta.
+    config: w.config as Record<string, unknown>,
+    data: computeWidgetData({ type: w.type, config: w.config }, fields, allResponses),
+  }));
+
+  return apiSuccess({
+    title:        dashboard.title,
+    description:  dashboard.description,
+    theme:        dashboard.theme,
+    coverUrl:      dashboard.coverUrl,
+    researchTitle: research.title,
+    showAds:      owner?.plan === "free" || !owner,
+    widgets:      widgetsWithData,
+  });
+}
