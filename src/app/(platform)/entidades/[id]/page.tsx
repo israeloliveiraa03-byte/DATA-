@@ -18,6 +18,12 @@ export default async function EntidadeDetailPage({ params }: { params: Promise<{
 
   const entity = await db.query.entities.findFirst({
     where: and(eq(entities.id, id), isNull(entities.deletedAt)),
+    with: {
+      municipalities: true,
+      adminDivisions: { with: { cities: true }, orderBy: (d, { asc }) => [asc(d.orderIndex)] },
+      orgDocument:    true,
+      personDetails:  true,
+    },
   });
   if (!entity) notFound();
 

@@ -15,6 +15,12 @@ export async function GET(
 
   const entity = await db.query.entities.findFirst({
     where: and(eq(entities.id, id), isNull(entities.deletedAt)),
+    with: {
+      municipalities: true,
+      adminDivisions: { with: { cities: true }, orderBy: (d, { asc }) => [asc(d.orderIndex)] },
+      orgDocument:    true,
+      personDetails:  true,
+    },
   });
 
   if (!entity) return apiError("Não encontrada", 404);

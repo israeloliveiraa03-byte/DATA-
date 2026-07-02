@@ -1,5 +1,9 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type { users, organizations, researches, forms, formFields, responses, dashboards, dashboardWidgets, entities, entityVersions, researchEntities } from "@/lib/db/schema";
+import type {
+  users, organizations, researches, forms, formFields, responses, dashboards, dashboardWidgets,
+  entities, entityVersions, researchEntities,
+  entityMunicipalities, entityAdminDivisions, entityAdminDivisionCities, entityOrgDocuments, entityPersonDetails,
+} from "@/lib/db/schema";
 
 export type User         = InferSelectModel<typeof users>;
 export type Organization = InferSelectModel<typeof organizations>;
@@ -12,6 +16,12 @@ export type Widget       = InferSelectModel<typeof dashboardWidgets>;
 export type Entity         = InferSelectModel<typeof entities>;
 export type EntityVersion  = InferSelectModel<typeof entityVersions>;
 export type ResearchEntity = InferSelectModel<typeof researchEntities>;
+
+export type EntityMunicipality     = InferSelectModel<typeof entityMunicipalities>;
+export type EntityAdminDivision    = InferSelectModel<typeof entityAdminDivisions>;
+export type EntityAdminDivisionCity = InferSelectModel<typeof entityAdminDivisionCities>;
+export type EntityOrgDocument      = InferSelectModel<typeof entityOrgDocuments>;
+export type EntityPersonDetails    = InferSelectModel<typeof entityPersonDetails>;
 
 export type FieldType = "short_text"|"long_text"|"number"|"single_choice"|"multiple_choice"|"scale"|"date"|"location"|"image"|"file"|"section"|"matrix";
 

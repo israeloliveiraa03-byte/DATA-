@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import type { Entity } from "@/lib/types";
 
 const TYPE_MAP: Record<string, { label: string; icon: string }> = {
-  territorio: { label: "Território",  icon: "ti-map" },
-  comunidade: { label: "Comunidade",  icon: "ti-users" },
-  escola:     { label: "Escola",      icon: "ti-school" },
-  associacao: { label: "Associação",  icon: "ti-building-community" },
-  projeto:    { label: "Projeto",     icon: "ti-clipboard-list" },
-  documento:  { label: "Documento",   icon: "ti-file-text" },
+  territorio:             { label: "Território",             icon: "ti-map" },
+  comunidade:             { label: "Comunidade",              icon: "ti-users" },
+  regiao_administrativa:  { label: "Região administrativa",   icon: "ti-map-2" },
+  escola:                 { label: "Escola",                  icon: "ti-school" },
+  associacao:             { label: "Associação",               icon: "ti-building-community" },
+  projeto:                { label: "Projeto",                  icon: "ti-clipboard-list" },
+  pessoa:                 { label: "Pessoa",                   icon: "ti-user" },
+  documento:              { label: "Documento",                icon: "ti-file-text" },
 };
 
 const STATUS_MAP: Record<string, { label: string; variant: "default"|"teal"|"amber" }> = {

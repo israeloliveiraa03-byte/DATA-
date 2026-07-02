@@ -4,12 +4,14 @@ import { entityCodeCounters } from "@/lib/db/schema";
 import type { entityTypeEnum } from "@/lib/db/schema/entities";
 
 const PREFIX: Record<(typeof entityTypeEnum.enumValues)[number], string> = {
-  territorio: "TER",
-  comunidade: "COM",
-  escola:     "ESC",
-  associacao: "ASSO",
-  projeto:    "PROJ",
-  documento:  "DOC",
+  territorio:             "TER",
+  comunidade:             "COM",
+  escola:                 "ESC",
+  associacao:             "ASSO",
+  projeto:                "PROJ",
+  documento:              "DOC",
+  regiao_administrativa:  "REG",
+  pessoa:                 "PES",
 };
 
 export async function generateEntityCode(type: (typeof entityTypeEnum.enumValues)[number]): Promise<string> {
