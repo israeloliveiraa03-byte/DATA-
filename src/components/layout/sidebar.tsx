@@ -11,6 +11,12 @@ const nav = [
     ],
   },
   {
+    label: "Catálogo",
+    items: [
+      { href: "/entidades", icon: "ti-database", label: "Entidades" },
+    ],
+  },
+  {
     label: "Conta",
     items: [
       { href: "/profile",  icon: "ti-user-circle", label: "Perfil"  },
