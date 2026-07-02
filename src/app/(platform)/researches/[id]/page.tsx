@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { researches } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { researches, researchEntities, entities } from "@/lib/db/schema";
+import { eq, isNull, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ResearchPageClient } from "./research-page-client";
 
@@ -21,5 +21,23 @@ export default async function ResearchPage({
     notFound();
   }
 
-  return <ResearchPageClient research={research} />;
+  const linkedEntities = await db.query.researchEntities.findMany({
+    where: eq(researchEntities.researchId, id),
+    with: { entity: true },
+  });
+
+  const linkedEntityIds = new Set(linkedEntities.map(l => l.entityId));
+  const allEntities = await db.query.entities.findMany({
+    where: isNull(entities.deletedAt),
+    orderBy: desc(entities.createdAt),
+  });
+  const availableEntities = allEntities.filter(e => !linkedEntityIds.has(e.id));
+
+  return (
+    <ResearchPageClient
+      research={research}
+      linkedEntities={linkedEntities}
+      availableEntities={availableEntities}
+    />
+  );
 }

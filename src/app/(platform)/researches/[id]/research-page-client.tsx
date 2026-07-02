@@ -3,7 +3,16 @@
 import { useState } from "react";
 
 import Link from "next/link";
-import type { Research } from "@/lib/types";
+import type { Research, Entity, ResearchEntity } from "@/lib/types";
+
+const ENTITY_TYPE_MAP: Record<string, { label: string; icon: string }> = {
+  territorio: { label: "Território",  icon: "ti-map" },
+  comunidade: { label: "Comunidade",  icon: "ti-users" },
+  escola:     { label: "Escola",      icon: "ti-school" },
+  associacao: { label: "Associação",  icon: "ti-building-community" },
+  projeto:    { label: "Projeto",     icon: "ti-clipboard-list" },
+  documento:  { label: "Documento",   icon: "ti-file-text" },
+};
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string; dot: string }> = {
   draft:     { label: "Rascunho",  bg: "#fbf3e7", color: "#7a5218", dot: "#c48a42" },
@@ -19,7 +28,13 @@ const THEME_MAP: Record<string, string> = {
   territory: "Território", other: "Outro",
 };
 
-export function ResearchPageClient({ research }: { research: Research }) {
+interface ResearchPageClientProps {
+  research: Research;
+  linkedEntities: (ResearchEntity & { entity: Entity })[];
+  availableEntities: Entity[];
+}
+
+export function ResearchPageClient({ research, linkedEntities, availableEntities }: ResearchPageClientProps) {
   // // const router = useRouter();
   const [status,      setStatus]      = useState(research.status);
   const [copied,      setCopied]      = useState(false);
@@ -28,6 +43,38 @@ export function ResearchPageClient({ research }: { research: Research }) {
   const [accessMode,  setAccessMode]  = useState<"public" | "restricted">("public");
   const [inviteEmail, setInviteEmail] = useState("");
   const [invites,     setInvites]     = useState<string[]>([]);
+
+  const [links,            setLinks]            = useState(linkedEntities);
+  const [remainingEntities, setRemainingEntities] = useState(availableEntities);
+  const [selectedEntityId, setSelectedEntityId]   = useState("");
+  const [relationNote,     setRelationNote]       = useState("");
+  const [linking,          setLinking]            = useState(false);
+  const [linkError,        setLinkError]          = useState("");
+
+  async function linkEntity(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedEntityId) return;
+    setLinking(true);
+    setLinkError("");
+    try {
+      const res = await fetch(`/api/researches/${research.id}/entities`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId: selectedEntityId, relationNote: relationNote || undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setLinkError(json.error ?? "Erro ao vincular"); return; }
+      const entity = remainingEntities.find(e => e.id === selectedEntityId)!;
+      setLinks(prev => [...prev, { ...json.data, entity }]);
+      setRemainingEntities(prev => prev.filter(e => e.id !== selectedEntityId));
+      setSelectedEntityId("");
+      setRelationNote("");
+    } catch {
+      setLinkError("Erro de conexão. Tente novamente.");
+    } finally {
+      setLinking(false);
+    }
+  }
 
   const publicUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://datazero.vercel.app"}/p/${research.slug}`;
   const s = STATUS_MAP[status] ?? STATUS_MAP.draft;
@@ -323,6 +370,68 @@ export function ResearchPageClient({ research }: { research: Research }) {
                   <span className="text-sm font-bold" style={{ color: "#0f172a" }}>{m.val}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Entidades vinculadas */}
+            <div className="rounded-xl p-4" style={{ border: BRD, background: "#fff" }}>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={TS}>Entidades vinculadas</p>
+
+              {links.length === 0 ? (
+                <p className="text-xs mb-3" style={{ color: "#a06d28" }}>Nenhuma entidade vinculada ainda.</p>
+              ) : (
+                <div className="flex flex-col gap-2 mb-3">
+                  {links.map(l => {
+                    const t = ENTITY_TYPE_MAP[l.entity.type] ?? { label: l.entity.type, icon: "ti-tag" };
+                    return (
+                      <Link key={l.id} href={`/entidades/${l.entity.id}`}
+                        className="flex items-center justify-between px-3 py-2 rounded-md transition-colors"
+                        style={{ border: BRD, background: "#fbf3e7" }}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <i className={`ti ${t.icon} text-xs`} style={{ color: "#c48a42" }} />
+                            <span className="text-xs font-bold truncate" style={{ color: "#0f172a" }}>{l.entity.name}</span>
+                          </div>
+                          <p className="text-2xs font-mono mt-0.5" style={{ color: "#a06d28" }}>{l.entity.code}</p>
+                        </div>
+                        <i className="ti ti-arrow-right text-xs flex-shrink-0" style={{ color: "#c48a42" }} />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
+              {remainingEntities.length > 0 && (
+                <form onSubmit={linkEntity} className="flex flex-col gap-2 pt-3" style={{ borderTop: BRD }}>
+                  <select
+                    value={selectedEntityId}
+                    onChange={e => setSelectedEntityId(e.target.value)}
+                    className="w-full rounded-md text-xs px-2 py-1.5 focus:outline-none"
+                    style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}
+                  >
+                    <option value="">Vincular entidade existente...</option>
+                    {remainingEntities.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                  </select>
+                  <input
+                    value={relationNote}
+                    onChange={e => setRelationNote(e.target.value)}
+                    placeholder="Nota sobre o vínculo (opcional)"
+                    className="w-full rounded-md text-xs px-2 py-1.5 focus:outline-none"
+                    style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}
+                  />
+                  {linkError && <p className="text-2xs" style={{ color: "#c0392b" }}>{linkError}</p>}
+                  <button type="submit" disabled={!selectedEntityId || linking}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
+                    style={{ background: "#c48a42", color: "#fff" }}>
+                    <i className={`ti ${linking ? "ti-loader-2 animate-spin" : "ti-link"}`} /> Vincular
+                  </button>
+                </form>
+              )}
+
+              <Link href="/entidades"
+                className="mt-3 flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: "#c48a42" }}>
+                <i className="ti ti-database" /> Ver catálogo de entidades
+              </Link>
             </div>
 
             {/* Configurações rápidas */}
