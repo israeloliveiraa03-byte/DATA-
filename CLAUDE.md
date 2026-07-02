@@ -38,7 +38,10 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 
 ## Bugs ativos / bloqueadores conhecidos
 
-Nenhum no momento. Testado ao vivo por Israel em 2026-06-30 na Pesquisa Gênesis (`pesquisa-genesis-mqy406bg`) — cascata geográfica e seleção de opções confirmadas funcionando.
+- Botão "Entrar com ORCID" no login (`(auth)/login/page.tsx`) chama `signIn("orcid", ...)`, mas `src/lib/auth/index.ts` só registra o provider do Google — o ORCID nunca foi configurado (precisa de client ID/secret do ORCID e decisão de Israel sobre isso). Clicar no botão hoje quebra. Descoberto em 2026-07-02 testando o Catálogo de Entidades, não é um bug introduzido agora.
+- `DATABASE_URL` no `.env.local` roda em Postgres 18 (Neon), que cria constraints NOT NULL nomeadas (recurso do PG 17+). O `drizzle-kit` do projeto (`^0.27.0`) não reconhece isso e propõe (incorretamente) remover o NOT NULL de quase toda coluna do banco sempre que `npm run db:push` é rodado — **nunca aceitar esse lote de `DROP CONSTRAINT ..._not_null` do prompt do `db:push`**. Até resolver (upgrade de `drizzle-kit`/`drizzle-orm`, não testado ainda), aplicar mudanças de schema aditivas (tabelas/colunas novas) via SQL direto, só com os `CREATE TABLE`/`CREATE TYPE`/`ALTER TABLE ADD CONSTRAINT` relevantes.
+
+Testado ao vivo por Israel em 2026-06-30 na Pesquisa Gênesis (`pesquisa-genesis-mqy406bg`) — cascata geográfica e seleção de opções confirmadas funcionando.
 
 ## Bugs recém-resolvidos
 
@@ -68,9 +71,13 @@ Nenhum no momento. Testado ao vivo por Israel em 2026-06-30 na Pesquisa Gênesis
 - TypeScript "field possibly null" em closures → corrigir criando `const f = field` depois do null check
 - Warnings do ESLint viram erros de build no Vercel (variáveis não usadas, tags `<img>`)
 
-## Próxima grande funcionalidade: Catálogo Global de Entidades
+## Catálogo Global de Entidades (MVP construído em 2026-07-02)
 
-Hierarquia: País → Estado → Município → Território → Comunidade → Escola → Associação → Projeto → Documento. Entidades são "vivas" — versionadas, com rastreamento temporal (histórico de nome/geometria/vínculos), ID persistente (nunca muda) e espacialidade dinâmica (geometrias oficial, histórica, reivindicada, ambiental). Motor de relações entre entidades forma uma rede de conhecimento. Camada de inteligência territorial: lacunas de informação, entidades sem pesquisa, evolução de indicadores ao longo do tempo.
+Hierarquia planejada de longo prazo: País → Estado → Município → Território → Comunidade → Escola → Associação → Projeto → Documento. Entidades são "vivas" — versionadas, com rastreamento temporal (histórico de nome/geometria/vínculos), ID persistente (nunca muda) e espacialidade dinâmica (geometrias oficial, histórica, reivindicada, ambiental). Motor de relações entre entidades forma uma rede de conhecimento. Camada de inteligência territorial (lacunas de informação, entidades sem pesquisa, evolução de indicadores ao longo do tempo) ainda não existe — é evolução futura.
+
+**MVP já funcional** (testado de ponta a ponta em 2026-07-02): schema (`src/lib/db/schema/entities.ts` — tabelas `entities`, `entity_versions`, `research_entities`, `entity_code_counters`), gerador de código persistente (`src/lib/db/entity-code.ts`, ex.: `COM-000001`), API (`/api/entities`, `/api/entities/[id]`, `/api/researches/[id]/entities`) e telas (`/entidades`, `/entidades/nova`, `/entidades/[id]`) com histórico de versões e vínculo entidade↔pesquisa. Só 6 dos 9 tipos da hierarquia existem hoje como `entity_type`: território, comunidade, escola, associação, projeto, documento (País/Estado/Município ficam como campos `stateCode`/`cityCode`/`cityName` na própria entidade, via IBGE, não como entidades separadas ainda).
+
+**Lacuna conhecida**: o vínculo entidade↔pesquisa só aparece na tela da entidade (`/entidades/[id]`) — a tela de detalhe da pesquisa (`researches/[id]/research-page-client.tsx`) ainda não mostra quais entidades estão vinculadas a ela. Não implementado ainda, decisão de quando fazer fica com Israel.
 
 ## Funcionalidades planejadas (visão de longo prazo)
 
