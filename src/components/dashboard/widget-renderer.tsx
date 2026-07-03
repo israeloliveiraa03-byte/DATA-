@@ -1,7 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
+
+// Leaflet acessa `window`/`document` direto — não roda em SSR.
+const HeatmapWidget = dynamic(() => import("@/components/dashboard/widgets/heatmap-widget").then(m => m.HeatmapWidget), { ssr: false });
+const MapWidget     = dynamic(() => import("@/components/dashboard/widgets/map-widget").then(m => m.MapWidget), { ssr: false });
 
 const CHART_COLORS = ["#c48a42", "#4c6b3c", "#1a56db", "#534ab7", "#c0392b", "#0c447c", "#7a5218", "#3a5430"];
 
@@ -53,6 +58,16 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
 
   if (data.kind === "text") {
     return <p className="text-sm whitespace-pre-wrap" style={{ color: "#111" }}>{data.content || "—"}</p>;
+  }
+
+  if (data.kind === "map") {
+    if (data.points.length === 0) return <EmptyState />;
+    return <MapWidget data={data} />;
+  }
+
+  if (data.kind === "heatmap") {
+    if (Object.keys(data.byState).length === 0) return <EmptyState />;
+    return <HeatmapWidget data={data} />;
   }
 
   return null;

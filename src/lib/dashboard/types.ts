@@ -1,4 +1,4 @@
-export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text";
+export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap";
 
 export interface NumberCardConfig {
   fieldId?: string;
@@ -22,7 +22,23 @@ export interface TextConfig {
   content: string;
 }
 
-export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig;
+// Mapa de pontos — um marcador por resposta que tenha respondido um campo
+// geo_coords.
+export interface MapConfig {
+  geoFieldId: string;
+}
+
+// Mapa de calor por estado — agrupa respostas pelo campo geo_state; modo
+// "count" colore por volume de respostas, "choice_percent" colore pela %
+// de respostas do estado em que outro campo (de escolha) bate com uma opção.
+export interface HeatmapConfig {
+  geoFieldId: string;
+  indicatorMode: "count" | "choice_percent";
+  indicatorFieldId?: string;
+  indicatorOptionId?: string;
+}
+
+export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig;
 
 export interface ChoiceOption {
   id: string;
@@ -74,7 +90,29 @@ export interface TextResult {
   content: string;
 }
 
-export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult;
+export interface MapPoint {
+  lat: number;
+  lng: number;
+  label: string;
+}
+
+export interface MapResult {
+  kind: "map";
+  points: MapPoint[];
+}
+
+export interface HeatmapStateValue {
+  value: number;
+  count: number;
+}
+
+export interface HeatmapResult {
+  kind: "heatmap";
+  byState: Record<string, HeatmapStateValue>;
+  max: number;
+}
+
+export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult | MapResult | HeatmapResult;
 
 export const NUMERIC_FIELD_TYPES = ["number", "scale", "nps", "stars", "slider"] as const;
 export const CHOICE_FIELD_TYPES = ["single_choice", "multiple_choice", "yes_no", "weighted", "consent"] as const;
@@ -86,4 +124,6 @@ export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string
   { value: "donut_chart", label: "Rosca",   icon: "ti-chart-donut" },
   { value: "table",       label: "Tabela",  icon: "ti-table" },
   { value: "text",        label: "Texto",   icon: "ti-text-size" },
+  { value: "map",         label: "Mapa de pontos", icon: "ti-map-pin" },
+  { value: "heatmap",     label: "Mapa de calor",  icon: "ti-map-2" },
 ];

@@ -1,9 +1,12 @@
 import type { FormField, Response, Widget } from "@/lib/types";
+import { parsePastedCoordinates } from "@/lib/entities/coordinates";
 import {
   CHOICE_FIELD_TYPES,
   type ChoiceAggResult,
   type ChoiceOption,
   type CountResult,
+  type HeatmapResult,
+  type MapResult,
   type NumericResult,
   type TableResult,
   type WidgetData,
@@ -108,6 +111,60 @@ export function buildTableRows(
   return { kind: "table", columns, rows };
 }
 
+export function aggregateMapPoints(responses: Response[], geoField: Pick<FormField, "id">): MapResult {
+  const points = [];
+  for (const r of responses) {
+    const raw = (r.data as Record<string, unknown> | null)?.[geoField.id];
+    if (typeof raw !== "string") continue;
+    const parsed = parsePastedCoordinates(raw);
+    if (!parsed) continue;
+    const label = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("pt-BR") : "Resposta";
+    points.push({ lat: parseFloat(parsed.latitude), lng: parseFloat(parsed.longitude), label });
+  }
+  return { kind: "map", points };
+}
+
+// Agrupa respostas por UF (via campo geo_state). Modo "count" = volume de
+// respostas por estado; "choice_percent" = % das respostas do estado em que
+// outro campo de escolha bate com a opção escolhida (reproduz indicadores
+// tipo "% de escolas com racismo" da referência CONAQ).
+export function aggregateHeatmapByState(
+  responses: Response[],
+  geoField: Pick<FormField, "id">,
+  indicatorMode: "count" | "choice_percent",
+  indicatorField?: Pick<FormField, "id" | "type" | "config">,
+  indicatorOptionId?: string,
+): HeatmapResult {
+  const byState: Record<string, { count: number; matches: number }> = {};
+
+  for (const r of responses) {
+    const data = r.data as Record<string, unknown> | null;
+    const uf = data?.[geoField.id];
+    if (typeof uf !== "string" || !uf.trim()) continue;
+
+    if (!byState[uf]) byState[uf] = { count: 0, matches: 0 };
+    byState[uf].count++;
+
+    if (indicatorMode === "choice_percent" && indicatorField && indicatorOptionId) {
+      const raw = data?.[indicatorField.id];
+      if (hasValue(raw)) {
+        const ids = Array.isArray(raw) ? raw : [raw];
+        if (ids.includes(indicatorOptionId)) byState[uf].matches++;
+      }
+    }
+  }
+
+  let max = 0;
+  const result: Record<string, { value: number; count: number }> = {};
+  for (const [uf, s] of Object.entries(byState)) {
+    const value = indicatorMode === "count" ? s.count : s.count > 0 ? (s.matches / s.count) * 100 : 0;
+    result[uf] = { value, count: s.count };
+    if (value > max) max = value;
+  }
+
+  return { kind: "heatmap", byState: result, max };
+}
+
 export function computeWidgetData(widget: Pick<Widget, "type" | "config">, fields: FormField[], responses: Response[]): WidgetData {
   const config = (widget.config ?? {}) as Record<string, unknown>;
 
@@ -140,6 +197,24 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
       if (aggregation === "count" || aggregation === "count_completed") return aggregateCount(responses, fieldId);
       if (!fieldId) return { kind: "numeric", count: 0, avg: null, sum: 0, min: null, max: null };
       return aggregateNumeric(responses, fieldId);
+    }
+
+    case "map": {
+      const geoFieldId = typeof config.geoFieldId === "string" ? config.geoFieldId : "";
+      const geoField = fields.find(f => f.id === geoFieldId);
+      if (!geoField) return { kind: "map", points: [] };
+      return aggregateMapPoints(responses, geoField);
+    }
+
+    case "heatmap": {
+      const geoFieldId = typeof config.geoFieldId === "string" ? config.geoFieldId : "";
+      const geoField = fields.find(f => f.id === geoFieldId);
+      if (!geoField) return { kind: "heatmap", byState: {}, max: 0 };
+      const indicatorMode = config.indicatorMode === "choice_percent" ? "choice_percent" : "count";
+      const indicatorFieldId = typeof config.indicatorFieldId === "string" ? config.indicatorFieldId : undefined;
+      const indicatorField = indicatorFieldId ? fields.find(f => f.id === indicatorFieldId) : undefined;
+      const indicatorOptionId = typeof config.indicatorOptionId === "string" ? config.indicatorOptionId : undefined;
+      return aggregateHeatmapByState(responses, geoField, indicatorMode, indicatorField, indicatorOptionId);
     }
 
     default:

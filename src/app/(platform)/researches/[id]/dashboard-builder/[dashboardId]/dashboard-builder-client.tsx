@@ -21,6 +21,8 @@ const DEFAULT_SIZE: Record<SupportedWidgetType, { width: number; height: number 
   donut_chart:  { width: 5, height: 5 },
   table:        { width: 8, height: 6 },
   text:         { width: 4, height: 2 },
+  map:          { width: 6, height: 6 },
+  heatmap:      { width: 6, height: 6 },
 };
 
 interface WidgetDraft {
@@ -91,7 +93,10 @@ export function DashboardBuilderClient({
     setWidgets(prev => [...prev, {
       id, type, title: SUPPORTED_WIDGET_TYPES.find(t => t.value === type)?.label ?? type,
       col: 0, row: maxRow, width: size.width, height: size.height,
-      config: type === "number_card" ? { aggregation: "count" } : type === "table" ? { fieldIds: [] } : {},
+      config: type === "number_card" ? { aggregation: "count" }
+        : type === "table" ? { fieldIds: [] }
+        : type === "heatmap" ? { indicatorMode: "count" }
+        : {},
     }]);
     setSelectedId(id);
   }, [widgets]);
@@ -375,6 +380,10 @@ function WidgetInspector({
   const choiceFields = useMemo(() => fields.filter(f => (CHOICE_FIELD_TYPES as readonly string[]).includes(f.type)), [fields]);
   const numericFields = useMemo(() => fields.filter(f => (NUMERIC_FIELD_TYPES as readonly string[]).includes(f.type)), [fields]);
   const questionFields = useMemo(() => fields.filter(f => f.type !== "section" && f.type !== "instruction"), [fields]);
+  const geoStateFields = useMemo(() => fields.filter(f => f.type === "geo_state"), [fields]);
+  const geoCoordsFields = useMemo(() => fields.filter(f => f.type === "geo_coords"), [fields]);
+  const indicatorField = fields.find(f => f.id === widget.config.indicatorFieldId);
+  const indicatorOptions = indicatorField ? (indicatorField.type === "yes_no" ? [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }] : ((indicatorField.config as { options?: { id: string; label: string }[] } | null)?.options ?? [])) : [];
 
   return (
     <div className="flex flex-col gap-3">
@@ -469,6 +478,62 @@ function WidgetInspector({
           <textarea className={input} style={{ ...inputStyle, resize: "vertical" }} rows={5}
             value={(widget.config.content as string) ?? ""} onChange={e => onUpdateConfig({ content: e.target.value })} />
         </div>
+      )}
+
+      {widget.type === "map" && (
+        <div>
+          <label {...label}>Campo de coordenadas</label>
+          <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
+            onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
+            <option value="">Selecione...</option>
+            {geoCoordsFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+          </select>
+          {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
+        </div>
+      )}
+
+      {widget.type === "heatmap" && (
+        <>
+          <div>
+            <label {...label}>Campo de estado</label>
+            <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {geoStateFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            {geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de estado neste formulário ainda.</p>}
+          </div>
+          <div>
+            <label {...label}>Colorir por</label>
+            <select className={input} style={inputStyle} value={(widget.config.indicatorMode as string) ?? "count"}
+              onChange={e => onUpdateConfig({ indicatorMode: e.target.value, indicatorFieldId: undefined, indicatorOptionId: undefined })}>
+              <option value="count">Volume de respostas</option>
+              <option value="choice_percent">% de respostas com uma opção específica</option>
+            </select>
+          </div>
+          {widget.config.indicatorMode === "choice_percent" && (
+            <>
+              <div>
+                <label {...label}>Campo indicador</label>
+                <select className={input} style={inputStyle} value={(widget.config.indicatorFieldId as string) ?? ""}
+                  onChange={e => onUpdateConfig({ indicatorFieldId: e.target.value || undefined, indicatorOptionId: undefined })}>
+                  <option value="">Selecione...</option>
+                  {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+              </div>
+              {indicatorField && (
+                <div>
+                  <label {...label}>Opção a medir</label>
+                  <select className={input} style={inputStyle} value={(widget.config.indicatorOptionId as string) ?? ""}
+                    onChange={e => onUpdateConfig({ indicatorOptionId: e.target.value || undefined })}>
+                    <option value="">Selecione...</option>
+                    {indicatorOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
 
       <button onClick={onDelete}
