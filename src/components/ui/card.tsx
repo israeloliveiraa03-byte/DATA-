@@ -15,7 +15,7 @@ export function Card({ className, hoverable, ...props }: HTMLAttributes<HTMLDivE
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("px-5 py-4 border-b border-ink-700", className)} {...props} />;
+  return <div className={cn("card-pad border-b border-ink-700", className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
@@ -27,5 +27,5 @@ export function CardDescription({ className, ...props }: HTMLAttributes<HTMLPara
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("px-5 py-4", className)} {...props} />;
+  return <div className={cn("card-pad", className)} {...props} />;
 }

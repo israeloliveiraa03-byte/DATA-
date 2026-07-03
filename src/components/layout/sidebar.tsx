@@ -123,7 +123,7 @@ export function PlatformSidebar() {
             <p className="leading-snug mb-2 text-ink-300" style={{ fontSize: "8px" }}>
               Acesso gratuito para comunidades tradicionais
             </p>
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-bold transition-[gap] duration-150 group-hover:gap-1.5 bg-brand-500 text-ink-950"
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-bold transition-[gap] duration-150 group-hover:gap-1.5 bg-brand-500 text-on-accent"
               style={{ fontSize: "8px" }}>
               Candidatar <i className="ti ti-arrow-right" style={{ fontSize: "8px" }} />
             </span>

@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { Research } from "@/lib/types";
 
-const CTA_CLASS = "inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold bg-brand-500 text-ink-950 border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150";
+const CTA_CLASS = "inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold bg-brand-500 text-on-accent border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150";
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   draft:     { label: "Rascunho",  bg: "bg-ink-800",    text: "text-ink-300",   dot: "bg-ink-300" },
@@ -96,7 +96,7 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
                 }`}>
                 {f.label}
                 {counts[f.key] !== undefined && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${active ? "bg-brand-500 text-ink-950" : "bg-ink-700 text-ink-300"}`}>
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${active ? "bg-brand-500 text-on-accent" : "bg-ink-700 text-ink-300"}`}>
                     {counts[f.key] ?? 0}
                   </span>
                 )}
@@ -156,7 +156,7 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
         ) : viewMode === "grid" ? (
 
           /* ── GRID ── */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 list-gap">
             {filtered.map(r => {
               const s = STATUS_MAP[r.status] ?? STATUS_MAP.draft;
               const progress = PROGRESS_MAP[r.status] ?? 20;
@@ -175,7 +175,7 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
                     )}
                   </div>
 
-                  <div className="p-4">
+                  <div className="card-pad">
                     {/* Status + Tema */}
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${s.bg} ${s.text}`}>
