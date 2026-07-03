@@ -162,53 +162,66 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
               const progress = PROGRESS_MAP[r.status] ?? 20;
               return (
                 <Link key={r.id} href={`/researches/${r.id}`}
-                  className="block rounded-lg p-4 border border-ink-700 bg-ink-900 transition-colors duration-150 hover:border-brand-500/40 group">
+                  className="block rounded-lg overflow-hidden border border-ink-700 bg-ink-900 transition-colors duration-150 hover:border-brand-500/40 group">
 
-                  {/* Status + Tema */}
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${s.bg} ${s.text}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                      {s.label}
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-ink-800 border border-ink-700 text-ink-300">
-                      {THEME_MAP[r.theme] ?? "Outro"}
-                    </span>
+                  {/* Capa */}
+                  <div className="h-28 w-full bg-ink-800 relative overflow-hidden">
+                    {r.coverImage ? (
+                      <img src={r.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <i className="ti ti-photo text-2xl text-ink-700" />
+                      </div>
+                    )}
                   </div>
 
-                  {/* Título */}
-                  <h3 className="text-sm font-bold mb-1 line-clamp-2 leading-snug font-condensed text-ink-100">
-                    {r.title}
-                  </h3>
+                  <div className="p-4">
+                    {/* Status + Tema */}
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${s.bg} ${s.text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                        {s.label}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-ink-800 border border-ink-700 text-ink-300">
+                        {THEME_MAP[r.theme] ?? "Outro"}
+                      </span>
+                    </div>
 
-                  {/* Descrição */}
-                  {r.description && (
-                    <p className="text-xs mb-3 line-clamp-2 leading-relaxed text-ink-300">
-                      {r.description}
-                    </p>
-                  )}
+                    {/* Título */}
+                    <h3 className="text-sm font-bold mb-1 line-clamp-2 leading-snug font-condensed text-ink-100">
+                      {r.title}
+                    </h3>
 
-                  {/* Localização */}
-                  {r.cityName && (
-                    <p className="text-xs flex items-center gap-1 mb-3 text-ink-300">
-                      <i className="ti ti-map-pin text-xs text-brand-400" />
-                      {r.cityName}
-                    </p>
-                  )}
+                    {/* Descrição */}
+                    {r.description && (
+                      <p className="text-xs mb-3 line-clamp-2 leading-relaxed text-ink-300">
+                        {r.description}
+                      </p>
+                    )}
 
-                  {/* Barra de progresso */}
-                  <div className="h-1 rounded-full overflow-hidden mb-2 bg-ink-700">
-                    <div className="h-full rounded-full bg-brand-500" style={{ width: `${progress}%` }} />
-                  </div>
+                    {/* Localização */}
+                    {r.cityName && (
+                      <p className="text-xs flex items-center gap-1 mb-3 text-ink-300">
+                        <i className="ti ti-map-pin text-xs text-brand-400" />
+                        {r.cityName}
+                      </p>
+                    )}
 
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-ink-300">
-                      {r.status === "draft"     ? "Em construção"    :
-                       r.status === "active"    ? "Coletando dados"  :
-                       r.status === "paused"    ? "Coleta pausada"   :
-                       r.status === "published" ? "Dashboard público":
-                       "Encerrada"}
-                    </p>
-                    <i className="ti ti-arrow-right text-xs text-brand-400 transition-transform duration-150 group-hover:translate-x-0.5" />
+                    {/* Barra de progresso */}
+                    <div className="h-1 rounded-full overflow-hidden mb-2 bg-ink-700">
+                      <div className="h-full rounded-full bg-brand-500" style={{ width: `${progress}%` }} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-ink-300">
+                        {r.status === "draft"     ? "Em construção"    :
+                         r.status === "active"    ? "Coletando dados"  :
+                         r.status === "paused"    ? "Coleta pausada"   :
+                         r.status === "published" ? "Dashboard público":
+                         "Encerrada"}
+                      </p>
+                      <i className="ti ti-arrow-right text-xs text-brand-400 transition-transform duration-150 group-hover:translate-x-0.5" />
+                    </div>
                   </div>
                 </Link>
               );

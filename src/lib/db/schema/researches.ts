@@ -34,6 +34,7 @@ export const researches = pgTable("researches", {
   organizationId: uuid("organization_id").references(() => organizations.id),
   title:          varchar("title",       { length: 500 }).notNull(),
   description:    text("description"),
+  coverImage:     text("cover_image"),
   slug:           varchar("slug",        { length: 200 }).notNull().unique(),
   status:         researchStatusEnum("status").notNull().default("draft"),
   theme:          researchThemeEnum("theme").notNull().default("other"),

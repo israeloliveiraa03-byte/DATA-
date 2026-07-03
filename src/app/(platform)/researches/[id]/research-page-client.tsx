@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 import Link from "next/link";
 import type { Research, Entity, ResearchEntity } from "@/lib/types";
@@ -40,6 +40,9 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   const [copied,      setCopied]      = useState(false);
   const [showQR,      setShowQR]      = useState(false);
   const [saving,      setSaving]      = useState(false);
+  const [coverImage,  setCoverImage]  = useState(research.coverImage);
+  const [coverSaving, setCoverSaving] = useState(false);
+  const coverRef = useRef<HTMLInputElement>(null);
   const [accessMode,  setAccessMode]  = useState<"public" | "restricted">("public");
   const [inviteEmail, setInviteEmail] = useState("");
   const [invites,     setInvites]     = useState<string[]>([]);
@@ -93,6 +96,25 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
     } finally { setSaving(false); }
   }
 
+  async function saveCover(value: string | null) {
+    setCoverSaving(true);
+    try {
+      await fetch(`/api/researches/${research.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverImage: value }),
+      });
+      setCoverImage(value);
+    } finally { setCoverSaving(false); }
+  }
+
+  function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => { if (ev.target?.result) saveCover(ev.target.result as string); };
+    r.readAsDataURL(file);
+  }
+
   function copyLink() {
     navigator.clipboard.writeText(publicUrl);
     setCopied(true);
@@ -107,6 +129,32 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
 
   return (
     <div className="flex-1 overflow-auto" style={{ background: "#fff" }}>
+      {/* Capa da pesquisa */}
+      <div className="relative h-36 max-w-4xl mx-auto mt-6 rounded-xl overflow-hidden" style={{ border: BRD, background: "#fbf3e7" }}>
+        {coverImage ? (
+          <img src={coverImage} alt="Capa da pesquisa" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <i className="ti ti-photo text-3xl" style={{ color: "#d9bb8c" }} />
+          </div>
+        )}
+        <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {coverImage && (
+            <button onClick={() => saveCover(null)} disabled={coverSaving}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+              style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "#c0392b", backdropFilter: "blur(8px)" }}>
+              <i className="ti ti-x text-xs" /> Remover
+            </button>
+          )}
+          <button onClick={() => coverRef.current?.click()} disabled={coverSaving}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "#5c3f13", backdropFilter: "blur(8px)" }}>
+            <i className="ti ti-camera text-xs" /> {coverImage ? "Trocar capa" : "Adicionar capa"}
+          </button>
+        </div>
+      </div>
+
       <div className="p-6 max-w-4xl mx-auto">
 
         {/* Breadcrumb */}
