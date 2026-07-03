@@ -9,64 +9,70 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primária — argila/terracota, tom institucional inspirado na malha do IBGE
-        // (chrome, ações, links, foco). Ver "Identidade visual" no CLAUDE.md.
-        brand: {
-          50:  "#fbf3e7",
-          100: "#f3e4cb",
-          200: "#e8d8be",
-          300: "#d9bb8c",
-          400: "#d2a05c",
-          500: "#c48a42",
-          600: "#a06d28",
-          700: "#7a5218",
-          800: "#5c3f13",
-          900: "#3d2a0d",
+        // Escala neutra "Observatório" — fundo/texto/borda em tom escuro e quente
+        // (não preto puro). Ver "Identidade visual" no CLAUDE.md.
+        ink: {
+          50:  "#f5f3ec",
+          100: "#e8e4d9",
+          300: "#9c9884",
+          500: "#5c5847",
+          700: "#302e22",
+          800: "#262419",
+          900: "#1e1d17",
+          950: "#14140f",
         },
-        // Acentos de dados — reservados a gráficos, indicadores e badges de status
+        // Acento único de ação/dado — verde-dado. Usar com disciplina.
+        brand: {
+          50:  "#e4ebdc",
+          100: "#cddcbb",
+          400: "#93b377",
+          500: "#7a9b5c",
+          600: "#61804a",
+          700: "#4c6539",
+        },
+        // Acentos reservados a badges de status e gráficos — recalibrados pra
+        // contraste em fundo escuro (mais claros/saturados que em fundo branco)
         teal: {
-          50:  "#eaf0e4",
-          100: "#d3e1c4",
-          500: "#4c6b3c",
-          600: "#3a5430",
-          700: "#2c4025",
+          50:  "#dce8ea",
+          500: "#4fa3ad",
+          600: "#3d8189",
         },
         amber: {
-          50:  "#faeeda",
-          500: "#ba7517",
-          600: "#854f0b",
+          50:  "#3a3122",
+          500: "#e0a940",
+          600: "#f0c674",
         },
         coral: {
-          50:  "#fcebeb",
-          500: "#c0392b",
-          600: "#791f1f",
+          50:  "#3a2521",
+          500: "#e0715a",
+          600: "#ec9686",
         },
         purple: {
-          50:  "#eeedfe",
-          500: "#534ab7",
-          600: "#3c3489",
+          50:  "#2c2a3a",
+          500: "#9d94e0",
+          600: "#b8b0ec",
         },
-        // Paleta de séries pra gráficos multi-categoria (inspirada no amCharts)
+        // Paleta de séries pra gráficos multi-categoria, legível em fundo escuro
         chart: {
-          1: "#1a56db",
-          2: "#0d9e75",
-          3: "#ba7517",
-          4: "#534ab7",
-          5: "#c0392b",
-          6: "#0891b2",
+          1: "#5b8fd9",
+          2: "#7a9b5c",
+          3: "#e0a940",
+          4: "#9d94e0",
+          5: "#e0715a",
+          6: "#4fa3ad",
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
-        serif: ["var(--font-serif)", "Fraunces", "Georgia", "serif"],
-        mono: ["JetBrains Mono", "Fira Code", "monospace"],
+        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
+        condensed: ["var(--font-condensed)", "IBM Plex Sans Condensed", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "IBM Plex Mono", "Fira Code", "monospace"],
       },
       borderRadius: {
-        DEFAULT: "8px",
-        sm: "6px",
-        md: "10px",
-        lg: "12px",
-        xl: "16px",
+        DEFAULT: "6px",
+        sm: "4px",
+        md: "8px",
+        lg: "8px",
+        xl: "10px",
       },
       fontSize: {
         "2xs": ["10px", { lineHeight: "14px" }],
@@ -77,21 +83,18 @@ const config: Config = {
         xl:   ["18px", { lineHeight: "28px" }],
       },
       boxShadow: {
-        xs:   "0 1px 2px rgba(15, 23, 42, 0.04)",
-        sm:   "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
-        md:   "0 4px 12px rgba(15, 23, 42, 0.08)",
-        lg:   "0 12px 32px rgba(15, 23, 42, 0.10)",
-        glow: "0 0 0 1px rgba(196, 138, 66, 0.10), 0 8px 24px rgba(196, 138, 66, 0.14)",
-      },
-      backgroundImage: {
-        "brand-glow": "radial-gradient(circle at 30% 20%, rgba(196, 138, 66, 0.16), transparent 55%)",
+        // Profundidade vem de borda + camada de fundo, não de sombra pesada —
+        // esses tokens ficam quase imperceptíveis, só pra separar bordas finas.
+        xs: "0 1px 2px rgba(0, 0, 0, 0.16)",
+        sm: "0 1px 2px rgba(0, 0, 0, 0.20)",
+        md: "0 2px 6px rgba(0, 0, 0, 0.24)",
       },
       keyframes: {
-        "fade-in":    { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        "fade-in":    { from: { opacity: "0", transform: "translateY(2px)" }, to: { opacity: "1", transform: "translateY(0)" } },
         "pulse-soft": { "0%, 100%": { opacity: "1", transform: "scale(1)" }, "50%": { opacity: "0.55", transform: "scale(0.82)" } },
       },
       animation: {
-        "fade-in":    "fade-in 0.4s ease-out both",
+        "fade-in":    "fade-in 0.15s ease-out both",
         "pulse-soft": "pulse-soft 2.4s ease-in-out infinite",
       },
     },

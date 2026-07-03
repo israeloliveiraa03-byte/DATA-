@@ -4,14 +4,14 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { Research } from "@/lib/types";
 
-const BRD = "1px solid #e8d8be";
+const CTA_CLASS = "inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold bg-brand-500 text-ink-950 border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150";
 
-const STATUS_MAP: Record<string, { label: string; bg: string; color: string; dot: string }> = {
-  draft:     { label: "Rascunho",  bg: "#fbf3e7", color: "#7a5218", dot: "#c48a42" },
-  active:    { label: "Ativa",     bg: "#eaf0e4", color: "#3a5430", dot: "#4c6b3c" },
-  paused:    { label: "Pausada",   bg: "#faeeda", color: "#854f0b", dot: "#ba7517" },
-  closed:    { label: "Encerrada", bg: "#fdf0ef", color: "#8b2a1a", dot: "#c0392b" },
-  published: { label: "Publicada", bg: "#e8f0fe", color: "#1041b2", dot: "#1a56db" },
+const STATUS_MAP: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  draft:     { label: "Rascunho",  bg: "bg-ink-800",    text: "text-ink-300",   dot: "bg-ink-300" },
+  active:    { label: "Ativa",     bg: "bg-brand-50",   text: "text-brand-700", dot: "bg-brand-500" },
+  paused:    { label: "Pausada",   bg: "bg-amber-50",   text: "text-amber-500", dot: "bg-amber-500" },
+  closed:    { label: "Encerrada", bg: "bg-coral-50",   text: "text-coral-500", dot: "bg-coral-500" },
+  published: { label: "Publicada", bg: "bg-chart-1/15", text: "text-chart-1",   dot: "bg-chart-1" },
 };
 
 const THEME_MAP: Record<string, string> = {
@@ -54,27 +54,24 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
   }, [researches]);
 
   return (
-    <div className="flex-1 overflow-auto" style={{ background: "#fff" }}>
+    <div className="flex-1 overflow-auto bg-ink-950">
       <div className="p-6 max-w-6xl mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest"
-              style={{ background: "#fbf3e7", border: BRD, color: "#5c3f13" }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#c48a42" }} />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest font-condensed bg-ink-900 border border-ink-700 text-ink-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
               Minhas pesquisas
             </div>
-            <h1 className="text-2xl font-bold" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif", letterSpacing: "-0.4px" }}>
+            <h1 className="text-2xl font-bold font-condensed text-ink-100" style={{ letterSpacing: "-0.3px" }}>
               Pesquisas
             </h1>
-            <p className="text-sm font-medium mt-0.5" style={{ color: "#5c3f13" }}>
+            <p className="text-sm font-medium mt-0.5 text-ink-300">
               {researches.length} {researches.length === 1 ? "pesquisa" : "pesquisas"} no total
             </p>
           </div>
-          <Link href="/researches/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold"
-            style={{ background: "#c48a42", color: "#fff", border: "1.5px solid #7a5218" }}>
+          <Link href="/researches/new" className={CTA_CLASS}>
             <i className="ti ti-plus" /> Nova pesquisa
           </Link>
         </div>
@@ -88,39 +85,38 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
             { key: "paused",    label: "Pausadas"  },
             { key: "published", label: "Publicadas"},
             { key: "closed",    label: "Encerradas"},
-          ].map(f => (
-            <button key={f.key} onClick={() => setStatusFilter(f.key)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-              style={{
-                border:     statusFilter === f.key ? "1.5px solid #c48a42" : BRD,
-                background: statusFilter === f.key ? "#fbf3e7" : "#fbf3e7",
-                color:      statusFilter === f.key ? "#7a5218" : "#5c3f13",
-              }}>
-              {f.label}
-              {counts[f.key] !== undefined && (
-                <span className="px-1.5 py-0.5 rounded-full text-xs font-bold"
-                  style={{ background: statusFilter === f.key ? "#c48a42" : "#e8d8be", color: statusFilter === f.key ? "#fff" : "#5c3f13" }}>
-                  {counts[f.key] ?? 0}
-                </span>
-              )}
-            </button>
-          ))}
+          ].map(f => {
+            const active = statusFilter === f.key;
+            return (
+              <button key={f.key} onClick={() => setStatusFilter(f.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold font-condensed border transition-colors duration-150 ${
+                  active
+                    ? "border-brand-500 bg-brand-50/10 text-brand-400"
+                    : "border-ink-700 bg-ink-900 text-ink-300 hover:border-ink-500 hover:text-ink-100"
+                }`}>
+                {f.label}
+                {counts[f.key] !== undefined && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${active ? "bg-brand-500 text-ink-950" : "bg-ink-700 text-ink-300"}`}>
+                    {counts[f.key] ?? 0}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Busca e filtros secundários */}
         <div className="flex items-center gap-3 mb-6">
           <div className="flex-1 relative">
-            <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#d9bb8c" }} />
+            <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-500" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por título ou descrição..."
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border focus:outline-none"
-              style={{ border: BRD, background: "#fff", color: "#111" }} />
+              className="w-full pl-9 pr-4 py-2 text-sm rounded-md border border-ink-700 bg-ink-900 text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors duration-150" />
           </div>
 
           {/* Filtro de tema */}
           <select value={themeFilter} onChange={e => setThemeFilter(e.target.value)}
-            className="px-3 py-2 text-xs rounded-lg border focus:outline-none"
-            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            className="px-3 py-2 text-xs rounded-md border border-ink-700 bg-ink-900 text-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
             <option value="all">Todos os temas</option>
             {Object.entries(THEME_MAP).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -128,15 +124,14 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
           </select>
 
           {/* Alternar view */}
-          <div className="flex rounded-lg overflow-hidden" style={{ border: BRD }}>
+          <div className="flex rounded-md overflow-hidden border border-ink-700">
             {[
               { mode: "grid", icon: "ti-layout-grid" },
               { mode: "list", icon: "ti-list" },
             ].map(v => (
               <button key={v.mode} onClick={() => setViewMode(v.mode as "grid" | "list")}
-                className="px-3 py-2 transition-colors"
-                style={{ background: viewMode === v.mode ? "#fbf3e7" : "#fff", borderRight: v.mode === "grid" ? BRD : "none" }}>
-                <i className={`ti ${v.icon} text-sm`} style={{ color: viewMode === v.mode ? "#c48a42" : "#a06d28" }} />
+                className={`px-3 py-2 transition-colors duration-150 ${viewMode === v.mode ? "bg-ink-800" : "bg-ink-900"} ${v.mode === "grid" ? "border-r border-ink-700" : ""}`}>
+                <i className={`ti ${v.icon} text-sm ${viewMode === v.mode ? "text-brand-400" : "text-ink-500"}`} />
               </button>
             ))}
           </div>
@@ -144,21 +139,19 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
 
         {/* Resultado vazio */}
         {researches.length === 0 ? (
-          <div className="text-center py-20 rounded-xl" style={{ border: "2px dashed #d9bb8c", background: "#fbf3e7" }}>
-            <i className="ti ti-clipboard-list text-4xl block mb-3" style={{ color: "#d9bb8c" }} />
-            <p className="text-sm font-semibold mb-1" style={{ color: "#5c3f13" }}>Nenhuma pesquisa ainda</p>
-            <p className="text-xs mb-5" style={{ color: "#a06d28" }}>Crie sua primeira pesquisa para começar a coletar dados</p>
-            <Link href="/researches/new"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold"
-              style={{ background: "#c48a42", color: "#fff" }}>
+          <div className="text-center py-20 rounded-lg border-2 border-dashed border-ink-700 bg-ink-900">
+            <i className="ti ti-clipboard-list text-4xl block mb-3 text-ink-500" />
+            <p className="text-sm font-semibold mb-1 text-ink-100">Nenhuma pesquisa ainda</p>
+            <p className="text-xs mb-5 text-ink-300">Crie sua primeira pesquisa para começar a coletar dados</p>
+            <Link href="/researches/new" className={CTA_CLASS}>
               <i className="ti ti-plus" /> Criar primeira pesquisa
             </Link>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 rounded-xl" style={{ border: BRD, background: "#fbf3e7" }}>
-            <i className="ti ti-search text-3xl block mb-3" style={{ color: "#d9bb8c" }} />
-            <p className="text-sm font-semibold mb-1" style={{ color: "#5c3f13" }}>Nenhum resultado encontrado</p>
-            <p className="text-xs" style={{ color: "#a06d28" }}>Tente ajustar os filtros ou a busca</p>
+          <div className="text-center py-16 rounded-lg border border-ink-700 bg-ink-900">
+            <i className="ti ti-search text-3xl block mb-3 text-ink-500" />
+            <p className="text-sm font-semibold mb-1 text-ink-100">Nenhum resultado encontrado</p>
+            <p className="text-xs text-ink-300">Tente ajustar os filtros ou a busca</p>
           </div>
         ) : viewMode === "grid" ? (
 
@@ -169,58 +162,53 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
               const progress = PROGRESS_MAP[r.status] ?? 20;
               return (
                 <Link key={r.id} href={`/researches/${r.id}`}
-                  className="block rounded-xl p-4 transition-all group"
-                  style={{ border: BRD, background: "#fff" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#d2a05c"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(196,138,66,0.08)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e8d8be"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
+                  className="block rounded-lg p-4 border border-ink-700 bg-ink-900 transition-colors duration-150 hover:border-brand-500/40 group">
 
                   {/* Status + Tema */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold"
-                      style={{ background: s.bg, color: s.color }}>
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${s.bg} ${s.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                       {s.label}
                     </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: "#fbf3e7", border: BRD, color: "#5c3f13" }}>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-ink-800 border border-ink-700 text-ink-300">
                       {THEME_MAP[r.theme] ?? "Outro"}
                     </span>
                   </div>
 
                   {/* Título */}
-                  <h3 className="text-sm font-bold mb-1 line-clamp-2 leading-snug" style={{ color: "#0f172a" }}>
+                  <h3 className="text-sm font-bold mb-1 line-clamp-2 leading-snug font-condensed text-ink-100">
                     {r.title}
                   </h3>
 
                   {/* Descrição */}
                   {r.description && (
-                    <p className="text-xs mb-3 line-clamp-2 leading-relaxed" style={{ color: "#a06d28" }}>
+                    <p className="text-xs mb-3 line-clamp-2 leading-relaxed text-ink-300">
                       {r.description}
                     </p>
                   )}
 
                   {/* Localização */}
                   {r.cityName && (
-                    <p className="text-xs flex items-center gap-1 mb-3" style={{ color: "#a06d28" }}>
-                      <i className="ti ti-map-pin text-xs" style={{ color: "#c48a42" }} />
+                    <p className="text-xs flex items-center gap-1 mb-3 text-ink-300">
+                      <i className="ti ti-map-pin text-xs text-brand-400" />
                       {r.cityName}
                     </p>
                   )}
 
                   {/* Barra de progresso */}
-                  <div className="h-1 rounded-full overflow-hidden mb-2" style={{ background: "#f3e4cb" }}>
-                    <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: "#c48a42" }} />
+                  <div className="h-1 rounded-full overflow-hidden mb-2 bg-ink-700">
+                    <div className="h-full rounded-full bg-brand-500" style={{ width: `${progress}%` }} />
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium" style={{ color: "#a06d28" }}>
+                    <p className="text-xs font-medium text-ink-300">
                       {r.status === "draft"     ? "Em construção"    :
                        r.status === "active"    ? "Coletando dados"  :
                        r.status === "paused"    ? "Coleta pausada"   :
                        r.status === "published" ? "Dashboard público":
                        "Encerrada"}
                     </p>
-                    <i className="ti ti-arrow-right text-xs transition-transform group-hover:translate-x-0.5" style={{ color: "#c48a42" }} />
+                    <i className="ti ti-arrow-right text-xs text-brand-400 transition-transform duration-150 group-hover:translate-x-0.5" />
                   </div>
                 </Link>
               );
@@ -230,43 +218,37 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
         ) : (
 
           /* ── LISTA ── */
-          <div className="rounded-xl overflow-hidden" style={{ border: BRD }}>
+          <div className="rounded-lg overflow-hidden border border-ink-700">
             {filtered.map((r, idx) => {
               const s = STATUS_MAP[r.status] ?? STATUS_MAP.draft;
               return (
                 <Link key={r.id} href={`/researches/${r.id}`}
-                  className="flex items-center gap-4 px-4 py-3 transition-colors"
-                  style={{ borderBottom: idx < filtered.length - 1 ? BRD : "none", background: "#fff" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#fbf3e7"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fff"; }}>
+                  className={`flex items-center gap-4 px-4 py-3 bg-ink-900 hover:bg-ink-800 transition-colors duration-150 ${idx < filtered.length - 1 ? "border-b border-ink-700" : ""}`}>
 
                   {/* Status dot */}
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: s.bg }}>
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.dot }} />
+                  <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${s.bg}`}>
+                    <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
                   </div>
 
                   {/* Título e desc */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate" style={{ color: "#0f172a" }}>{r.title}</p>
+                    <p className="text-sm font-bold truncate text-ink-100">{r.title}</p>
                     {r.description && (
-                      <p className="text-xs truncate mt-0.5" style={{ color: "#a06d28" }}>{r.description}</p>
+                      <p className="text-xs truncate mt-0.5 text-ink-300">{r.description}</p>
                     )}
                   </div>
 
                   {/* Tema */}
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap hidden md:block"
-                    style={{ background: "#fbf3e7", border: BRD, color: "#5c3f13" }}>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap hidden md:block bg-ink-800 border border-ink-700 text-ink-300">
                     {THEME_MAP[r.theme] ?? "Outro"}
                   </span>
 
                   {/* Status */}
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap"
-                    style={{ background: s.bg, color: s.color }}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap ${s.bg} ${s.text}`}>
                     {s.label}
                   </span>
 
-                  <i className="ti ti-chevron-right text-xs flex-shrink-0" style={{ color: "#c48a42" }} />
+                  <i className="ti ti-chevron-right text-xs flex-shrink-0 text-brand-400" />
                 </Link>
               );
             })}
@@ -275,7 +257,7 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
 
         {/* Resumo */}
         {filtered.length > 0 && (
-          <p className="text-center text-xs mt-6 font-medium" style={{ color: "#d9bb8c" }}>
+          <p className="text-center text-xs mt-6 font-medium text-ink-500">
             Mostrando {filtered.length} de {researches.length} pesquisas
           </p>
         )}

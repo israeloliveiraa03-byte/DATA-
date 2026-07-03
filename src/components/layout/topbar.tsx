@@ -15,9 +15,9 @@ export function PlatformTopbar({ user }: { user: User }) {
   const pathname = usePathname();
 
   return (
-    <header className="h-12 flex items-center justify-between px-5 sticky top-0 z-50 flex-shrink-0 bg-white/90 backdrop-blur border-b border-slate-200">
-      <Link href="/dashboard" className="flex-shrink-0">
-        <DataLogo className="text-lg" />
+    <header className="h-12 flex items-center justify-between px-5 sticky top-0 z-50 flex-shrink-0 bg-ink-950/95 backdrop-blur border-b border-ink-700">
+      <Link href="/dashboard" className="flex-shrink-0 text-ink-100">
+        <DataLogo className="text-lg font-condensed" />
       </Link>
 
       {/* Nav central */}
@@ -28,10 +28,10 @@ export function PlatformTopbar({ user }: { user: User }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${
+              className={`px-3 py-1.5 rounded text-sm font-medium font-condensed transition-colors duration-150 border ${
                 active
-                  ? "bg-brand-50 text-brand-700 border-brand-100"
-                  : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
+                  ? "bg-brand-50/10 text-brand-400 border-brand-500/30"
+                  : "text-ink-300 border-transparent hover:bg-ink-900 hover:text-ink-100"
               }`}
             >
               {item.label}
@@ -42,12 +42,12 @@ export function PlatformTopbar({ user }: { user: User }) {
 
       {/* User */}
       <div className="flex items-center gap-3">
-        <span className="text-xs hidden sm:block font-medium text-slate-500">
+        <span className="text-xs hidden sm:block font-medium text-ink-300">
           {user.email}
         </span>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="text-xs font-semibold px-3 py-1.5 rounded-md transition-colors text-slate-600 border border-slate-200 bg-white hover:bg-slate-50"
+          className="text-xs font-semibold px-3 py-1.5 rounded transition-colors duration-150 text-ink-300 border border-ink-700 bg-ink-900 hover:bg-ink-800 hover:text-ink-100"
         >
           Sair
         </button>
