@@ -13,13 +13,20 @@ interface MapWidgetProps {
 function FitToPoints({ points }: { points: MapResult["points"] }) {
   const map = useMap();
   useEffect(() => {
-    if (points.length === 0) return;
-    if (points.length === 1) {
-      map.setView([points[0].lat, points[0].lng], 10);
-      return;
-    }
-    const bounds: [number, number][] = points.map(p => [p.lat, p.lng]);
-    map.fitBounds(bounds, { padding: [24, 24] });
+    // Leaflet às vezes calcula tamanho 0x0 no primeiro paint quando o
+    // container pai é posicionado via `absolute` (caso do grid do
+    // dashboard) — força recalcular antes de ajustar a visão.
+    const t = setTimeout(() => {
+      map.invalidateSize();
+      if (points.length === 0) return;
+      if (points.length === 1) {
+        map.setView([points[0].lat, points[0].lng], 10);
+        return;
+      }
+      const bounds: [number, number][] = points.map(p => [p.lat, p.lng]);
+      map.fitBounds(bounds, { padding: [24, 24] });
+    }, 150);
+    return () => clearTimeout(t);
   }, [map, points]);
   return null;
 }

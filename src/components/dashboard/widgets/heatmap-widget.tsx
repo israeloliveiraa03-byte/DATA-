@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import type { Layer, PathOptions } from "leaflet";
 import type { Feature, FeatureCollection } from "geojson";
 import type { HeatmapResult } from "@/lib/dashboard/types";
@@ -12,6 +12,18 @@ const NO_DATA_STYLE: PathOptions = { fillColor: "#5c5847", weight: 1, color: "#3
 
 interface HeatmapWidgetProps {
   data: HeatmapResult;
+}
+
+// Leaflet às vezes calcula tamanho 0x0 no primeiro paint quando o container
+// pai é posicionado via `absolute` (caso do grid do dashboard) — força
+// recalcular o tamanho logo depois de montar, senão o mapa fica em branco.
+function InvalidateSizeOnMount() {
+  const map = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 150);
+    return () => clearTimeout(t);
+  }, [map]);
+  return null;
 }
 
 export function HeatmapWidget({ data }: HeatmapWidgetProps) {
@@ -58,6 +70,7 @@ export function HeatmapWidget({ data }: HeatmapWidgetProps) {
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
           <GeoJSON key={JSON.stringify(data.byState)} data={estados} style={styleFeature} onEachFeature={onEachFeature} />
+          <InvalidateSizeOnMount />
         </MapContainer>
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 px-1">

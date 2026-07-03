@@ -67,7 +67,55 @@ export function DashboardBuilderClient({
   const [publishing, setPublishing] = useState(false);
   const [savedAt,    setSavedAt]    = useState<string | null>(null);
 
+  const [dashboardTheme,    setDashboardTheme]    = useState(dashboard.theme ?? "light");
+  const [dashboardCoverUrl, setDashboardCoverUrl]  = useState(dashboard.coverUrl);
+  const [appearanceOpen,    setAppearanceOpen]     = useState(false);
+  const [coverUploading,    setCoverUploading]     = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
   const selectedWidget = widgets.find(w => w.id === selectedId) ?? null;
+
+  const saveAppearance = useCallback(async (patch: { theme?: string; coverUrl?: string | null }) => {
+    await fetch(`/api/dashboards/${dashboard.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+  }, [dashboard.id]);
+
+  function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setCoverUploading(true);
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        // Redimensiona no cliente antes de guardar (fundo de página tende a
+        // ser maior que avatar/capa — evita inchar o banco com base64 gigante).
+        const maxWidth = 1600;
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        setDashboardCoverUrl(dataUrl);
+        saveAppearance({ coverUrl: dataUrl }).finally(() => setCoverUploading(false));
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeCover() {
+    setDashboardCoverUrl(null);
+    saveAppearance({ coverUrl: null });
+  }
+
+  function setTheme(theme: string) {
+    setDashboardTheme(theme);
+    saveAppearance({ theme });
+  }
 
   // Carrega os widgets salvos ao montar
   useEffect(() => {
@@ -243,6 +291,49 @@ export function DashboardBuilderClient({
 
         {/* Painel esquerdo — paleta de widgets */}
         <aside className="w-48 flex-shrink-0 overflow-y-auto py-3 px-2.5" style={{ background: "#fbf3e7", borderRight: BRD }}>
+
+          {/* Aparência da página publicada — a página é do pesquisador, não
+              chrome do Dataº: fundo e tom ficam com ele escolher. */}
+          <button onClick={() => setAppearanceOpen(v => !v)}
+            className="w-full flex items-center justify-between px-1 mb-1.5">
+            <span className="font-bold uppercase tracking-widest" style={TS}>Aparência publicada</span>
+            <i className={`ti ${appearanceOpen ? "ti-chevron-up" : "ti-chevron-down"} text-xs`} style={{ color: "#c48a42" }} />
+          </button>
+          {appearanceOpen && (
+            <div className="mb-3 p-2 rounded-md" style={{ border: BRD, background: "#fff" }}>
+              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Imagem de fundo</p>
+              <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
+              {dashboardCoverUrl && (
+                <div className="relative h-16 rounded-md overflow-hidden mb-1.5" style={{ border: BRD }}>
+                  <img src={dashboardCoverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="flex gap-1.5 mb-3">
+                <button onClick={() => coverInputRef.current?.click()} disabled={coverUploading}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-2xs font-semibold disabled:opacity-50"
+                  style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
+                  <i className={`ti ${coverUploading ? "ti-loader-2 animate-spin" : "ti-photo"}`} />
+                  {dashboardCoverUrl ? "Trocar" : "Adicionar"}
+                </button>
+                {dashboardCoverUrl && (
+                  <button onClick={removeCover} className="px-2 py-1.5 rounded-md text-2xs font-semibold" style={{ border: BRD, color: "#c0392b" }}>
+                    <i className="ti ti-x" />
+                  </button>
+                )}
+              </div>
+              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Tom</p>
+              <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+                {[{ v: "light", l: "Claro" }, { v: "dark", l: "Escuro" }].map(t => (
+                  <button key={t.v} onClick={() => setTheme(t.v)}
+                    className="flex-1 py-1.5 text-2xs font-semibold"
+                    style={{ background: dashboardTheme === t.v ? "#c48a42" : "#fff", color: dashboardTheme === t.v ? "#fff" : "#5c3f13" }}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <p className="px-1 mb-1.5 font-bold uppercase tracking-widest" style={TS}>Widgets</p>
           {SUPPORTED_WIDGET_TYPES.map(item => (
             <button key={item.value} onClick={() => addWidget(item.value)}

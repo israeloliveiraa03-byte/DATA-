@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 // Só os tipos com motor de agregação implementado em src/lib/dashboard/aggregate.ts
-// (o widget_type do banco tem mais opções — line_chart, map, image, heatmap — que
-// ainda não têm cálculo nem editor; ficam de fora daqui até serem implementados).
+// (o widget_type do banco tem mais opções — line_chart, image — que ainda não
+// têm cálculo nem editor; ficam de fora daqui até serem implementados).
 export const supportedWidgetTypeValues = [
-  "number_card", "bar_chart", "pie_chart", "donut_chart", "table", "text",
+  "number_card", "bar_chart", "pie_chart", "donut_chart", "table", "text", "map", "heatmap",
 ] as const;
 
 export const createDashboardSchema = z.object({
@@ -16,7 +16,10 @@ export const updateDashboardSchema = z.object({
   description: z.string().max(2000).optional(),
   isPublic:    z.boolean().optional(),
   theme:       z.string().max(50).optional(),
-  coverUrl:    z.string().max(2000).optional(),
+  // Imagem de fundo customizada guardada como base64 (mesmo padrão de capa de
+  // pesquisa/perfil) — limite generoso o bastante pra uma imagem comprimida
+  // (redimensionada no cliente antes de enviar, ver dashboard-builder-client.tsx).
+  coverUrl:    z.string().max(3000000).nullable().optional(),
 });
 
 const widgetInput = z.object({
