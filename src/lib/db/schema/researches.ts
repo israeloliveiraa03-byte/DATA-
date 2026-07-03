@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, timestamp, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, boolean, timestamp, integer, real, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { users, organizations } from "./users";
 import { researchEntities } from "./entities";
@@ -48,6 +48,13 @@ export const researches = pgTable("researches", {
   closesAt:       timestamp("closes_at",      { withTimezone: true }),
   publicDashboard:boolean("public_dashboard").notNull().default(false),
   publicUrl:      varchar("public_url",  { length: 300 }),
+  // Confiabilidade estatística — universo da pesquisa e amostra necessária.
+  // Ver "Confiabilidade estatística" no CLAUDE.md / src/lib/dashboard/reliability.ts.
+  universeSize:              integer("universe_size"),
+  confidenceLevel:           integer("confidence_level").notNull().default(95),
+  marginError:               real("margin_error").notNull().default(5),
+  reliabilityStratumFieldId: uuid("reliability_stratum_field_id"),
+  universeByStratum:         jsonb("universe_by_stratum"),
   createdAt:      timestamp("created_at",     { withTimezone: true }).notNull().defaultNow(),
   updatedAt:      timestamp("updated_at",     { withTimezone: true }).notNull().defaultNow(),
   deletedAt:      timestamp("deleted_at",     { withTimezone: true }),

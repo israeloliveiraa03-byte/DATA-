@@ -2,7 +2,9 @@ import { db } from "@/lib/db";
 import { forms, responses } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { after } from "next/server";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { checkAndNotifyReliability } from "@/lib/dashboard/reliability";
 import { z } from "zod";
 
 const submitSchema = z.object({
@@ -37,6 +39,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     submittedAt: new Date(),
     syncedAt: collectedOffline ? new Date() : null,
   }).returning({ id: responses.id });
+
+  // Roda depois da resposta já ter sido enviada pro cliente, mas garante que
+  // a checagem termina de verdade (não é só um "dispara e esquece" que o
+  // runtime serverless poderia cortar antes de terminar).
+  after(() => checkAndNotifyReliability(form.researchId));
 
   return apiSuccess({ id: response.id });
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import Link from "next/link";
 import type { Research, Entity, ResearchEntity } from "@/lib/types";
+import type { ReliabilityStatus } from "@/lib/dashboard/reliability";
+import { SIGLA_TO_CODAREA } from "@/lib/geo/uf";
 
 const ENTITY_TYPE_MAP: Record<string, { label: string; icon: string }> = {
   territorio: { label: "Território",  icon: "ti-map" },
@@ -46,6 +48,59 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   const [accessMode,  setAccessMode]  = useState<"public" | "restricted">("public");
   const [inviteEmail, setInviteEmail] = useState("");
   const [invites,     setInvites]     = useState<string[]>([]);
+
+  const [reliability,        setReliability]        = useState<ReliabilityStatus | null>(null);
+  const [geoFields,          setGeoFields]           = useState<{ id: string; type: string; label: string }[]>([]);
+  const [showReliabilityHelp, setShowReliabilityHelp] = useState(false);
+  const [universeInput,      setUniverseInput]       = useState(research.universeSize?.toString() ?? "");
+  const [confidenceLevel,    setConfidenceLevelInput] = useState(research.confidenceLevel);
+  const [marginErrorInput,   setMarginErrorInput]     = useState(research.marginError);
+  const [stratumFieldId,     setStratumFieldId]       = useState(research.reliabilityStratumFieldId ?? "");
+  const [stratumUniverses,   setStratumUniverses]     = useState<Record<string, string>>(
+    (research.universeByStratum as Record<string, number> | null) ?
+      Object.fromEntries(Object.entries(research.universeByStratum as Record<string, number>).map(([k, v]) => [k, String(v)])) : {}
+  );
+  const [addStratumKey,      setAddStratumKey]        = useState("");
+  const [reliabilitySaving,  setReliabilitySaving]    = useState(false);
+
+  async function loadReliability() {
+    const res = await fetch(`/api/researches/${research.id}/reliability`);
+    if (res.ok) setReliability((await res.json()).data);
+  }
+
+  useEffect(() => {
+    loadReliability();
+    (async () => {
+      const res = await fetch(`/api/researches/${research.id}/form`);
+      if (!res.ok) return;
+      const form = (await res.json()).data;
+      const fields = (form?.fields ?? []) as { id: string; type: string; label: string }[];
+      setGeoFields(fields.filter(f => f.type === "geo_state" || f.type === "geo_region"));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function saveReliabilityConfig() {
+    setReliabilitySaving(true);
+    try {
+      await fetch(`/api/researches/${research.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          universeSize: universeInput ? Number(universeInput) : null,
+          confidenceLevel,
+          marginError: marginErrorInput,
+          reliabilityStratumFieldId: stratumFieldId || null,
+          universeByStratum: Object.keys(stratumUniverses).length > 0
+            ? Object.fromEntries(Object.entries(stratumUniverses).filter(([, v]) => v).map(([k, v]) => [k, Number(v)]))
+            : null,
+        }),
+      });
+      await loadReliability();
+    } finally {
+      setReliabilitySaving(false);
+    }
+  }
 
   const [links,            setLinks]            = useState(linkedEntities);
   const [remainingEntities, setRemainingEntities] = useState(availableEntities);
@@ -365,6 +420,164 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                           </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Confiabilidade estatística */}
+            <div className="rounded-xl p-5" style={{ border: BRD, background: "#fff" }}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: "#eaf0e4" }}>
+                    <i className="ti ti-chart-arcs text-sm" style={{ color: "#4c6b3c" }} />
+                  </div>
+                  <h2 className="text-sm font-bold" style={{ color: "#0f172a" }}>Confiabilidade estatística</h2>
+                </div>
+                <button onClick={() => setShowReliabilityHelp(v => !v)} className="text-2xs font-semibold underline" style={{ color: "#a06d28" }}>
+                  {showReliabilityHelp ? "Ocultar explicação" : "Como isso é calculado?"}
+                </button>
+              </div>
+
+              {showReliabilityHelp && (
+                <div className="text-2xs rounded-lg p-3 mb-3 mt-2" style={{ background: "#fbf3e7", color: "#5c3f13", lineHeight: 1.6 }}>
+                  <p className="mb-1.5">Calculamos quantas respostas você precisa pra ter confiança estatística nos
+                  resultados, usando a fórmula de Cochran (a mesma usada em pesquisas de opinião e amostragem de censo).</p>
+                  <p className="mb-1.5"><strong>Nível de confiança</strong>: se você repetisse essa pesquisa 100 vezes,
+                  em quantas o resultado ficaria dentro da margem de erro.</p>
+                  <p className="mb-1.5"><strong>Margem de erro</strong>: o quanto o resultado pode variar pra mais ou pra menos.</p>
+                  <p>Se sua pesquisa cobre várias regiões/estados com contextos muito diferentes, estratificar por
+                  estado (abaixo) evita que uma região fique sub-representada mesmo que o total geral já pareça suficiente.</p>
+                </div>
+              )}
+
+              {/* Config */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div>
+                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>Universo</label>
+                  <input type="number" min={0} value={universeInput} onChange={e => setUniverseInput(e.target.value)}
+                    placeholder="Ex: 50000"
+                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none"
+                    style={{ border: BRD, background: "#fff", color: "#111" }} />
+                </div>
+                <div>
+                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>Confiança</label>
+                  <select value={confidenceLevel} onChange={e => setConfidenceLevelInput(Number(e.target.value))}
+                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none"
+                    style={{ border: BRD, background: "#fff", color: "#111" }}>
+                    <option value={90}>90%</option>
+                    <option value={95}>95%</option>
+                    <option value={99}>99%</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>Margem de erro</label>
+                  <select value={marginErrorInput} onChange={e => setMarginErrorInput(Number(e.target.value))}
+                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none"
+                    style={{ border: BRD, background: "#fff", color: "#111" }}>
+                    <option value={1}>±1%</option>
+                    <option value={3}>±3%</option>
+                    <option value={5}>±5%</option>
+                    <option value={10}>±10%</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Estratificação por estado/região */}
+              {geoFields.length > 0 && (
+                <div className="mb-3">
+                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>
+                    Estratificar por (opcional — pra pesquisas nacionais/multi-região)
+                  </label>
+                  <select value={stratumFieldId} onChange={e => setStratumFieldId(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none mb-2"
+                    style={{ border: BRD, background: "#fff", color: "#111" }}>
+                    <option value="">Não estratificar (só meta geral)</option>
+                    {geoFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                  </select>
+
+                  {stratumFieldId && (
+                    <div className="flex flex-col gap-1.5">
+                      {Object.entries(stratumUniverses).map(([key, val]) => (
+                        <div key={key} className="flex items-center gap-2">
+                          <span className="text-xs font-mono w-10" style={{ color: "#5c3f13" }}>{key}</span>
+                          <input type="number" min={0} value={val}
+                            onChange={e => setStratumUniverses(prev => ({ ...prev, [key]: e.target.value }))}
+                            placeholder="Universo desse estado"
+                            className="flex-1 px-2 py-1 rounded-md text-xs border focus:outline-none"
+                            style={{ border: BRD, background: "#fff", color: "#111" }} />
+                          <button onClick={() => setStratumUniverses(prev => { const n = { ...prev }; delete n[key]; return n; })}
+                            className="text-gray-300 hover:text-red-400">
+                            <i className="ti ti-x text-xs" />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2">
+                        <select value={addStratumKey} onChange={e => {
+                          if (e.target.value) { setStratumUniverses(prev => ({ ...prev, [e.target.value]: "" })); setAddStratumKey(""); }
+                        }} className="flex-1 px-2 py-1.5 rounded-md text-xs border focus:outline-none"
+                          style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
+                          <option value="">+ Adicionar estado...</option>
+                          {Object.keys(SIGLA_TO_CODAREA).filter(uf => !(uf in stratumUniverses)).map(uf => (
+                            <option key={uf} value={uf}>{uf}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button onClick={saveReliabilityConfig} disabled={reliabilitySaving}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50 mb-3"
+                style={{ background: "#c48a42", color: "#fff" }}>
+                <i className={`ti ${reliabilitySaving ? "ti-loader-2 animate-spin" : "ti-device-floppy"}`} /> Salvar configuração
+              </button>
+
+              {/* Progresso */}
+              {reliability?.configured && (
+                <div className="pt-3" style={{ borderTop: BRD }}>
+                  <div className="p-3 rounded-lg mb-2" style={{ background: reliability.overall.met ? "#eaf0e4" : "#fbf3e7", border: BRD }}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold" style={{ color: reliability.overall.met ? "#3a5430" : "#7a5218" }}>
+                        {reliability.overall.met ? "✓ Meta geral atingida" : "Meta geral em progresso"}
+                      </span>
+                      <span className="text-xs font-mono" style={{ color: "#5c3f13" }}>
+                        {reliability.overall.current} / {reliability.overall.required}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#f3e4cb" }}>
+                      <div style={{
+                        width: `${Math.min(100, (reliability.overall.current / reliability.overall.required) * 100)}%`,
+                        background: reliability.overall.met ? "#4c6b3c" : "#c48a42", height: "100%",
+                      }} />
+                    </div>
+                  </div>
+
+                  {reliability.mode === "stratified" && reliability.strata.length > 0 && (
+                    <div className="flex flex-col gap-1 mb-2">
+                      {reliability.strata.map(s => (
+                        <div key={s.key} className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-md"
+                          style={{ border: BRD, background: s.met ? "#eaf0e4" : "#fff" }}>
+                          <span style={{ color: "#5c3f13" }}>{s.met && "✓ "}{s.label}</span>
+                          <span className="font-mono" style={{ color: "#5c3f13" }}>{s.current} / {s.required}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {reliability.perResearcher && reliability.perResearcher.length > 0 && (
+                    <div className="mt-2 pt-2" style={{ borderTop: BRD }}>
+                      <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Por pesquisador</p>
+                      <div className="flex flex-col gap-1">
+                        {reliability.perResearcher.map(r => (
+                          <div key={r.userId} className="flex items-center justify-between text-xs">
+                            <span style={{ color: "#5c3f13" }}>{r.met && "✓ "}{r.name}</span>
+                            <span className="font-mono" style={{ color: "#5c3f13" }}>{r.current} / {r.quota}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
