@@ -117,13 +117,13 @@ export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableRe
 export const NUMERIC_FIELD_TYPES = ["number", "scale", "nps", "stars", "slider"] as const;
 export const CHOICE_FIELD_TYPES = ["single_choice", "multiple_choice", "yes_no", "weighted", "consent"] as const;
 
-export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string; icon: string }[] = [
-  { value: "number_card", label: "Número",  icon: "ti-square-rounded-number-1" },
-  { value: "bar_chart",   label: "Barras",  icon: "ti-chart-bar" },
-  { value: "pie_chart",   label: "Pizza",   icon: "ti-chart-pie" },
-  { value: "donut_chart", label: "Rosca",   icon: "ti-chart-donut" },
-  { value: "table",       label: "Tabela",  icon: "ti-table" },
-  { value: "text",        label: "Texto",   icon: "ti-text-size" },
-  { value: "map",         label: "Mapa de pontos", icon: "ti-map-pin" },
-  { value: "heatmap",     label: "Mapa de calor",  icon: "ti-map-2" },
+export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string; icon: string; description: string }[] = [
+  { value: "number_card", label: "Número",  icon: "ti-square-rounded-number-1", description: "Um valor só — contagem, soma, média..." },
+  { value: "bar_chart",   label: "Barras",  icon: "ti-chart-bar",               description: "Comparar opções de um campo de escolha" },
+  { value: "pie_chart",   label: "Pizza",   icon: "ti-chart-pie",               description: "Proporção entre opções de escolha" },
+  { value: "donut_chart", label: "Rosca",   icon: "ti-chart-donut",             description: "Como a pizza, com espaço central" },
+  { value: "table",       label: "Tabela",  icon: "ti-table",                   description: "Lista de respostas, coluna por campo" },
+  { value: "text",        label: "Texto",   icon: "ti-text-size",               description: "Bloco de texto livre, sem dado" },
+  { value: "map",         label: "Mapa de pontos", icon: "ti-map-pin",          description: "Um marcador por resposta com GPS" },
+  { value: "heatmap",     label: "Mapa de calor",  icon: "ti-map-2",           description: "Colore o Brasil por estado" },
 ];

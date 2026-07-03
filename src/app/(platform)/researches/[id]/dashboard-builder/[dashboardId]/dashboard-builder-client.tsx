@@ -246,14 +246,18 @@ export function DashboardBuilderClient({
           <p className="px-1 mb-1.5 font-bold uppercase tracking-widest" style={TS}>Widgets</p>
           {SUPPORTED_WIDGET_TYPES.map(item => (
             <button key={item.value} onClick={() => addWidget(item.value)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md mb-1 text-left transition-all"
+              title={item.description}
+              className="w-full flex items-start gap-2 px-2 py-1.5 rounded-md mb-1 text-left transition-all"
               style={{ border: BRD, background: "#fff" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#d2a05c"; e.currentTarget.style.background = "#fbf3e7"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#e8d8be"; e.currentTarget.style.background = "#fff"; }}>
-              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0" style={{ background: "#fbf3e7", color: "#c48a42" }}>
+              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 mt-0.5" style={{ background: "#fbf3e7", color: "#c48a42" }}>
                 <i className={`ti ${item.icon}`} />
               </div>
-              <span className="text-xs font-medium flex-1" style={{ color: "#5c3f13" }}>{item.label}</span>
+              <span className="flex-1 min-w-0">
+                <span className="text-xs font-medium block" style={{ color: "#5c3f13" }}>{item.label}</span>
+                <span className="text-2xs leading-snug block" style={{ color: "#a06d28" }}>{item.description}</span>
+              </span>
             </button>
           ))}
           {fields.length === 0 && (
@@ -275,7 +279,12 @@ export function DashboardBuilderClient({
             </div>
           ) : (
             <DndContext onDragEnd={handleDragEnd}>
-              <div ref={canvasRef} className="relative rounded-xl" style={{ height: totalHeightPx, background: "#fff", border: BRD }}>
+              <div ref={canvasRef} className="relative rounded-xl" style={{
+                height: totalHeightPx, background: "#fff", border: BRD,
+                // Grade sutil de fundo (colunas + linhas de altura) — guia visual de
+                // alinhamento enquanto arrasta/redimensiona, igual Metabase/Grafana.
+                backgroundImage: `repeating-linear-gradient(to right, transparent, transparent calc(${100 / COLUMNS}% - 1px), #f3e4cb calc(${100 / COLUMNS}% - 1px), #f3e4cb ${100 / COLUMNS}%), repeating-linear-gradient(to bottom, transparent, transparent ${ROW_HEIGHT - 1}px, #f3e4cb ${ROW_HEIGHT - 1}px, #f3e4cb ${ROW_HEIGHT}px)`,
+              }}>
                 {widgets.map(w => (
                   <GridWidget
                     key={w.id}
