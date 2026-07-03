@@ -15,8 +15,10 @@ function FitToPoints({ points }: { points: MapResult["points"] }) {
   useEffect(() => {
     // Leaflet às vezes calcula tamanho 0x0 no primeiro paint quando o
     // container pai é posicionado via `absolute` (caso do grid do
-    // dashboard) — força recalcular antes de ajustar a visão.
-    const t = setTimeout(() => {
+    // dashboard) — recalcula no mount E sempre que o container mudar de
+    // tamanho de verdade (resize no builder, etc.), senão o mapa fica
+    // cortado quando o widget é redimensionado depois do primeiro render.
+    const fit = () => {
       map.invalidateSize();
       if (points.length === 0) return;
       if (points.length === 1) {
@@ -25,8 +27,14 @@ function FitToPoints({ points }: { points: MapResult["points"] }) {
       }
       const bounds: [number, number][] = points.map(p => [p.lat, p.lng]);
       map.fitBounds(bounds, { padding: [24, 24] });
-    }, 150);
-    return () => clearTimeout(t);
+    };
+    const t = setTimeout(fit, 150);
+
+    const container = map.getContainer();
+    const observer = new ResizeObserver(() => fit());
+    observer.observe(container);
+
+    return () => { clearTimeout(t); observer.disconnect(); };
   }, [map, points]);
   return null;
 }

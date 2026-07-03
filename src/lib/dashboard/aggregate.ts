@@ -124,45 +124,69 @@ export function aggregateMapPoints(responses: Response[], geoField: Pick<FormFie
   return { kind: "map", points };
 }
 
-// Agrupa respostas por UF (via campo geo_state). Modo "count" = volume de
-// respostas por estado; "choice_percent" = % das respostas do estado em que
-// outro campo de escolha bate com a opção escolhida (reproduz indicadores
-// tipo "% de escolas com racismo" da referência CONAQ).
+export interface HeatmapIndicatorInput {
+  key: string;
+  label: string;
+  mode: "count" | "choice_percent";
+  field?: Pick<FormField, "id" | "type" | "config">;
+  optionId?: string;
+}
+
+// Agrupa respostas por UF (via campo geo_state), uma vez, e calcula cada
+// indicador configurado sobre esse mesmo agrupamento. Modo "count" = volume
+// de respostas por estado; "choice_percent" = % das respostas do estado em
+// que outro campo de escolha bate com a opção escolhida (reproduz
+// indicadores tipo "% de escolas com racismo" da referência CONAQ). Vários
+// indicadores podem coexistir no mesmo mapa — o widget deixa trocar qual
+// colore o país sem precisar reconfigurar.
 export function aggregateHeatmapByState(
   responses: Response[],
   geoField: Pick<FormField, "id">,
-  indicatorMode: "count" | "choice_percent",
-  indicatorField?: Pick<FormField, "id" | "type" | "config">,
-  indicatorOptionId?: string,
+  indicators: HeatmapIndicatorInput[],
 ): HeatmapResult {
-  const byState: Record<string, { count: number; matches: number }> = {};
+  const byState: Record<string, { count: number; matchesByIndicator: Record<string, number> }> = {};
 
   for (const r of responses) {
     const data = r.data as Record<string, unknown> | null;
     const uf = data?.[geoField.id];
     if (typeof uf !== "string" || !uf.trim()) continue;
 
-    if (!byState[uf]) byState[uf] = { count: 0, matches: 0 };
+    if (!byState[uf]) byState[uf] = { count: 0, matchesByIndicator: {} };
     byState[uf].count++;
 
-    if (indicatorMode === "choice_percent" && indicatorField && indicatorOptionId) {
-      const raw = data?.[indicatorField.id];
-      if (hasValue(raw)) {
-        const ids = Array.isArray(raw) ? raw : [raw];
-        if (ids.includes(indicatorOptionId)) byState[uf].matches++;
+    for (const ind of indicators) {
+      if (ind.mode !== "choice_percent" || !ind.field || !ind.optionId) continue;
+      const raw = data?.[ind.field.id];
+      if (!hasValue(raw)) continue;
+      const ids = Array.isArray(raw) ? raw : [raw];
+      if (ids.includes(ind.optionId)) {
+        byState[uf].matchesByIndicator[ind.key] = (byState[uf].matchesByIndicator[ind.key] ?? 0) + 1;
       }
     }
   }
 
-  let max = 0;
-  const result: Record<string, { value: number; count: number }> = {};
-  for (const [uf, s] of Object.entries(byState)) {
-    const value = indicatorMode === "count" ? s.count : s.count > 0 ? (s.matches / s.count) * 100 : 0;
-    result[uf] = { value, count: s.count };
-    if (value > max) max = value;
+  const byIndicator: Record<string, Record<string, { value: number; count: number }>> = {};
+  const maxByIndicator: Record<string, number> = {};
+
+  for (const ind of indicators) {
+    let max = 0;
+    const result: Record<string, { value: number; count: number }> = {};
+    for (const [uf, s] of Object.entries(byState)) {
+      const matches = s.matchesByIndicator[ind.key] ?? 0;
+      const value = ind.mode === "count" ? s.count : s.count > 0 ? (matches / s.count) * 100 : 0;
+      result[uf] = { value, count: s.count };
+      if (value > max) max = value;
+    }
+    byIndicator[ind.key] = result;
+    maxByIndicator[ind.key] = max;
   }
 
-  return { kind: "heatmap", byState: result, max };
+  return {
+    kind: "heatmap",
+    indicators: indicators.map(i => ({ key: i.key, label: i.label })),
+    byIndicator,
+    maxByIndicator,
+  };
 }
 
 export function computeWidgetData(widget: Pick<Widget, "type" | "config">, fields: FormField[], responses: Response[]): WidgetData {
@@ -209,12 +233,36 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
     case "heatmap": {
       const geoFieldId = typeof config.geoFieldId === "string" ? config.geoFieldId : "";
       const geoField = fields.find(f => f.id === geoFieldId);
-      if (!geoField) return { kind: "heatmap", byState: {}, max: 0 };
-      const indicatorMode = config.indicatorMode === "choice_percent" ? "choice_percent" : "count";
-      const indicatorFieldId = typeof config.indicatorFieldId === "string" ? config.indicatorFieldId : undefined;
-      const indicatorField = indicatorFieldId ? fields.find(f => f.id === indicatorFieldId) : undefined;
-      const indicatorOptionId = typeof config.indicatorOptionId === "string" ? config.indicatorOptionId : undefined;
-      return aggregateHeatmapByState(responses, geoField, indicatorMode, indicatorField, indicatorOptionId);
+      if (!geoField) return { kind: "heatmap", indicators: [], byIndicator: {}, maxByIndicator: {} };
+
+      type RawIndicator = { key?: string; label?: string; mode?: string; fieldId?: string; optionId?: string };
+      let rawIndicators: RawIndicator[] = Array.isArray(config.indicators) ? (config.indicators as RawIndicator[]) : [];
+
+      // Compatibilidade: widgets salvos antes de existir a lista de
+      // indicadores tinham indicatorMode/indicatorFieldId/indicatorOptionId
+      // soltos — normaliza pra uma lista de 1 item, nada quebra.
+      if (rawIndicators.length === 0 && (config.indicatorMode || config.indicatorFieldId)) {
+        rawIndicators = [{
+          key: "legacy",
+          label: "Indicador",
+          mode: config.indicatorMode === "choice_percent" ? "choice_percent" : "count",
+          fieldId: typeof config.indicatorFieldId === "string" ? config.indicatorFieldId : undefined,
+          optionId: typeof config.indicatorOptionId === "string" ? config.indicatorOptionId : undefined,
+        }];
+      }
+      if (rawIndicators.length === 0) {
+        rawIndicators = [{ key: "count", label: "Volume de respostas", mode: "count" }];
+      }
+
+      const indicators = rawIndicators.map((ind, i) => ({
+        key: ind.key || `ind_${i}`,
+        label: ind.label || (ind.mode === "choice_percent" ? "Indicador" : "Volume de respostas"),
+        mode: (ind.mode === "choice_percent" ? "choice_percent" : "count") as "count" | "choice_percent",
+        field: ind.fieldId ? fields.find(f => f.id === ind.fieldId) : undefined,
+        optionId: ind.optionId,
+      }));
+
+      return aggregateHeatmapByState(responses, geoField, indicators);
     }
 
     default:

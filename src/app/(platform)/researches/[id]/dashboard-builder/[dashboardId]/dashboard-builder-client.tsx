@@ -6,7 +6,7 @@ import { DndContext, useDraggable, type DragEndEvent } from "@dnd-kit/core";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData } from "@/lib/dashboard/aggregate";
-import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, type SupportedWidgetType } from "@/lib/dashboard/types";
+import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
 
 const BRD = "1px solid #e8d8be";
@@ -21,8 +21,8 @@ const DEFAULT_SIZE: Record<SupportedWidgetType, { width: number; height: number 
   donut_chart:  { width: 5, height: 5 },
   table:        { width: 8, height: 6 },
   text:         { width: 4, height: 2 },
-  map:          { width: 6, height: 6 },
-  heatmap:      { width: 6, height: 6 },
+  map:          { width: 6, height: 10 },
+  heatmap:      { width: 6, height: 10 },
 };
 
 interface WidgetDraft {
@@ -143,7 +143,7 @@ export function DashboardBuilderClient({
       col: 0, row: maxRow, width: size.width, height: size.height,
       config: type === "number_card" ? { aggregation: "count" }
         : type === "table" ? { fieldIds: [] }
-        : type === "heatmap" ? { indicatorMode: "count" }
+        : type === "heatmap" ? { indicators: [{ key: crypto.randomUUID(), label: "Volume de respostas", mode: "count" as const }] }
         : {},
     }]);
     setSelectedId(id);
@@ -482,8 +482,17 @@ function WidgetInspector({
   const questionFields = useMemo(() => fields.filter(f => f.type !== "section" && f.type !== "instruction"), [fields]);
   const geoStateFields = useMemo(() => fields.filter(f => f.type === "geo_state"), [fields]);
   const geoCoordsFields = useMemo(() => fields.filter(f => f.type === "geo_coords"), [fields]);
-  const indicatorField = fields.find(f => f.id === widget.config.indicatorFieldId);
-  const indicatorOptions = indicatorField ? (indicatorField.type === "yes_no" ? [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }] : ((indicatorField.config as { options?: { id: string; label: string }[] } | null)?.options ?? [])) : [];
+
+  const heatmapIndicators = (Array.isArray(widget.config.indicators) ? widget.config.indicators : []) as HeatmapIndicatorConfig[];
+  function updateHeatmapIndicator(index: number, patch: Partial<HeatmapIndicatorConfig>) {
+    onUpdateConfig({ indicators: heatmapIndicators.map((ind, i) => i === index ? { ...ind, ...patch } : ind) });
+  }
+  function removeHeatmapIndicator(index: number) {
+    onUpdateConfig({ indicators: heatmapIndicators.filter((_, i) => i !== index) });
+  }
+  function addHeatmapIndicator() {
+    onUpdateConfig({ indicators: [...heatmapIndicators, { key: crypto.randomUUID(), label: `Indicador ${heatmapIndicators.length + 1}`, mode: "count" as const }] });
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -603,36 +612,57 @@ function WidgetInspector({
             </select>
             {geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de estado neste formulário ainda.</p>}
           </div>
+
           <div>
-            <label {...label}>Colorir por</label>
-            <select className={input} style={inputStyle} value={(widget.config.indicatorMode as string) ?? "count"}
-              onChange={e => onUpdateConfig({ indicatorMode: e.target.value, indicatorFieldId: undefined, indicatorOptionId: undefined })}>
-              <option value="count">Volume de respostas</option>
-              <option value="choice_percent">% de respostas com uma opção específica</option>
-            </select>
-          </div>
-          {widget.config.indicatorMode === "choice_percent" && (
-            <>
-              <div>
-                <label {...label}>Campo indicador</label>
-                <select className={input} style={inputStyle} value={(widget.config.indicatorFieldId as string) ?? ""}
-                  onChange={e => onUpdateConfig({ indicatorFieldId: e.target.value || undefined, indicatorOptionId: undefined })}>
-                  <option value="">Selecione...</option>
-                  {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
-              </div>
-              {indicatorField && (
-                <div>
-                  <label {...label}>Opção a medir</label>
-                  <select className={input} style={inputStyle} value={(widget.config.indicatorOptionId as string) ?? ""}
-                    onChange={e => onUpdateConfig({ indicatorOptionId: e.target.value || undefined })}>
-                    <option value="">Selecione...</option>
-                    {indicatorOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            <div className="flex items-center justify-between mb-1">
+              <label {...label} className="mb-0">Indicadores (o mapa deixa trocar entre eles)</label>
+            </div>
+            {heatmapIndicators.map((ind, i) => {
+              const rowField = fields.find(f => f.id === ind.fieldId);
+              const rowOptions = rowField
+                ? (rowField.type === "yes_no" ? [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }]
+                  : ((rowField.config as { options?: { id: string; label: string }[] } | null)?.options ?? []))
+                : [];
+              return (
+                <div key={ind.key} className="p-2 rounded-md mb-1.5" style={{ border: BRD, background: "#fff" }}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <input className={input} style={inputStyle} value={ind.label}
+                      placeholder="Nome do indicador"
+                      onChange={e => updateHeatmapIndicator(i, { label: e.target.value })} />
+                    <button onClick={() => removeHeatmapIndicator(i)} className="flex-shrink-0 text-gray-300 hover:text-red-400">
+                      <i className="ti ti-x text-xs" />
+                    </button>
+                  </div>
+                  <select className={input} style={{ ...inputStyle, marginBottom: "6px" }} value={ind.mode}
+                    onChange={e => updateHeatmapIndicator(i, { mode: e.target.value as "count" | "choice_percent", fieldId: undefined, optionId: undefined })}>
+                    <option value="count">Volume de respostas</option>
+                    <option value="choice_percent">% de respostas com uma opção específica</option>
                   </select>
+                  {ind.mode === "choice_percent" && (
+                    <>
+                      <select className={input} style={{ ...inputStyle, marginBottom: "6px" }} value={ind.fieldId ?? ""}
+                        onChange={e => updateHeatmapIndicator(i, { fieldId: e.target.value || undefined, optionId: undefined })}>
+                        <option value="">Campo indicador...</option>
+                        {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                      </select>
+                      {rowField && (
+                        <select className={input} style={inputStyle} value={ind.optionId ?? ""}
+                          onChange={e => updateHeatmapIndicator(i, { optionId: e.target.value || undefined })}>
+                          <option value="">Opção a medir...</option>
+                          {rowOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                        </select>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
-            </>
-          )}
+              );
+            })}
+            <button onClick={addHeatmapIndicator}
+              className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold"
+              style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
+              <i className="ti ti-plus" /> Adicionar indicador
+            </button>
+          </div>
         </>
       )}
 

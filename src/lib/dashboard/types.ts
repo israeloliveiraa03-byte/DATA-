@@ -28,14 +28,23 @@ export interface MapConfig {
   geoFieldId: string;
 }
 
-// Mapa de calor por estado — agrupa respostas pelo campo geo_state; modo
-// "count" colore por volume de respostas, "choice_percent" colore pela %
-// de respostas do estado em que outro campo (de escolha) bate com uma opção.
+// Um indicador possível pra colorir o mapa de calor — "count" usa volume de
+// respostas, "choice_percent" usa a % de respostas do estado em que outro
+// campo (de escolha) bate com uma opção.
+export interface HeatmapIndicatorConfig {
+  key:   string; // identifica o indicador (estável entre edições — não recalcular a cada save)
+  label: string;
+  mode:  "count" | "choice_percent";
+  fieldId?: string;
+  optionId?: string;
+}
+
+// Mapa de calor por estado — agrupa respostas pelo campo geo_state; permite
+// vários indicadores configurados, trocáveis no próprio mapa renderizado
+// (ver HeatmapWidget) sem precisar reabrir o editor.
 export interface HeatmapConfig {
   geoFieldId: string;
-  indicatorMode: "count" | "choice_percent";
-  indicatorFieldId?: string;
-  indicatorOptionId?: string;
+  indicators: HeatmapIndicatorConfig[];
 }
 
 export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig;
@@ -108,8 +117,9 @@ export interface HeatmapStateValue {
 
 export interface HeatmapResult {
   kind: "heatmap";
-  byState: Record<string, HeatmapStateValue>;
-  max: number;
+  indicators: { key: string; label: string }[];
+  byIndicator: Record<string, Record<string, HeatmapStateValue>>;
+  maxByIndicator: Record<string, number>;
 }
 
 export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult | MapResult | HeatmapResult;

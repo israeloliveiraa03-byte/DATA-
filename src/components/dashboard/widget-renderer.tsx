@@ -66,7 +66,8 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
   }
 
   if (data.kind === "heatmap") {
-    if (Object.keys(data.byState).length === 0) return <EmptyState />;
+    const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
+    if (!hasAnyData) return <EmptyState />;
     return <HeatmapWidget data={data} />;
   }
 
