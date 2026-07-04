@@ -1232,41 +1232,104 @@ function WidgetInspector({
 
 // ─── Widget de imagem — upload + modo de encaixe ──────────────────────────
 
+interface LibraryAsset {
+  id: string; name: string; imageUrl: string; isShared: boolean;
+}
+
 function ImageWidgetFields({
   config, onUpdateConfig,
 }: {
   config: Record<string, unknown>;
   onUpdateConfig: (patch: Record<string, unknown>) => void;
 }) {
+  const [tab, setTab] = useState<"upload" | "mine" | "community">("upload");
   const [uploading, setUploading] = useState(false);
+  const [shareOnUpload, setShareOnUpload] = useState(false);
+  const [mineAssets, setMineAssets] = useState<LibraryAsset[] | null>(null);
+  const [communityAssets, setCommunityAssets] = useState<LibraryAsset[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const imageUrl = (config.imageUrl as string) ?? "";
   const fit = (config.fit as string) ?? "cover";
+
+  useEffect(() => {
+    if (tab === "mine" && mineAssets === null) {
+      fetch("/api/assets").then(r => r.json()).then(j => setMineAssets(j.data ?? [])).catch(() => setMineAssets([]));
+    }
+    if (tab === "community" && communityAssets === null) {
+      fetch("/api/assets/community").then(r => r.json()).then(j => setCommunityAssets(j.data ?? [])).catch(() => setCommunityAssets([]));
+    }
+  }, [tab, mineAssets, communityAssets]);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true);
     resizeImageToDataUrl(file, 1200)
-      .then(dataUrl => onUpdateConfig({ imageUrl: dataUrl }))
+      .then(dataUrl => {
+        onUpdateConfig({ imageUrl: dataUrl });
+        // Todo envio vira reaproveitável na biblioteca pessoal, sem passo
+        // extra — só o compartilhamento com a comunidade é opt-in.
+        const name = (file.name.replace(/\.[^.]+$/, "").slice(0, 200) || "Imagem sem nome");
+        return fetch("/api/assets", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, imageUrl: dataUrl, isShared: shareOnUpload }),
+        });
+      })
+      .then(() => setMineAssets(null))
       .finally(() => setUploading(false));
   }
+
+  function pickAsset(asset: LibraryAsset) {
+    onUpdateConfig({ imageUrl: asset.imageUrl });
+  }
+
+  const tabBtn = (t: typeof tab, label: string) => (
+    <button onClick={() => setTab(t)}
+      className="flex-1 py-1.5 text-2xs font-semibold"
+      style={{ background: tab === t ? "#c48a42" : "#fff", color: tab === t ? "#fff" : "#5c3f13" }}>
+      {label}
+    </button>
+  );
 
   return (
     <div className="flex flex-col gap-2">
       <label className="text-xs font-semibold mb-1 block" style={{ color: "#5c3f13" }}>Imagem</label>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
       {imageUrl && (
         <div className="relative h-24 rounded-md overflow-hidden" style={{ border: BRD }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- preview de base64 gerado no cliente */}
           <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: fit === "contain" ? "contain" : "cover" }} />
         </div>
       )}
-      <button onClick={() => inputRef.current?.click()} disabled={uploading}
-        className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold disabled:opacity-50"
-        style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
-        <i className={`ti ${uploading ? "ti-loader-2 animate-spin" : "ti-upload"}`} />
-        {imageUrl ? "Trocar imagem" : "Enviar imagem"}
-      </button>
+
+      <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+        {tabBtn("upload", "Enviar")}
+        {tabBtn("mine", "Minha biblioteca")}
+        {tabBtn("community", "Comunidade")}
+      </div>
+
+      {tab === "upload" && (
+        <>
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <button onClick={() => inputRef.current?.click()} disabled={uploading}
+            className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold disabled:opacity-50"
+            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            <i className={`ti ${uploading ? "ti-loader-2 animate-spin" : "ti-upload"}`} />
+            {imageUrl ? "Trocar imagem" : "Enviar imagem"}
+          </button>
+          <label className="flex items-center gap-1.5 text-2xs" style={{ color: "#5c3f13" }}>
+            <input type="checkbox" checked={shareOnUpload} onChange={e => setShareOnUpload(e.target.checked)} />
+            Compartilhar com a comunidade Dataº (outros pesquisadores podem usar)
+          </label>
+        </>
+      )}
+
+      {tab === "mine" && (
+        <AssetGrid assets={mineAssets} onPick={pickAsset} emptyMessage="Você ainda não tem imagens salvas — envie uma na aba &quot;Enviar&quot;." />
+      )}
+
+      {tab === "community" && (
+        <AssetGrid assets={communityAssets} onPick={pickAsset} emptyMessage="Nenhuma imagem compartilhada pela comunidade ainda." />
+      )}
+
       {imageUrl && (
         <div>
           <label className="text-xs font-semibold mb-1 block" style={{ color: "#5c3f13" }}>Encaixe</label>
@@ -1277,6 +1340,33 @@ function ImageWidgetFields({
           </select>
         </div>
       )}
+    </div>
+  );
+}
+
+function AssetGrid({
+  assets, onPick, emptyMessage,
+}: {
+  assets: LibraryAsset[] | null;
+  onPick: (asset: LibraryAsset) => void;
+  emptyMessage: string;
+}) {
+  if (assets === null) {
+    return <p className="text-2xs" style={{ color: "#a06d28" }}>Carregando...</p>;
+  }
+  if (assets.length === 0) {
+    return <p className="text-2xs" style={{ color: "#a06d28" }}>{emptyMessage}</p>;
+  }
+  return (
+    <div className="grid grid-cols-4 gap-1.5 max-h-36 overflow-y-auto p-1 rounded-md" style={{ border: BRD, background: "#fff" }}>
+      {assets.map(a => (
+        <button key={a.id} onClick={() => onPick(a)} title={a.name}
+          className="aspect-square rounded-md overflow-hidden relative"
+          style={{ border: BRD }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- thumbnail de base64 gerado no cliente */}
+          <img src={a.imageUrl} alt={a.name} className="absolute inset-0 w-full h-full object-cover" />
+        </button>
+      ))}
     </div>
   );
 }
