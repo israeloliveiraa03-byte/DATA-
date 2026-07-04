@@ -1,13 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
-import Moveable from "react-moveable";
+import dynamic from "next/dynamic";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData } from "@/lib/dashboard/aggregate";
 import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
+
+// react-moveable manipula o DOM direto (tamanho/posição via window/document)
+// — igual ao Leaflet, quebra a renderização no servidor se importado direto.
+// Tipagem própria da lib não sobrevive bem ao wrapper de import dinâmico
+// (perde os mixins de snap/group no meio do caminho) — any é o escape
+// pragmático aqui, só nesse limite com a biblioteca de terceiro.
+const Moveable = dynamic(() => import("react-moveable"), { ssr: false }) as unknown as ComponentType<Record<string, unknown>>;
 
 const BRD = "1px solid #e8d8be";
 const TS  = { color: "#c48a42", fontSize: "9px" } as const;
@@ -570,22 +577,22 @@ export function DashboardBuilderClient({
                   elementGuidelines={Array.from(widgetRefs.current.entries())
                     .filter(([wid]) => wid !== selectedIdsArray[0])
                     .map(([, el]) => el)}
-                  onDrag={({ target, left, top }) => {
+                  onDrag={({ target, left, top }: any) => {
                     target.style.left = `${left}px`;
                     target.style.top = `${top}px`;
                   }}
-                  onDragEnd={({ lastEvent }) => {
+                  onDragEnd={({ lastEvent }: any) => {
                     if (!lastEvent) return;
                     pushHistory();
                     commitDrag(selectedIdsArray[0], lastEvent.left, lastEvent.top);
                   }}
-                  onResize={({ target, width, height, drag }) => {
+                  onResize={({ target, width, height, drag }: any) => {
                     target.style.width = `${width}px`;
                     target.style.height = `${height}px`;
                     target.style.left = `${drag.left}px`;
                     target.style.top = `${drag.top}px`;
                   }}
-                  onResizeEnd={({ lastEvent }) => {
+                  onResizeEnd={({ lastEvent }: any) => {
                     if (!lastEvent) return;
                     pushHistory();
                     commitResize(selectedIdsArray[0], lastEvent.width, lastEvent.height, lastEvent.drag.left, lastEvent.drag.top);
@@ -599,28 +606,28 @@ export function DashboardBuilderClient({
                   resizable
                   keepRatio={false}
                   snappable
-                  onDragGroup={({ events }) => {
-                    events.forEach(ev => { ev.target.style.left = `${ev.left}px`; ev.target.style.top = `${ev.top}px`; });
+                  onDragGroup={({ events }: any) => {
+                    events.forEach((ev: any) => { ev.target.style.left = `${ev.left}px`; ev.target.style.top = `${ev.top}px`; });
                   }}
-                  onDragGroupEnd={({ events }) => {
-                    if (events.some(ev => ev.lastEvent)) pushHistory();
-                    events.forEach(ev => {
+                  onDragGroupEnd={({ events }: any) => {
+                    if (events.some((ev: any) => ev.lastEvent)) pushHistory();
+                    events.forEach((ev: any) => {
                       if (!ev.lastEvent) return;
                       const id = findWidgetIdByEl(ev.target as HTMLElement);
                       if (id) commitDrag(id, ev.lastEvent.left, ev.lastEvent.top);
                     });
                   }}
-                  onResizeGroup={({ events }) => {
-                    events.forEach(ev => {
+                  onResizeGroup={({ events }: any) => {
+                    events.forEach((ev: any) => {
                       ev.target.style.width = `${ev.width}px`;
                       ev.target.style.height = `${ev.height}px`;
                       ev.target.style.left = `${ev.drag.left}px`;
                       ev.target.style.top = `${ev.drag.top}px`;
                     });
                   }}
-                  onResizeGroupEnd={({ events }) => {
-                    if (events.some(ev => ev.lastEvent)) pushHistory();
-                    events.forEach(ev => {
+                  onResizeGroupEnd={({ events }: any) => {
+                    if (events.some((ev: any) => ev.lastEvent)) pushHistory();
+                    events.forEach((ev: any) => {
                       if (!ev.lastEvent) return;
                       const id = findWidgetIdByEl(ev.target as HTMLElement);
                       if (id) commitResize(id, ev.lastEvent.width, ev.lastEvent.height, ev.lastEvent.drag.left, ev.lastEvent.drag.top);
