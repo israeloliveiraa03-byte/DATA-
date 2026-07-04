@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { DataLogo } from "@/components/layout/data-logo";
 
 const COMMUNITY_TYPES = [
@@ -73,7 +74,7 @@ const sectionTitleStyle: React.CSSProperties = {
   paddingBottom: "8px", borderBottom: BRD,
 };
 
-export function TerritorioClient() {
+export function TerritorioClient({ loggedIn }: { loggedIn: boolean }) {
   const [form,      setForm]      = useState<FormData>(EMPTY);
   const [sending,   setSending]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -109,12 +110,16 @@ export function TerritorioClient() {
     if (!validate()) return;
     setSending(true);
     try {
-      await fetch("/api/territorio", {
+      const res = await fetch("/api/territorio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(json.error ?? "Erro ao enviar candidatura."); return; }
       setSubmitted(true);
+    } catch {
+      toast.error("Erro de conexão ao enviar candidatura.");
     } finally {
       setSending(false);
     }
@@ -137,22 +142,42 @@ export function TerritorioClient() {
           Nossa equipe irá analisar as informações e entrará em contato com <strong>{form.emailResponsavel}</strong> em breve.
         </p>
         <div style={{ background: "#fbf3e7", border: "1px solid #d9bb8c", borderRadius: "12px", padding: "20px", marginBottom: "28px" }}>
-          <i className="ti ti-gift" style={{ fontSize: "24px", color: "#c48a42", display: "block", marginBottom: "8px" }} />
+          <i className="ti ti-hourglass" style={{ fontSize: "24px", color: "#c48a42", display: "block", marginBottom: "8px" }} />
           <p style={{ fontSize: "13px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>
-            30 dias de acesso gratuito liberados
+            Candidatura em análise
           </p>
           <p style={{ fontSize: "12px", color: "#5c3f13", lineHeight: 1.6 }}>
-            Enquanto sua candidatura é avaliada, sua organização já pode criar uma conta e usar todas as funcionalidades da plataforma gratuitamente por 30 dias.
+            Nossa equipe vai avaliar as informações enviadas. Quando aprovada, o acesso institucional gratuito é liberado direto na sua conta.
           </p>
         </div>
-        <Link href="/login" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#c48a42", color: "#fff", padding: "12px 24px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
-          <i className="ti ti-arrow-right" /> Criar conta e começar agora
+        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#c48a42", color: "#fff", padding: "12px 24px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
+          <i className="ti ti-arrow-right" /> Ir para o painel
         </Link>
         <div style={{ marginTop: "16px" }}>
           <Link href="/" style={{ fontSize: "12px", color: "#c48a42", textDecoration: "underline" }}>
             Voltar para a página inicial
           </Link>
         </div>
+      </div>
+    </div>
+  );
+
+  // Candidatura precisa estar vinculada a uma conta de verdade — é o que
+  // permite aprovar direto na conta certa depois (plan = "institution"),
+  // em vez de só arquivar um formulário solto.
+  if (!loggedIn) return (
+    <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#fbf3e7", padding: "24px" }}>
+      <div style={{ maxWidth: "440px", width: "100%", textAlign: "center" }}>
+        <DataLogo className="text-2xl" />
+        <h1 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "22px", fontWeight: 700, color: "#111", margin: "20px 0 12px" }}>
+          Entre na sua conta primeiro
+        </h1>
+        <p style={{ fontSize: "14px", color: "#5c3f13", lineHeight: 1.75, marginBottom: "24px" }}>
+          A candidatura ao Dataº Território fica vinculada à sua conta — assim, quando aprovada, o acesso institucional gratuito já é liberado direto nela.
+        </p>
+        <Link href="/login" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#c48a42", color: "#fff", padding: "12px 24px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
+          <i className="ti ti-arrow-right" /> Entrar ou criar conta
+        </Link>
       </div>
     </div>
   );

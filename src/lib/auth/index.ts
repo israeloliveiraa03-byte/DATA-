@@ -20,6 +20,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     session({ session, user }) {
       session.user.id = user.id;
+      // Papel de equipe interna (admin/suporte) — ver src/lib/db/schema/users.ts.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      session.user.role = (user as any).role ?? "user";
       return session;
     },
   },

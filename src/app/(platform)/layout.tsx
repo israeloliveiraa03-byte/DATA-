@@ -10,7 +10,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     <div className="min-h-dvh flex flex-col bg-ink-950">
       <PlatformTopbar user={session.user} />
       <div className="flex flex-1">
-        <PlatformSidebar />
+        <PlatformSidebar role={session.user.role} />
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>

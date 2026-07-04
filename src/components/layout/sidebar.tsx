@@ -23,6 +23,7 @@ const nav = [
     items: [
       { href: "/profile",  icon: "ti-user-circle", label: "Perfil"  },
       { href: "/settings", icon: "ti-settings",    label: "Config." },
+      { href: "/suporte",  icon: "ti-headset",     label: "Suporte" },
     ],
   },
   {
@@ -35,9 +36,13 @@ const nav = [
 
 const STORAGE_KEY = "dataz-sidebar-collapsed";
 
-export function PlatformSidebar() {
+export function PlatformSidebar({ role }: { role?: string } = {}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const isStaff = role === "admin" || role === "support";
+  const navGroups = isStaff
+    ? [...nav, { label: "Interno", items: [{ href: "/admin", icon: "ti-shield-lock", label: "Admin" }] }]
+    : nav;
 
   useEffect(() => {
     setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
@@ -67,7 +72,7 @@ export function PlatformSidebar() {
         <i className={`ti ${collapsed ? "ti-chevron-right" : "ti-chevron-left"} text-base`} />
       </button>
 
-      {nav.map(group => (
+      {navGroups.map(group => (
         <div key={group.label} className="mb-5">
           {!collapsed && (
             <p className="px-2 mb-1.5 font-bold uppercase font-condensed text-ink-500" style={{ fontSize: "9px", letterSpacing: "0.1em" }}>

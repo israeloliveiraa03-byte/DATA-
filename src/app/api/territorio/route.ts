@@ -1,6 +1,12 @@
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { territorioApplications } from "@/lib/db/schema";
 import { apiSuccess, apiError } from "@/lib/utils";
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) return apiError("Faça login antes de enviar a candidatura", 401);
+
   try {
     const body = await request.json();
 
@@ -16,20 +22,26 @@ export async function POST(request: Request) {
       if (!body[field]) return apiError(`Campo obrigatório: ${field}`, 400);
     }
 
-    // Log da candidatura (futuramente salvar no banco e enviar email)
-    console.log("📋 Nova candidatura Dataº Território:", {
-      razaoSocial:   body.razaoSocial,
-      cnpj:          body.cnpj,
-      tipo:          body.tipoComunidade,
-      responsavel:   body.nomeResponsavel,
-      email:         body.emailResponsavel,
-      submittedAt:   new Date().toISOString(),
-    });
+    const [application] = await db.insert(territorioApplications).values({
+      applicantUserId:     session.user.id,
+      cnpj:                body.cnpj,
+      razaoSocial:         body.razaoSocial,
+      naturezaJuridica:    body.naturezaJuridica,
+      enderecoSede:        body.enderecoSede,
+      municipio:           body.municipio,
+      estado:              body.estado,
+      tipoComunidade:      body.tipoComunidade,
+      historico:           body.historico,
+      territorioAtuacao:   body.territorioAtuacao,
+      numeroMembros:       body.numeroMembros,
+      nomeResponsavel:     body.nomeResponsavel,
+      cpfResponsavel:      body.cpfResponsavel,
+      cargoResponsavel:    body.cargoResponsavel,
+      emailResponsavel:    body.emailResponsavel,
+      telefoneResponsavel: body.telefoneResponsavel,
+    }).returning();
 
-    return apiSuccess({
-      message: "Candidatura recebida com sucesso",
-      trialDays: 30,
-    });
+    return apiSuccess({ id: application.id, status: application.status });
   } catch {
     return apiError("Erro ao processar candidatura", 500);
   }

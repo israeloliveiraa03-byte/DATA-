@@ -15,6 +15,10 @@ export const users = pgTable("users", {
   lattesUrl:     text("lattes_url"),
   bio:           text("bio"),
   plan:          planEnum("plan").notNull().default("free"),
+  // Papel de equipe interna do Dataº (admin/suporte) — separado de `plan`
+  // (nível de cobrança) e do futuro `org_role` (permissão dentro de uma
+  // pesquisa/organização). Coluna adicionada via SQL direto (aditiva).
+  role:          varchar("role", { length: 20 }).notNull().default("user"),
   publicProfile: boolean("public_profile").notNull().default(false),
   emailVerified: timestamp("email_verified", { withTimezone: true }),
   createdAt:     timestamp("created_at",     { withTimezone: true }).notNull().defaultNow(),
