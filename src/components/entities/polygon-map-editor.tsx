@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import * as turf from "@turf/turf";
+import { toast } from "sonner";
 import type { Feature, FeatureCollection } from "geojson";
 import { BOUNDARY_ROLE } from "@/lib/entities/geo-format";
 
@@ -265,7 +266,7 @@ export function PolygonMapEditor({ value, onChange, center }: PolygonMapEditorPr
         (group as any)._map?.fitBounds(group.getBounds(), { maxZoom: 15 });
       }
       onChange(buildFeatureCollection(group));
-    }).catch(() => alert("Não conseguimos ler esse arquivo. Confira se é um GeoJSON válido."));
+    }).catch(() => toast.error("Não conseguimos ler esse arquivo. Confira se é um GeoJSON válido."));
   }
 
   function handleExport() {

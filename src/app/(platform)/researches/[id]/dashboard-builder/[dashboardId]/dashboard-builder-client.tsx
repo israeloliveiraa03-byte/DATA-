@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData } from "@/lib/dashboard/aggregate";
@@ -392,11 +393,12 @@ export function DashboardBuilderClient({
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) { alert("Erro ao salvar: " + (json?.error ?? res.status)); return; }
+      if (!res.ok) { toast.error("Erro ao salvar: " + (json?.error ?? res.status)); return; }
       setWidgets(hydrate(json.data));
       setSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+      toast.success("Dashboard salvo.");
     } catch (err) {
-      alert("Erro de conexão ao salvar: " + String(err));
+      toast.error("Erro de conexão ao salvar: " + String(err));
     } finally {
       setSaving(false);
     }

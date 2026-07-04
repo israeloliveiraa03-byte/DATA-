@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 
 import Link from "next/link";
+import QRCode from "qrcode";
 import type { Research, Entity, ResearchEntity } from "@/lib/types";
 import type { ReliabilityStatus } from "@/lib/dashboard/reliability";
 import { SIGLA_TO_CODAREA } from "@/lib/geo/uf";
@@ -41,6 +42,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   const [status,      setStatus]      = useState(research.status);
   const [copied,      setCopied]      = useState(false);
   const [showQR,      setShowQR]      = useState(false);
+  const [qrDataUrl,   setQrDataUrl]   = useState<string | null>(null);
   const [saving,      setSaving]      = useState(false);
   const [coverImage,  setCoverImage]  = useState(research.coverImage);
   const [coverSaving, setCoverSaving] = useState(false);
@@ -135,6 +137,25 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   }
 
   const publicUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://datazero.vercel.app"}/p/${research.slug}`;
+
+  // Gera o QR só quando o pesquisador pede pra ver — evita trabalho à toa
+  // toda vez que a página carrega.
+  useEffect(() => {
+    if (!showQR || qrDataUrl) return;
+    QRCode.toDataURL(publicUrl, { width: 256, margin: 1, color: { dark: "#5c3f13", light: "#ffffff" } })
+      .then(setQrDataUrl)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQR]);
+
+  function downloadQr() {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `qrcode-${research.slug}.png`;
+    a.click();
+  }
+
   const s = STATUS_MAP[status] ?? STATUS_MAP.draft;
   const BRD = "1px solid #e8d8be";
   const TS  = { color: "#c48a42", fontSize: "9px" } as const;
@@ -369,16 +390,19 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                     </a>
                   </div>
 
-                  {/* QR Code placeholder */}
                   {showQR && (
                     <div className="mt-3 p-4 rounded-lg flex flex-col items-center gap-2"
                       style={{ border: BRD, background: "#fbf3e7" }}>
-                      <div className="w-32 h-32 rounded-lg flex items-center justify-center"
+                      <div className="w-32 h-32 rounded-lg flex items-center justify-center overflow-hidden"
                         style={{ background: "#fff", border: BRD }}>
-                        <i className="ti ti-qrcode text-5xl" style={{ color: "#c48a42" }} />
+                        {qrDataUrl
+                          ? // eslint-disable-next-line @next/next/no-img-element -- imagem gerada em base64 no cliente
+                            <img src={qrDataUrl} alt="QR Code do formulário" className="w-full h-full" />
+                          : <i className="ti ti-loader-2 animate-spin text-2xl" style={{ color: "#c48a42" }} />}
                       </div>
                       <p className="text-xs font-semibold" style={{ color: "#5c3f13" }}>QR Code do formulário</p>
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold"
+                      <button onClick={downloadQr} disabled={!qrDataUrl}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
                         style={{ background: "#c48a42", color: "#fff" }}>
                         <i className="ti ti-download" /> Baixar QR Code
                       </button>
@@ -721,20 +745,6 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                 style={{ color: "#c48a42" }}>
                 <i className="ti ti-settings" /> Editar configurações
               </Link>
-            </div>
-
-            {/* Ações perigosas */}
-            <div className="rounded-xl p-4" style={{ border: "1px solid #f0d0cc", background: "#fdf8f7" }}>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#c0392b", fontSize: "9px" }}>Zona de risco</p>
-              <button onClick={() => toggleStatus("closed")} disabled={saving}
-                className="w-full flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold mb-2 disabled:opacity-50"
-                style={{ border: "1px solid #f0d0cc", background: "#fff", color: "#c0392b" }}>
-                <i className="ti ti-lock" /> Encerrar pesquisa
-              </button>
-              <button className="w-full flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold"
-                style={{ border: "1px solid #f0d0cc", background: "#fff", color: "#c0392b" }}>
-                <i className="ti ti-trash" /> Excluir pesquisa
-              </button>
             </div>
 
           </div>

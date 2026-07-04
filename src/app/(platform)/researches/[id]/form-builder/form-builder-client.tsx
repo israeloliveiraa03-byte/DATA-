@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { Research } from "@/lib/types";
 import { DataLogo } from "@/components/layout/data-logo";
 
@@ -1058,12 +1059,13 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert("Erro ao salvar: " + (data?.error || res.status + " — verifique os campos"));
+        toast.error("Erro ao salvar: " + (data?.error || res.status + " — verifique os campos"));
         return;
       }
       setSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+      toast.success("Formulário salvo.");
     } catch (err) {
-      alert("Erro de conexão ao salvar: " + String(err));
+      toast.error("Erro de conexão ao salvar: " + String(err));
     } finally { setSaving(false); }
   }, [research.id, formTitle, formDescription, fields]);
 

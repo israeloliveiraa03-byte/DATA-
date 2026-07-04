@@ -2,6 +2,7 @@ import { signIn } from "@/lib/auth";
 import type { Metadata } from "next";
 import { DataLogo } from "@/components/layout/data-logo";
 import { BRAZIL_MAP_PATH } from "@/components/layout/brazil-map-outline";
+import { AccessibilityControls } from "./accessibility-controls";
 
 export const metadata: Metadata = { title: "Entrar — Dataº" };
 
@@ -263,20 +264,10 @@ export default function LoginPage() {
                 em conformidade com a LGPD.
               </p>
 
-              {/* Acessibilidade — visual por enquanto, ainda não conectada a uma funcionalidade real */}
+              {/* Acessibilidade — liga direto no ThemeProvider global (localStorage), mesmo sistema usado em /settings */}
               <div className="mt-6 pt-5 border-t border-slate-200">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600 mb-2.5">Acessibilidade</p>
-                <div className="flex gap-2">
-                  <button type="button" aria-label="Alternar alto contraste" className="flex-1 h-9 rounded-lg border border-slate-200 text-slate-500 hover:border-brand-300 hover:bg-brand-50 transition-colors flex items-center justify-center">
-                    <i className="ti ti-contrast" aria-hidden="true" />
-                  </button>
-                  <button type="button" aria-label="Aumentar fonte" className="flex-1 h-9 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500 hover:border-brand-300 hover:bg-brand-50 transition-colors">
-                    A+
-                  </button>
-                  <button type="button" aria-label="Diminuir fonte" className="flex-1 h-9 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500 hover:border-brand-300 hover:bg-brand-50 transition-colors">
-                    A−
-                  </button>
-                </div>
+                <AccessibilityControls />
               </div>
             </div>
           </div>
