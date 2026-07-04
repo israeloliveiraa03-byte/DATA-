@@ -101,12 +101,15 @@ export interface HeatmapIndicatorConfig {
   optionId?: string;
 }
 
-// Mapa de calor por estado — agrupa respostas pelo campo geo_state; permite
-// vários indicadores configurados, trocáveis no próprio mapa renderizado
-// (ver HeatmapWidget) sem precisar reabrir o editor.
+// Mapa de calor — agrupa respostas pelo campo geo_state (granularity
+// "state", padrão) ou por município (granularity "city", usa geo_city +
+// o geo_state irmão pra resolver o código IBGE); permite vários
+// indicadores configurados, trocáveis no próprio mapa renderizado (ver
+// HeatmapWidget) sem precisar reabrir o editor.
 export interface HeatmapConfig {
   geoFieldId: string;
   indicators: HeatmapIndicatorConfig[];
+  granularity?: "state" | "city";
 }
 
 // Cruzamento de dados — categoria A (linha) × categoria B (coluna), tipo
@@ -213,6 +216,7 @@ export interface HeatmapResult {
   indicators: { key: string; label: string }[];
   byIndicator: Record<string, Record<string, HeatmapStateValue>>;
   maxByIndicator: Record<string, number>;
+  granularity?: "state" | "city";
 }
 
 export interface CrosstabResult {

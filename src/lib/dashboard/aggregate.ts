@@ -1,5 +1,6 @@
 import type { FormField, Response, Widget } from "@/lib/types";
 import { parsePastedCoordinates } from "@/lib/entities/coordinates";
+import { resolveMunicipioCode } from "@/lib/geo/municipios";
 import {
   CHOICE_FIELD_TYPES,
   type ChoiceAggResult,
@@ -190,17 +191,20 @@ export interface HeatmapIndicatorInput {
   optionId?: string;
 }
 
-// Agrupa respostas por UF (via campo geo_state), uma vez, e calcula cada
+// Agrupa respostas por UF (via campo geo_state) ou, com cityField, por
+// código de município (7 dígitos — resolve UF+nome via resolveMunicipioCode,
+// já que geo_city só grava o nome da cidade), uma vez, e calcula cada
 // indicador configurado sobre esse mesmo agrupamento. Modo "count" = volume
-// de respostas por estado; "choice_percent" = % das respostas do estado em
-// que outro campo de escolha bate com a opção escolhida (reproduz
-// indicadores tipo "% de escolas com racismo" da referência CONAQ). Vários
-// indicadores podem coexistir no mesmo mapa — o widget deixa trocar qual
-// colore o país sem precisar reconfigurar.
+// de respostas; "choice_percent" = % das respostas do grupo em que outro
+// campo de escolha bate com a opção escolhida (reproduz indicadores tipo
+// "% de escolas com racismo" da referência CONAQ). Vários indicadores podem
+// coexistir no mesmo mapa — o widget deixa trocar qual colore o país sem
+// precisar reconfigurar.
 export function aggregateHeatmapByState(
   responses: Response[],
   geoField: Pick<FormField, "id">,
   indicators: HeatmapIndicatorInput[],
+  cityField?: Pick<FormField, "id">,
 ): HeatmapResult {
   const byState: Record<string, { count: number; matchesByIndicator: Record<string, number> }> = {};
 
@@ -209,8 +213,17 @@ export function aggregateHeatmapByState(
     const uf = data?.[geoField.id];
     if (typeof uf !== "string" || !uf.trim()) continue;
 
-    if (!byState[uf]) byState[uf] = { count: 0, matchesByIndicator: {} };
-    byState[uf].count++;
+    let groupKey = uf;
+    if (cityField) {
+      const cityName = data?.[cityField.id];
+      if (typeof cityName !== "string" || !cityName.trim()) continue;
+      const code = resolveMunicipioCode(uf, cityName);
+      if (!code) continue; // nome não bateu com nenhum município da UF — ignora em vez de agrupar errado
+      groupKey = code;
+    }
+
+    if (!byState[groupKey]) byState[groupKey] = { count: 0, matchesByIndicator: {} };
+    byState[groupKey].count++;
 
     for (const ind of indicators) {
       if (ind.mode !== "choice_percent" || !ind.field || !ind.optionId) continue;
@@ -218,7 +231,7 @@ export function aggregateHeatmapByState(
       if (!hasValue(raw)) continue;
       const ids = Array.isArray(raw) ? raw : [raw];
       if (ids.includes(ind.optionId)) {
-        byState[uf].matchesByIndicator[ind.key] = (byState[uf].matchesByIndicator[ind.key] ?? 0) + 1;
+        byState[groupKey].matchesByIndicator[ind.key] = (byState[groupKey].matchesByIndicator[ind.key] ?? 0) + 1;
       }
     }
   }
@@ -335,9 +348,20 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
 // normalização de indicadores (com compatibilidade pra widgets salvos antes
 // de existir a lista) e mesmo motor de agregação por estado.
 function computeHeatmapResult(config: Record<string, unknown>, fields: FormField[], responses: Response[]): HeatmapResult {
+  const granularity = config.granularity === "city" ? "city" : "state";
   const geoFieldId = typeof config.geoFieldId === "string" ? config.geoFieldId : "";
   const geoField = fields.find(f => f.id === geoFieldId);
   if (!geoField) return { kind: "heatmap", indicators: [], byIndicator: {}, maxByIndicator: {} };
+
+  // Granularidade "cidade": geoFieldId aponta pro campo geo_city (grava só o
+  // nome) — o campo geo_state irmão no mesmo formulário dá a UF, necessária
+  // pra resolver o código de 7 dígitos do município (nome de cidade não é
+  // único no Brasil sem a UF junto).
+  let stateField: Pick<FormField, "id"> | undefined;
+  if (granularity === "city") {
+    stateField = fields.find(f => f.type === "geo_state");
+    if (!stateField) return { kind: "heatmap", indicators: [], byIndicator: {}, maxByIndicator: {} };
+  }
 
   type RawIndicator = { key?: string; label?: string; mode?: string; fieldId?: string; optionId?: string };
   let rawIndicators: RawIndicator[] = Array.isArray(config.indicators) ? (config.indicators as RawIndicator[]) : [];
@@ -366,5 +390,8 @@ function computeHeatmapResult(config: Record<string, unknown>, fields: FormField
     optionId: ind.optionId,
   }));
 
-  return aggregateHeatmapByState(responses, geoField, indicators);
+  const result = granularity === "city"
+    ? aggregateHeatmapByState(responses, stateField!, indicators, geoField)
+    : aggregateHeatmapByState(responses, geoField, indicators);
+  return { ...result, granularity };
 }

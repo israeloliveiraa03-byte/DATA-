@@ -6,6 +6,7 @@ import L, { type Layer, type PathOptions } from "leaflet";
 import type { Feature, FeatureCollection } from "geojson";
 import type { HeatmapResult } from "@/lib/dashboard/types";
 import { CODAREA_TO_SIGLA } from "@/lib/geo/uf";
+import { resolveMunicipioName } from "@/lib/geo/municipios";
 
 const ACCENT = "126, 155, 92"; // brand-500 #7a9b5c em rgb, pra variar só a opacidade
 const NO_DATA_STYLE: PathOptions = { fillColor: "#5c5847", weight: 1, color: "#302e22", fillOpacity: 0.25 };
@@ -40,17 +41,19 @@ function FitToBrazil({ geo }: { geo: FeatureCollection }) {
 }
 
 export function HeatmapWidget({ data }: HeatmapWidgetProps) {
+  const isCity = data.granularity === "city";
   const [estados, setEstados] = useState<FeatureCollection | null>(null);
   const [indicatorKey, setIndicatorKey] = useState(data.indicators[0]?.key);
 
   useEffect(() => {
     let cancel = false;
-    fetch("/geo/brasil-estados.json")
+    setEstados(null);
+    fetch(isCity ? "/geo/brasil-municipios.json" : "/geo/brasil-estados.json")
       .then(res => res.json())
       .then(json => { if (!cancel) setEstados(json); })
       .catch(() => {});
     return () => { cancel = true; };
-  }, []);
+  }, [isCity]);
 
   // Se o indicador selecionado sumir (config mudou), volta pro primeiro.
   useEffect(() => {
@@ -63,27 +66,39 @@ export function HeatmapWidget({ data }: HeatmapWidgetProps) {
   const byState = activeKey ? (data.byIndicator[activeKey] ?? {}) : {};
   const max = activeKey ? (data.maxByIndicator[activeKey] ?? 0) : 0;
 
+  // Estado: codarea (2 dígitos) precisa virar sigla pra bater com byState.
+  // Município: codarea (7 dígitos) já É a chave usada em byState direto.
+  function groupKeyFor(codarea: string | undefined): string | undefined {
+    if (!codarea) return undefined;
+    return isCity ? codarea : CODAREA_TO_SIGLA[codarea];
+  }
+  function labelFor(codarea: string | undefined, groupKey: string | undefined): string {
+    if (isCity) return (codarea && resolveMunicipioName(codarea)) ?? "?";
+    return groupKey ?? "?";
+  }
+
   function styleFeature(feature?: Feature): PathOptions {
     const codarea = feature?.properties?.codarea as string | undefined;
-    const sigla = codarea ? CODAREA_TO_SIGLA[codarea] : undefined;
-    const stateData = sigla ? byState[sigla] : undefined;
+    const groupKey = groupKeyFor(codarea);
+    const stateData = groupKey ? byState[groupKey] : undefined;
     if (!stateData || max === 0) return NO_DATA_STYLE;
     const intensity = 0.15 + (stateData.value / max) * 0.75;
-    return { fillColor: `rgb(${ACCENT})`, weight: 1, color: "#f5f3ec", fillOpacity: intensity };
+    return { fillColor: `rgb(${ACCENT})`, weight: isCity ? 0.5 : 1, color: isCity ? "#e8e4d5" : "#f5f3ec", fillOpacity: intensity };
   }
 
   function onEachFeature(feature: Feature, layer: Layer) {
     const codarea = feature.properties?.codarea as string | undefined;
-    const sigla = codarea ? CODAREA_TO_SIGLA[codarea] : undefined;
-    const stateData = sigla ? byState[sigla] : undefined;
+    const groupKey = groupKeyFor(codarea);
+    const stateData = groupKey ? byState[groupKey] : undefined;
+    const label = labelFor(codarea, groupKey);
     const content = stateData
-      ? `<b>${sigla}</b><br/>${stateData.value.toFixed(1)}${max > 100 ? "" : "%"} · ${stateData.count} resposta${stateData.count === 1 ? "" : "s"}`
-      : `<b>${sigla ?? "?"}</b><br/>Sem dados`;
+      ? `<b>${label}</b><br/>${stateData.value.toFixed(1)}${max > 100 ? "" : "%"} · ${stateData.count} resposta${stateData.count === 1 ? "" : "s"}`
+      : `<b>${label}</b><br/>Sem dados`;
     layer.bindTooltip(content);
   }
 
   if (!estados) {
-    return <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: "#a06d28" }}>Carregando mapa...</div>;
+    return <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: "#a06d28" }}>Carregando mapa{isCity ? " (malha municipal, pode demorar um instante)" : ""}...</div>;
   }
 
   return (
@@ -96,12 +111,12 @@ export function HeatmapWidget({ data }: HeatmapWidgetProps) {
         </select>
       )}
       <div className="flex-1 min-h-0 rounded-md overflow-hidden">
-        <MapContainer center={[-14.235, -51.9253]} zoom={3} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
+        <MapContainer center={[-14.235, -51.9253]} zoom={3} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} preferCanvas={isCity}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
-          <GeoJSON key={activeKey + JSON.stringify(byState)} data={estados} style={styleFeature} onEachFeature={onEachFeature} />
+          <GeoJSON key={isCity + activeKey + JSON.stringify(byState)} data={estados} style={styleFeature} onEachFeature={onEachFeature} />
           <FitToBrazil geo={estados} />
         </MapContainer>
       </div>

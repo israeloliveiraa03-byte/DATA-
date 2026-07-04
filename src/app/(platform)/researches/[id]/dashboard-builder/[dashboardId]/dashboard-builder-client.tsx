@@ -765,6 +765,7 @@ function WidgetInspector({
   const numericFields = useMemo(() => fields.filter(f => (NUMERIC_FIELD_TYPES as readonly string[]).includes(f.type)), [fields]);
   const questionFields = useMemo(() => fields.filter(f => f.type !== "section" && f.type !== "instruction"), [fields]);
   const geoStateFields = useMemo(() => fields.filter(f => f.type === "geo_state"), [fields]);
+  const geoCityFields = useMemo(() => fields.filter(f => f.type === "geo_city"), [fields]);
   const geoCoordsFields = useMemo(() => fields.filter(f => f.type === "geo_coords"), [fields]);
 
   const heatmapIndicators = (Array.isArray(widget.config.indicators) ? widget.config.indicators : []) as HeatmapIndicatorConfig[];
@@ -1044,19 +1045,32 @@ function WidgetInspector({
         );
       })()}
 
-      {widget.type === "heatmap" && (
-        <>
-          <div>
-            <label {...label}>Campo de estado</label>
-            <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
-              onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
-              <option value="">Selecione...</option>
-              {geoStateFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-            </select>
-            {geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de estado neste formulário ainda.</p>}
-          </div>
+      {widget.type === "heatmap" && (() => {
+        const granularity = (widget.config.granularity as string) ?? "state";
+        const isCity = granularity === "city";
+        const geoOptions = isCity ? geoCityFields : geoStateFields;
+        return (
+          <>
+            <div>
+              <label {...label}>Granularidade</label>
+              <select className={input} style={inputStyle} value={granularity}
+                onChange={e => onUpdateConfig({ granularity: e.target.value, geoFieldId: undefined })}>
+                <option value="state">Por estado (27 polígonos)</option>
+                <option value="city">Por município (mapa mais pesado de carregar)</option>
+              </select>
+            </div>
+            <div>
+              <label {...label}>{isCity ? "Campo de cidade" : "Campo de estado"}</label>
+              <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
+                onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
+                <option value="">Selecione...</option>
+                {geoOptions.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              {geoOptions.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de {isCity ? "cidade" : "estado"} neste formulário ainda.</p>}
+              {isCity && geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#c0392b" }}>Precisa também de um campo de estado (UF) no mesmo formulário, pra resolver o município certo.</p>}
+            </div>
 
-          <div>
+            <div>
             <div className="flex items-center justify-between mb-1">
               <label {...label} className="mb-0">Indicadores (o mapa deixa trocar entre eles)</label>
             </div>
@@ -1105,9 +1119,10 @@ function WidgetInspector({
               style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
               <i className="ti ti-plus" /> Adicionar indicador
             </button>
-          </div>
-        </>
-      )}
+            </div>
+          </>
+        );
+      })()}
 
       {widget.type === "crosstab" && (
         <>
