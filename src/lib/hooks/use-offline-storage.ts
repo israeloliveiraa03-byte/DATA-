@@ -2,7 +2,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { openDB, type IDBPDatabase } from "idb";
 import type { OfflineResponse } from "@/lib/types";
-import { shortId } from "@/lib/utils";
 
 const DB_NAME = "datazero-offline";
 const DB_VERSION = 1;
@@ -37,7 +36,9 @@ export function useOfflineStorage() {
   useEffect(() => { refreshCount(); }, [refreshCount]);
 
   const saveOffline = useCallback(async (formId: string, researchId: string, data: Record<string, unknown>) => {
-    const entry: OfflineResponse = { id: shortId(), formId, researchId, data, createdAt: new Date().toISOString(), synced: false };
+    // UUID de verdade — é a chave primária da resposta no Postgres (responses.id),
+    // e é o que permite ao servidor reconhecer reenvio depois de falha sem duplicar.
+    const entry: OfflineResponse = { id: crypto.randomUUID(), formId, researchId, data, createdAt: new Date().toISOString(), synced: false };
     const db = await getDB();
     await db.add(STORE_NAME, entry);
     await refreshCount();
@@ -48,19 +49,28 @@ export function useOfflineStorage() {
     if (!navigator.onLine || isSyncing) return;
     setIsSyncing(true);
     try {
-      const db      = await getDB();
-      const tx      = db.transaction(STORE_NAME, "readwrite");
-      const pending = await tx.store.index("synced").getAll(IDBKeyRange.only(false));
+      const db = await getDB();
+      // Leitura e escrita cada uma na sua própria transação curta (db.getAllFromIndex/db.put)
+      // em vez de uma transação só segurada por todo o loop — uma transação de IndexedDB
+      // fecha sozinha assim que um await "de verdade" (rede) demora, e o fetch aqui dentro
+      // é exatamente isso.
+      const pending = await db.getAllFromIndex(STORE_NAME, "synced", IDBKeyRange.only(false));
       for (const entry of pending) {
+        if (entry.error) continue; // erro permanente já classificado — não repete sozinho
         try {
           const res = await fetch(`/api/forms/${entry.formId}/responses`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...entry, collectedOffline: true }),
+            body: JSON.stringify({ id: entry.id, data: entry.data, collectedOffline: true }),
           });
-          if (res.ok) await tx.store.put({ ...entry, synced: true });
-        } catch { /* mantém na fila */ }
+          if (res.ok) {
+            await db.put(STORE_NAME, { ...entry, synced: true });
+          } else if (res.status >= 400 && res.status < 500) {
+            // erro de validação — reenviar sem mudar nada não vai resolver
+            await db.put(STORE_NAME, { ...entry, synced: false, error: true });
+          }
+          // 5xx: deixa como está, tenta de novo na próxima reconexão
+        } catch { /* falha de rede — mantém pendente */ }
       }
-      await tx.done;
       await refreshCount();
     } finally { setIsSyncing(false); }
   }, [isSyncing, refreshCount]);

@@ -43,6 +43,9 @@ export interface IBGECity  { id: number; nome: string; }
 export interface OfflineResponse {
   id: string; formId: string; researchId: string;
   data: Record<string, unknown>; createdAt: string; synced: boolean;
+  // Erro de validação permanente (4xx) — não adianta reenviar do jeito que está,
+  // sai da fila de retry automático em vez de tentar pra sempre a cada reconexão.
+  error?: boolean;
 }
 
 export type WSEventType = "response:new"|"response:updated"|"indicator:updated"|"research:status_changed";

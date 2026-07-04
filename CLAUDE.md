@@ -132,6 +132,18 @@ Levantamento completo do projeto (rotas, links, botões) achou 3 páginas linkad
 - **Bootstrap do primeiro admin**: como não existe UI pra promover ninguém antes de existir o primeiro admin, a conta do Israel (`israeloliveiraa03@gmail.com`) foi promovida via script SQL direto (apagado depois de rodar) — dali em diante, promover outros usuários já é possível pela tela `/admin/usuarios`.
 - **Fora de escopo, fase seguinte** (mais estrutural, afeta quem pode editar cada pesquisa existente): Equipe de pesquisa — colaboradores por pesquisa com papel dono/editor/visualizador. Usaria `organizations`/`organization_members` (`src/lib/db/schema/users.ts`), que já existem no schema com um enum `org_role` (`owner|admin|member`) mas nunca foram usados em nenhuma página/rota — são tabelas mortas até essa fase acontecer.
 
+## Fila de sincronização offline — parte 1 implementada (2026-07-04)
+
+Objetivo de longo prazo: app de campo (celular/tablet, via Capacitor — planejado, não construído ainda) capturando resposta e ponto de GPS territorial sem internet. Antes de investir no app, foram corrigidos os passos 1–4 do offline que já existiam pela metade no site:
+
+- **Achado**: `src/lib/hooks/use-offline-storage.ts` já existia (IndexedDB + fila de pendentes + sincronização no evento `online`) mas nunca tinha sido conectado em nenhuma tela — código morto. Tinha dois bugs que explicam por que nunca foi ligado: gerava id com `shortId()` (string curta, incompatível com a coluna `responses.id` que é `uuid`), e qualquer erro (mesmo validação permanente) deixava a resposta pendente pra sempre, tentando de novo a cada reconexão.
+- **Corrigido**: `saveOffline` agora gera `crypto.randomUUID()`; `POST /api/forms/[id]/responses` aceita `id` opcional no corpo e usa `.onConflictDoNothing({ target: responses.id })` — reenvio depois de falha de rede confirma que já está salvo em vez de duplicar; o hook classifica erro (4xx sai da fila de retry automático, 5xx/falha de rede continua tentando); `respondent-client.tsx` agora chama `saveOffline` quando `research.offlineEnabled` e sem conexão (ou quando o `fetch` falha no meio do envio), com tela de sucesso e mensagem diferentes pra "salvo neste aparelho, sincroniza sozinho depois". É a primeira vez que o toggle `offlineEnabled` (existia na tela de configuração desde antes, só decorativo) passa a ter efeito real.
+- **Registrado como próxima etapa, não implementado ainda**:
+  - Endpoint de sincronização em lote (`/api/sync/responses`) — hoje ainda é um `fetch` por resposta pendente, aceitável no volume atual, vira gargalo se acumular centenas
+  - Conflito de versão em edição de entidade (`baseVersion` no PATCH de `/api/entities/[id]`, usando `entityVersions.version` que já existe) — só relevante quando `campo-client.tsx` (captura de GPS territorial) ganhar persistência local própria
+  - Token de dispositivo (`device_tokens`, nova tabela) — só necessário quando o app Capacitor existir; o hook web de hoje usa cookie de sessão do NextAuth, não precisa disso
+  - Upload de mídia (`@vercel/blob` ou similar) — não existe nenhuma rota de upload/Blob no projeto hoje; fundação nova, não ajuste
+
 ## Funcionalidades planejadas (visão de longo prazo)
 
 - **Sistema Colaborativo de Território**: editor de mapas (Leaflet — versão básica de desenho de polígono já existe desde 2026-07-02 em `PolygonMapEditor`, sem versionamento/PRs/forks ainda), versionamento estilo Git com conformidade ABNT, pull requests geográficos, forks com atribuição, biblioteca colaborativa de GeoJSON
@@ -140,16 +152,21 @@ Levantamento completo do projeto (rotas, links, botões) achou 3 páginas linkad
 - **Governança e Rastreabilidade**: Scientific Ledger com ID permanente, timestamp e hash criptográfico para cada evento relevante; blockchain entra só como camada de certificação pós-MVP (XRPL, Polygon, Hyperledger)
 - **IA (longo prazo)**: sugerir entidades existentes, identificar duplicatas no catálogo, auxiliar construção de formulários, sugerir indicadores, interpretar respostas abertas, gerar mapas, detectar inconsistências
 
-## Modelo de negócio
+## Modelo de negócio (revisado em 2026-07-04)
 
-- R$10/mês por projeto de pesquisa ativo (usuários e respostas ilimitados)
-- Dashboards publicados gratuitos com anúncios obrigatórios colocados pelo pesquisador
-- R$5/mês para dashboards premium sem anúncios
-- Biblioteca de território: publicar gera R$1 de desconto por uso de terceiros
-- Chamadas de colaboração pagas: Dataº cobra taxa
-- Curadoria de biblioteca de instrumentos: paga
+Princípio: quem tem orçamento institucional paga o suficiente pra manter a plataforma no azul; o excedente financia o Dataº Território. Substitui o rascunho anterior (R$10/R$5 fixos) por uma escada de planos calibrada por público — o preço fixo único não cobria custo com margem real.
 
-**Dataº Território**: acesso gratuito completo para instituições que representam comunidades tradicionais. Vagas calculadas para sustentabilidade (~10% da base pagante como referência). Fundamental para a base ética da plataforma.
+- **Exploração** (gratuito) — 1 pesquisa ativa, até 50 respostas/mês, dashboard com anúncio obrigatório. Funil de entrada, sem cartão.
+- **Pesquisador** — R$29/mês por pesquisa ativa (usuários e respostas ilimitados na pesquisa); dashboard sem anúncio: +R$9/mês. Público: pesquisador individual/pós-graduando.
+- **Laboratório** — R$149/mês até 5 pesquisas ativas (pesquisa adicional: R$19/mês); colaboradores com papéis (dono/editor/visualizador — depende da feature "Equipe de pesquisa", ainda não construída); faturamento institucional com NF-e. Público: grupo de pesquisa universitário.
+- **Governo/Enterprise** — sob consulta, referência a partir de R$690/mês; contrato anual, boleto + NF-e centralizada, SLA. Público: prefeitura, secretaria, autarquia.
+- **Dataº Território** (gratuito) — acesso completo para instituições que representam comunidades tradicionais. Vagas calculadas para sustentabilidade (~10% da base pagante como referência). Fundamental para a base ética da plataforma.
+
+**Receita complementar**: dashboard sem anúncio avulso (R$9/mês); certificação de instrumento na biblioteca (R$120 avaliação única ou R$29/mês manutenção); chamada de colaboração paga (taxa de 12% sobre o valor arrecadado); biblioteca de território (R$1 de crédito por uso de terceiro do GeoJSON publicado).
+
+**Custo de operar (excluindo IA, ainda não decidida)**: infra fixa (Vercel + Neon + storage + e-mail) ≈ R$1.300/mês em estágio inicial-crescimento; custo variável por conta pagante ≈ R$4/mês (gateway de pagamento + banda/armazenamento incremental). Com ticket médio de R$35, margem de contribuição ≈ 89%; breakeven do fixo em ≈42 contas pagantes. Meio de pagamento recomendado: gateway brasileiro (Asaas/Iugu/Pagar.me) em vez de Stripe puro — Stripe não resolve Pix/boleto/NF-e nativamente no Brasil, e universidade/governo vão exigir isso.
+
+**Pendente antes de cobrar de verdade**: hoje só existe o enum `users.plan`, sem tabela de assinatura/fatura, webhook de pagamento ou portal de autoatendimento — ver plano completo (planos, custos, matemática de margem e estimativa de lucratividade em escala) no artefato gerado em 2026-07-04.
 
 ## Princípios-chave
 

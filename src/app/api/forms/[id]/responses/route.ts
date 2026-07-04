@@ -8,6 +8,9 @@ import { checkAndNotifyReliability } from "@/lib/dashboard/reliability";
 import { z } from "zod";
 
 const submitSchema = z.object({
+  // Gerado no cliente (app/hook offline) pra reenvio depois de falha de rede
+  // nunca criar uma resposta duplicada — ver onConflictDoNothing abaixo.
+  id: z.string().uuid().optional(),
   data: z.record(z.unknown()),
   collectedOffline: z.boolean().default(false),
   latitude: z.string().optional(),
@@ -17,8 +20,8 @@ const submitSchema = z.object({
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const { id } = await params;
-  const form = await db.query.forms.findFirst({ where: eq(forms.id, id) });
+  const { id: formId } = await params;
+  const form = await db.query.forms.findFirst({ where: eq(forms.id, formId) });
   if (!form) return apiError("Formulário não encontrado", 404);
 
   const session = await auth();
@@ -26,8 +29,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   const parsed = submitSchema.safeParse(body);
   if (!parsed.success) return apiError(parsed.error.issues[0].message, 422);
 
-  const { data, collectedOffline, latitude, longitude } = parsed.data;
-  const [response] = await db.insert(responses).values({
+  const { id: responseIdInput, data, collectedOffline, latitude, longitude } = parsed.data;
+  const [inserted] = await db.insert(responses).values({
+    ...(responseIdInput ? { id: responseIdInput } : {}),
     formId: form.id,
     researchId: form.researchId,
     respondentId: session?.user?.id ?? null,
@@ -38,12 +42,24 @@ export async function POST(request: Request, { params }: RouteParams) {
     completed: true,
     submittedAt: new Date(),
     syncedAt: collectedOffline ? new Date() : null,
-  }).returning({ id: responses.id });
+  })
+    // Reenvio depois de falha de rede manda o mesmo id de novo — não duplica,
+    // só confirma que já está salvo (idempotência de verdade, não só no cliente).
+    .onConflictDoNothing({ target: responses.id })
+    .returning({ id: responses.id });
 
-  // Roda depois da resposta já ter sido enviada pro cliente, mas garante que
-  // a checagem termina de verdade (não é só um "dispara e esquece" que o
-  // runtime serverless poderia cortar antes de terminar).
-  after(() => checkAndNotifyReliability(form.researchId));
+  // Se não veio nada de volta, o id já existia (reenvio) — não é erro, é sucesso repetido.
+  const responseId = inserted?.id ?? responseIdInput;
+  if (!responseId) return apiError("Não foi possível registrar a resposta", 500);
 
-  return apiSuccess({ id: response.id });
+  // Só dispara a checagem de confiabilidade quando a resposta é realmente nova —
+  // reenvio de um id já existente não deveria contar duas vezes.
+  if (inserted) {
+    // Roda depois da resposta já ter sido enviada pro cliente, mas garante que
+    // a checagem termina de verdade (não é só um "dispara e esquece" que o
+    // runtime serverless poderia cortar antes de terminar).
+    after(() => checkAndNotifyReliability(form.researchId));
+  }
+
+  return apiSuccess({ id: responseId });
 }

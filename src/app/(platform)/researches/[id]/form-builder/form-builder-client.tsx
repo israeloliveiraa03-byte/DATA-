@@ -59,6 +59,19 @@ interface Field {
   timelineStart:string;
   timelineEnd:  string;
   zoneOptions:  string[];
+  // Novos tipos (2026-07-04) — tudo persiste em form_fields.config (jsonb)
+  tableColumns:        string[];                     // data_table
+  availabilityDays:    string[];                     // availability
+  availabilityPeriods: string[];                     // availability
+  geoMapMode:          "point" | "area" | "both";    // geo_map
+  condDependsOn:       string;                       // conditional — id do campo do qual depende
+  condOperator:        string;                       // conditional — answered | equals | not_equals | contains
+  condValue:           string;                       // conditional — valor comparado
+  pairwiseItems:       string[];                     // pairwise
+  formula:             string;                       // equation — ex: ({P1} / ({P2} * {P2}))
+  consentText:         string;                       // dynamic_consent — texto do TCLE
+  consentItems:        string[];                     // dynamic_consent — itens de consentimento
+  uploadItems:         string[];                     // multi_upload — itens indexados
 }
 
 // ─── Modelos de capa ─────────────────────────────────────────────────────────
@@ -173,18 +186,18 @@ const FIELD_TYPES: FieldGroup[] = [
     ],
   },
   {
-    group: "Em desenvolvimento",
+    group: "Coleta avançada",
     items: [
-      { type: "audio",           label: "Gravação de voz",         icon: "ti-microphone",     color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "photo_annotation",label: "Foto com anotação",       icon: "ti-photo-edit",     color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "doc_capture",     label: "Captura de documento",    icon: "ti-scan",           color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "pairwise",        label: "Comparação par a par",    icon: "ti-arrows-diff",    color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "equation",        label: "Equação calculada",       icon: "ti-math",           color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "dynamic_consent", label: "Consentimento dinâmico",  icon: "ti-lock-check",     color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "field_diary",     label: "Diário de campo",         icon: "ti-notebook",       color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "multi_upload",    label: "Upload múltiplo indexado",icon: "ti-files",          color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "qr_barcode",      label: "QR / Código de barras",   icon: "ti-qrcode",         color: "#9ca3af", bg: "#f3f4f6", dev: true },
-      { type: "bibliography",    label: "Citação bibliográfica",   icon: "ti-book-2",         color: "#9ca3af", bg: "#f3f4f6", dev: true },
+      { type: "audio",           label: "Gravação de voz",         icon: "ti-microphone",     color: "#534ab7", bg: "#eeedfe" },
+      { type: "photo_annotation",label: "Foto com anotação",       icon: "ti-photo-edit",     color: "#c48a42", bg: "#fbf3e7" },
+      { type: "doc_capture",     label: "Captura de documento",    icon: "ti-scan",           color: "#1a56db", bg: "#e8f0fe" },
+      { type: "pairwise",        label: "Comparação par a par",    icon: "ti-arrows-diff",    color: "#534ab7", bg: "#eeedfe" },
+      { type: "equation",        label: "Equação calculada",       icon: "ti-math",           color: "#c48a42", bg: "#fbf3e7" },
+      { type: "dynamic_consent", label: "Consentimento dinâmico",  icon: "ti-lock-check",     color: "#4c6b3c", bg: "#eaf0e4" },
+      { type: "field_diary",     label: "Diário de campo",         icon: "ti-notebook",       color: "#c48a42", bg: "#fbf3e7" },
+      { type: "multi_upload",    label: "Upload múltiplo indexado",icon: "ti-files",          color: "#1a56db", bg: "#e8f0fe" },
+      { type: "qr_barcode",      label: "QR / Código de barras",   icon: "ti-qrcode",         color: "#534ab7", bg: "#eeedfe" },
+      { type: "bibliography",    label: "Citação bibliográfica",   icon: "ti-book-2",         color: "#1a56db", bg: "#e8f0fe" },
     ],
   },
   {
@@ -233,6 +246,18 @@ function newField(type: FieldType): Field {
     timelineStart:  "2020",
     timelineEnd:    new Date().getFullYear().toString(),
     zoneOptions:    ["Norte", "Sul", "Leste", "Oeste", "Centro"],
+    tableColumns:        ["Nome", "Idade", "Observação"],
+    availabilityDays:    ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+    availabilityPeriods: ["Manhã", "Tarde", "Noite"],
+    geoMapMode:          "point",
+    condDependsOn:       "",
+    condOperator:        "answered",
+    condValue:           "",
+    pairwiseItems:       ["Item A", "Item B", "Item C"],
+    formula:             "",
+    consentText:         "",
+    consentItems:        ["Li e aceito participar da pesquisa", "Autorizo o uso dos dados para fins acadêmicos"],
+    uploadItems:         ["Item 1", "Item 2"],
   };
 }
 
@@ -480,13 +505,13 @@ function FieldPreview({ field }: { field: Field }) {
   if (field.type === "data_table") return (
     <div className="mt-1 rounded-lg overflow-hidden" style={{ border: "1px solid #e8d8be" }}>
       <div className="flex" style={{ background: "#fbf3e7", borderBottom: "1px solid #e8d8be" }}>
-        {["Nome", "Idade", "Escolaridade"].map((h, i) => (
+        {field.tableColumns.map((h, i) => (
           <div key={i} className="flex-1 px-2 py-1.5 text-xs font-bold" style={{ color: "#c48a42", borderLeft: i > 0 ? "1px solid #e8d8be" : "none" }}>{h}</div>
         ))}
       </div>
       {[0,1].map(i => (
         <div key={i} className="flex" style={{ borderBottom: "1px solid #f3e4cb", background: i % 2 === 0 ? "#fff" : "#fbf3e7" }}>
-          {[0,1,2].map(j => (
+          {field.tableColumns.map((_, j) => (
             <div key={j} className="flex-1 px-2 py-1.5 text-xs" style={{ color: "#d9bb8c", borderLeft: j > 0 ? "1px solid #f3e4cb" : "none" }}>...</div>
           ))}
         </div>
@@ -514,17 +539,86 @@ function FieldPreview({ field }: { field: Field }) {
     </div>
   );
   if (field.type === "availability") return (
-    <div className="mt-1 grid grid-cols-7 gap-0.5">
-      {["D","S","T","Q","Q","S","S"].map((d, i) => (
+    <div className="mt-1 grid gap-0.5" style={{ gridTemplateColumns: `repeat(${Math.max(field.availabilityDays.length, 1)}, minmax(0, 1fr))` }}>
+      {field.availabilityDays.map((d, i) => (
         <div key={i} className="text-center">
           <div className="text-xs font-bold mb-0.5" style={{ color: "#a06d28", fontSize: "9px" }}>{d}</div>
-          {[1,2].map(r => (
+          {field.availabilityPeriods.map((_, r) => (
             <div key={r} className="h-5 rounded mb-0.5 flex items-center justify-center"
               style={{ background: (i+r)%3===0 ? "#eaf0e4" : "#fbf3e7", border: "1px solid #e8d8be" }}>
               {(i+r)%3===0 && <i className="ti ti-check text-xs" style={{ color: "#4c6b3c" }} />}
             </div>
           ))}
         </div>
+      ))}
+    </div>
+  );
+
+  // Coleta avançada
+  if (field.type === "audio") return (
+    <div className={cls + " flex items-center gap-2"} style={{ ...empty, cursor: "default" }}>
+      <i className="ti ti-microphone" style={{ color: "#c48a42" }} /> Gravar resposta em áudio
+    </div>
+  );
+  if (field.type === "photo_annotation") return (
+    <div className={cls + " flex flex-col items-center justify-center gap-1"} style={{ ...empty, height: "64px", cursor: "default" }}>
+      <span className="flex items-center gap-2"><i className="ti ti-photo-edit" /> Foto com marcações comentadas</span>
+    </div>
+  );
+  if (field.type === "doc_capture") return (
+    <div className={cls + " flex items-center gap-2"} style={{ ...empty, cursor: "default" }}>
+      <i className="ti ti-scan" /> Foto do documento + transcrição
+    </div>
+  );
+  if (field.type === "pairwise") return (
+    <div className="flex items-center gap-2 mt-1">
+      {field.pairwiseItems.slice(0, 2).map((item, i) => (
+        <div key={i} className="flex-1 px-3 py-2 rounded-lg text-xs text-center font-medium"
+          style={{ border: "1px solid #d2a05c", background: "#fbf3e7", color: "#5c3f13" }}>{item}</div>
+      ))}
+      <span className="text-xs font-bold" style={{ color: "#c48a42" }}>vs</span>
+    </div>
+  );
+  if (field.type === "equation") return (
+    <div className={cls + " flex items-center gap-2"} style={{ ...empty, cursor: "default", fontFamily: "monospace" }}>
+      <i className="ti ti-math" /> {field.formula || "Ex.: {P1} / ({P2} * {P2})"}
+    </div>
+  );
+  if (field.type === "dynamic_consent") return (
+    <div className="flex flex-col gap-1.5 mt-1">
+      {field.consentItems.slice(0, 3).map((item, i) => (
+        <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+          style={{ border: "1px solid #e8d8be", background: "#fbf3e7", color: "#a06d28" }}>
+          <div className="w-3 h-3 rounded flex-shrink-0" style={{ border: "1.5px solid #d2a05c" }} /> {item}
+        </div>
+      ))}
+    </div>
+  );
+  if (field.type === "field_diary") return (
+    <div className={cls + " flex flex-col gap-1"} style={{ ...empty, cursor: "default" }}>
+      <span className="flex items-center gap-2"><i className="ti ti-notebook" /> Registro cronológico com data/hora</span>
+      <span style={{ fontSize: "9px" }}>Cada entrada recebe carimbo de data/hora automático</span>
+    </div>
+  );
+  if (field.type === "multi_upload") return (
+    <div className="flex flex-col gap-1 mt-1">
+      {field.uploadItems.slice(0, 3).map((item, i) => (
+        <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+          style={{ border: "1px solid #e8d8be", background: "#fbf3e7", color: "#a06d28" }}>
+          <i className="ti ti-upload text-xs" /> {item}
+        </div>
+      ))}
+    </div>
+  );
+  if (field.type === "qr_barcode") return (
+    <div className={cls + " flex items-center gap-2"} style={{ ...empty, cursor: "default" }}>
+      <i className="ti ti-qrcode" /> Ler QR / código de barras pela câmera
+    </div>
+  );
+  if (field.type === "bibliography") return (
+    <div className="grid grid-cols-2 gap-1 mt-1">
+      {["Autor(es)", "Ano", "Título", "DOI / Fonte"].map((h, i) => (
+        <div key={i} className={cls} style={{ ...empty, fontSize: "10px", cursor: "default" }}>{h}</div>
       ))}
     </div>
   );
@@ -620,10 +714,42 @@ function CoverPanel({ cover, coverImage, onSelectCover, onUploadImage }: {
   );
 }
 
+// ─── Editor genérico de lista de textos (colunas, itens, dias...) ────────────
+
+function StrListEditor({ label, items, minItems = 1, addLabel, onChange }: {
+  label: string; items: string[]; minItems?: number; addLabel: string;
+  onChange: (items: string[]) => void;
+}) {
+  const iS = { border: "1px solid #e8d8be", background: "#fff", color: "#3d2a0d" };
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "#c48a42", fontSize: "9px" }}>{label}</p>
+      <div className="flex flex-col gap-1">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <input value={item} onChange={e => onChange(items.map((r, j) => j === i ? e.target.value : r))}
+              className="flex-1 px-2 py-1 text-xs rounded border focus:outline-none" style={iS} />
+            {items.length > minItems && (
+              <button onClick={() => onChange(items.filter((_, j) => j !== i))}
+                className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-400">
+                <i className="ti ti-x text-xs" />
+              </button>
+            )}
+          </div>
+        ))}
+        <button onClick={() => onChange([...items, `${addLabel} ${items.length + 1}`])}
+          className="mt-0.5 flex items-center gap-1 text-xs font-semibold" style={{ color: "#c48a42" }}>
+          <i className="ti ti-plus" /> Adicionar {addLabel.toLowerCase()}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Painel direito ───────────────────────────────────────────────────────────
 
-function RightPanel({ field, onUpdate, onDelete, showCover, cover, coverImage, onSelectCover, onUploadImage }: {
-  field: Field | null; onUpdate: (f: Field) => void; onDelete: () => void;
+function RightPanel({ field, allFields, onUpdate, onDelete, showCover, cover, coverImage, onSelectCover, onUploadImage }: {
+  field: Field | null; allFields: Field[]; onUpdate: (f: Field) => void; onDelete: () => void;
   showCover: boolean; cover: string; coverImage: string | null;
   onSelectCover: (id: string) => void; onUploadImage: (url: string) => void;
 }) {
@@ -955,6 +1081,156 @@ function RightPanel({ field, onUpdate, onDelete, showCover, cover, coverImage, o
         </div>
       )}
 
+      {/* Condicional — condição de exibição */}
+      {field.type === "conditional" && (() => {
+        const candidates = allFields.filter(o => o.id !== f.id && !["section", "instruction", "conditional"].includes(o.type));
+        const target = candidates.find(o => o.id === f.condDependsOn) ?? null;
+        const targetHasOptions = target !== null && ["single_choice", "multiple_choice", "weighted", "consent"].includes(target.type);
+        return (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={TS}>Condição de exibição</p>
+            <div>
+              <p className="text-xs mb-1" style={{ color: "#a06d28" }}>Depende da pergunta</p>
+              <select value={f.condDependsOn} onChange={e => update({ condDependsOn: e.target.value, condValue: "" })} className={iC} style={iS}>
+                <option value="">Selecione a pergunta...</option>
+                {candidates.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <p className="text-xs mb-1" style={{ color: "#a06d28" }}>Condição</p>
+              <select value={f.condOperator} onChange={e => update({ condOperator: e.target.value })} className={iC} style={iS}>
+                <option value="answered">Foi respondida (qualquer valor)</option>
+                <option value="equals">É igual a</option>
+                <option value="not_equals">É diferente de</option>
+                <option value="contains">Contém o texto</option>
+              </select>
+            </div>
+            {f.condOperator !== "answered" && (
+              <div>
+                <p className="text-xs mb-1" style={{ color: "#a06d28" }}>Valor comparado</p>
+                {targetHasOptions && f.condOperator !== "contains" && target ? (
+                  <select value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS}>
+                    <option value="">Selecione a opção...</option>
+                    {target.options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                ) : target && target.type === "yes_no" && f.condOperator !== "contains" ? (
+                  <select value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS}>
+                    <option value="">Selecione...</option>
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                  </select>
+                ) : target && target.type === "geo_zone" && f.condOperator !== "contains" ? (
+                  <select value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS}>
+                    <option value="">Selecione a zona...</option>
+                    {target.zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
+                  </select>
+                ) : (
+                  <input value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS} placeholder="Valor..." />
+                )}
+              </div>
+            )}
+            <p className="text-xs leading-relaxed" style={{ color: "#a06d28" }}>
+              Esta pergunta só aparece para o respondente quando a condição for satisfeita. A resposta é registrada como texto curto.
+            </p>
+          </div>
+        );
+      })()}
+
+      {/* Mapa — ponto / área */}
+      {field.type === "geo_map" && (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest mb-2" style={TS}>Tipo de marcação</p>
+          <select value={f.geoMapMode} onChange={e => update({ geoMapMode: e.target.value as Field["geoMapMode"] })} className={iC} style={iS}>
+            <option value="point">Ponto único</option>
+            <option value="area">Área (polígono)</option>
+            <option value="both">Ponto ou área — respondente escolhe</option>
+          </select>
+          <p className="text-xs leading-relaxed mt-2" style={{ color: "#a06d28" }}>
+            O respondente marca a localização direto num mapa interativo (toque/clique).
+          </p>
+        </div>
+      )}
+
+      {/* Localização relacional (Catálogo de Entidades) */}
+      {field.type === "geo_relational" && (
+        <p className="text-xs leading-relaxed p-2 rounded" style={{ background: "#fbf3e7", border: "1px solid #e8d8be", color: "#5c3f13" }}>
+          O respondente busca e seleciona uma entidade já cadastrada no Catálogo de Entidades
+          (identificador persistente, ex.: COM-000245). Não há configuração adicional.
+        </p>
+      )}
+
+      {/* Tabela de coleta */}
+      {field.type === "data_table" && (
+        <StrListEditor label="Colunas da tabela" addLabel="Coluna" items={f.tableColumns}
+          onChange={v => update({ tableColumns: v })} />
+      )}
+
+      {/* Calendário de disponibilidade */}
+      {field.type === "availability" && (
+        <div className="flex flex-col gap-3">
+          <StrListEditor label="Dias" addLabel="Dia" items={f.availabilityDays}
+            onChange={v => update({ availabilityDays: v })} />
+          <StrListEditor label="Períodos" addLabel="Período" items={f.availabilityPeriods}
+            onChange={v => update({ availabilityPeriods: v })} />
+        </div>
+      )}
+
+      {/* Comparação par a par */}
+      {field.type === "pairwise" && (
+        <div className="flex flex-col gap-2">
+          <StrListEditor label="Itens para comparar" addLabel="Item" minItems={2} items={f.pairwiseItems}
+            onChange={v => update({ pairwiseItems: v })} />
+          <p className="text-xs leading-relaxed" style={{ color: "#a06d28" }}>
+            {f.pairwiseItems.length} itens geram {f.pairwiseItems.length * (f.pairwiseItems.length - 1) / 2} comparações.
+            O ranking final é calculado automaticamente.
+          </p>
+        </div>
+      )}
+
+      {/* Equação calculada */}
+      {field.type === "equation" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={TS}>Fórmula</p>
+          <input value={f.formula} onChange={e => update({ formula: e.target.value })}
+            className={iC} style={{ ...iS, fontFamily: "monospace" }} placeholder="Ex.: {P1} / ({P2} * {P2})" />
+          <p className="text-xs leading-relaxed" style={{ color: "#a06d28" }}>
+            Use {"{P1}"}, {"{P2}"}... para referenciar respostas numéricas de outras perguntas,
+            com + − * / e parênteses. Numeração atual:
+          </p>
+          <div className="flex flex-col gap-0.5">
+            {allFields.filter(o => !["section", "instruction"].includes(o.type)).map((o, i) => o.id === f.id ? null : (
+              <p key={o.id} className="text-xs truncate" style={{ color: "#5c3f13" }}>
+                <span className="font-bold" style={{ color: "#c48a42" }}>{`{P${i + 1}}`}</span> {o.label}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Consentimento dinâmico */}
+      {field.type === "dynamic_consent" && (
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={TS}>Texto do consentimento (TCLE)</p>
+            <textarea value={f.consentText} onChange={e => update({ consentText: e.target.value })}
+              rows={5} className={iC + " resize-none"} style={iS}
+              placeholder="Cole aqui o termo de consentimento livre e esclarecido..." />
+          </div>
+          <StrListEditor label="Itens de consentimento" addLabel="Item" items={f.consentItems}
+            onChange={v => update({ consentItems: v })} />
+          <p className="text-xs leading-relaxed" style={{ color: "#a06d28" }}>
+            O respondente marca cada item individualmente. Se o campo for obrigatório,
+            é preciso marcar pelo menos um item para avançar.
+          </p>
+        </div>
+      )}
+
+      {/* Upload múltiplo indexado */}
+      {field.type === "multi_upload" && (
+        <StrListEditor label="Itens da lista (um arquivo por item)" addLabel="Item" items={f.uploadItems}
+          onChange={v => update({ uploadItems: v })} />
+      )}
+
       {/* Deletar */}
       <button onClick={onDelete} className="mt-2 flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#c0392b" }}>
         <i className="ti ti-trash" /> Remover campo
@@ -992,6 +1268,26 @@ function hydrateFields(saved: SavedField[]): Field[] {
       matrixRows:   Array.isArray(cfg.matrixRows) ? cfg.matrixRows as string[] : base.matrixRows,
       matrixCols:   Array.isArray(cfg.matrixCols) ? cfg.matrixCols as string[] : base.matrixCols,
       rankingItems: Array.isArray(cfg.rankingItems) ? cfg.rankingItems as string[] : base.rankingItems,
+      totalPoints:  (cfg.totalPoints as number) ?? base.totalPoints,
+      cardCategories: Array.isArray(cfg.cardCategories) ? cfg.cardCategories as string[] : base.cardCategories,
+      cardItems:    Array.isArray(cfg.cardItems) ? cfg.cardItems as string[] : base.cardItems,
+      semanticLeft: (cfg.semanticLeft as string) ?? base.semanticLeft,
+      semanticRight:(cfg.semanticRight as string) ?? base.semanticRight,
+      timelineStart:(cfg.timelineStart as string) ?? base.timelineStart,
+      timelineEnd:  (cfg.timelineEnd as string) ?? base.timelineEnd,
+      zoneOptions:  Array.isArray(cfg.zoneOptions) ? cfg.zoneOptions as string[] : base.zoneOptions,
+      tableColumns:        Array.isArray(cfg.tableColumns) ? cfg.tableColumns as string[] : base.tableColumns,
+      availabilityDays:    Array.isArray(cfg.availabilityDays) ? cfg.availabilityDays as string[] : base.availabilityDays,
+      availabilityPeriods: Array.isArray(cfg.availabilityPeriods) ? cfg.availabilityPeriods as string[] : base.availabilityPeriods,
+      geoMapMode:          (cfg.geoMapMode as Field["geoMapMode"]) ?? base.geoMapMode,
+      condDependsOn:       (cfg.condDependsOn as string) ?? base.condDependsOn,
+      condOperator:        (cfg.condOperator as string) ?? base.condOperator,
+      condValue:           (cfg.condValue as string) ?? base.condValue,
+      pairwiseItems:       Array.isArray(cfg.pairwiseItems) ? cfg.pairwiseItems as string[] : base.pairwiseItems,
+      formula:             (cfg.formula as string) ?? base.formula,
+      consentText:         (cfg.consentText as string) ?? base.consentText,
+      consentItems:        Array.isArray(cfg.consentItems) ? cfg.consentItems as string[] : base.consentItems,
+      uploadItems:         Array.isArray(cfg.uploadItems) ? cfg.uploadItems as string[] : base.uploadItems,
     };
   });
 }
@@ -1285,7 +1581,7 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
             </div>
             <div className="flex-1 overflow-y-auto">
               <RightPanel
-                field={selectedField} onUpdate={updateField} onDelete={deleteField}
+                field={selectedField} allFields={fields} onUpdate={updateField} onDelete={deleteField}
                 showCover={showCover} cover={cover} coverImage={coverImage}
                 onSelectCover={id => { setCover(id); setCoverImage(null); }}
                 onUploadImage={url => { setCoverImage(url); setCover(""); }}

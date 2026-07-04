@@ -104,11 +104,42 @@ export async function POST(
         timelineEnd:  f.timelineEnd,
         zoneOptions:  f.zoneOptions,
         placeholder:  f.placeholder,
+        // Novos tipos (2026-07-04): tudo vive em config (jsonb), sem mudança de schema
+        tableColumns:        f.tableColumns,
+        availabilityDays:    f.availabilityDays,
+        availabilityPeriods: f.availabilityPeriods,
+        geoMapMode:          f.geoMapMode,
+        condDependsOn:       f.condDependsOn,
+        condOperator:        f.condOperator,
+        condValue:           f.condValue,
+        pairwiseItems:       f.pairwiseItems,
+        formula:             f.formula,
+        consentText:         f.consentText,
+        consentItems:        f.consentItems,
+        uploadItems:         f.uploadItems,
       },
     }));
 
     try {
-      await db.insert(formFields).values(fieldsToInsert);
+      const inserted = await db.insert(formFields).values(fieldsToInsert)
+        .returning({ id: formFields.id });
+
+      // Campos condicionais referenciam outra pergunta pelo id (condDependsOn).
+      // Como os campos são apagados e recriados a cada salvamento (ids novos),
+      // remapeamos a referência do id enviado pelo cliente para o id recém-criado.
+      const idMap = new Map<string, string>();
+      rawFields.forEach((f: Record<string, unknown>, idx: number) => {
+        if (f.id && inserted[idx]) idMap.set(String(f.id), inserted[idx].id);
+      });
+      for (let idx = 0; idx < rawFields.length; idx++) {
+        const dep = rawFields[idx]?.condDependsOn as string | undefined;
+        if (!dep || !inserted[idx]) continue;
+        const newDep = idMap.get(dep);
+        if (!newDep || newDep === dep) continue;
+        await db.update(formFields)
+          .set({ config: { ...fieldsToInsert[idx].config, condDependsOn: newDep } })
+          .where(eq(formFields.id, inserted[idx].id));
+      }
     } catch (err) {
       return apiError("Erro ao salvar campos: " + String(err), 500);
     }
