@@ -111,7 +111,14 @@ export function buildTableRows(
   return { kind: "table", columns, rows };
 }
 
-export function aggregateMapPoints(responses: Response[], geoField: Pick<FormField, "id">): MapResult {
+// categoryField opcional: quando presente, cada marcador leva a opção
+// escolhida naquela resposta (categoryValue) — o mapa usa isso pra trocar o
+// círculo padrão por um ícone colorido por categoria.
+export function aggregateMapPoints(
+  responses: Response[],
+  geoField: Pick<FormField, "id">,
+  categoryField?: Pick<FormField, "id" | "type" | "config">,
+): MapResult {
   const points = [];
   for (const r of responses) {
     const raw = (r.data as Record<string, unknown> | null)?.[geoField.id];
@@ -119,9 +126,19 @@ export function aggregateMapPoints(responses: Response[], geoField: Pick<FormFie
     const parsed = parsePastedCoordinates(raw);
     if (!parsed) continue;
     const label = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("pt-BR") : "Resposta";
-    points.push({ lat: parseFloat(parsed.latitude), lng: parseFloat(parsed.longitude), label });
+    let categoryValue: string | undefined;
+    if (categoryField) {
+      const rawCategory = (r.data as Record<string, unknown> | null)?.[categoryField.id];
+      const id = Array.isArray(rawCategory) ? rawCategory[0] : rawCategory;
+      if (typeof id === "string") categoryValue = id;
+    }
+    points.push({ lat: parseFloat(parsed.latitude), lng: parseFloat(parsed.longitude), label, categoryValue });
   }
-  return { kind: "map", points };
+  return {
+    kind: "map",
+    points,
+    categories: categoryField ? fieldOptions(categoryField) : undefined,
+  };
 }
 
 export interface HeatmapIndicatorInput {
@@ -234,7 +251,11 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
       const geoFieldId = typeof config.geoFieldId === "string" ? config.geoFieldId : "";
       const geoField = fields.find(f => f.id === geoFieldId);
       if (!geoField) return { kind: "map", points: [] };
-      return aggregateMapPoints(responses, geoField);
+      const categoryFieldId = typeof config.categoryFieldId === "string" ? config.categoryFieldId : undefined;
+      const categoryField = categoryFieldId ? fields.find(f => f.id === categoryFieldId) : undefined;
+      const result = aggregateMapPoints(responses, geoField, categoryField);
+      const categoryStyles = config.categoryStyles as MapResult["categoryStyles"];
+      return categoryStyles ? { ...result, categoryStyles } : result;
     }
 
     case "heatmap": {

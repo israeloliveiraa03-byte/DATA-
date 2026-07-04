@@ -27,7 +27,7 @@ export function WidgetRenderer({ type, title, data, config }: WidgetRendererProp
   // preencher a caixa inteira, não uma caixa branca com um retângulo dentro.
   const appearance = (config.style ?? {}) as { backgroundColor?: string; borderRadius?: number };
   const variant = config.variant as string | undefined;
-  const isDecorative = type === "text" && (variant === "divider" || variant === "block");
+  const isDecorative = type === "text" && (variant === "divider" || variant === "block" || variant === "icon");
 
   return (
     <div className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-3 overflow-hidden"}
@@ -71,6 +71,7 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
     const variant = (config.variant as string) ?? "text";
     if (variant === "divider") return <DividerView config={config} />;
     if (variant === "block") return null; // a cor já vem do fundo do container (config.style)
+    if (variant === "icon") return <IconView config={config} />;
     const textStyle = (config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; color?: string; align?: "left" | "center" | "right" };
     return (
       <p className="whitespace-pre-wrap h-full" style={{
@@ -102,6 +103,16 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
   }
 
   return null;
+}
+
+function IconView({ config }: { config: Record<string, unknown> }) {
+  const textStyle = (config.textStyle ?? {}) as { fontSize?: number; color?: string };
+  const iconName = (config.iconName as string) || "map-pin";
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <i className={`ti ti-${iconName}`} style={{ fontSize: textStyle.fontSize ? `${textStyle.fontSize}px` : "32px", color: textStyle.color ?? "#c48a42" }} />
+    </div>
+  );
 }
 
 function DividerView({ config }: { config: Record<string, unknown> }) {

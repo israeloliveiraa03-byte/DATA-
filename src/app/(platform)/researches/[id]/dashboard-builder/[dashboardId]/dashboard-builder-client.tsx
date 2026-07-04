@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData } from "@/lib/dashboard/aggregate";
-import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
+import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
 
 // react-moveable manipula o DOM direto (tamanho/posição via window/document)
@@ -69,10 +69,11 @@ interface WidgetDraft {
   config: Record<string, unknown>;
 }
 
-const DECORATIVE_PRESETS: { variant: "text" | "divider" | "block"; label: string; icon: string; w: number; h: number; config: Record<string, unknown> }[] = [
+const DECORATIVE_PRESETS: { variant: "text" | "divider" | "block" | "icon"; label: string; icon: string; w: number; h: number; config: Record<string, unknown> }[] = [
   { variant: "text",    label: "Texto",         icon: "ti-typography",           w: 33.33, h: 64, config: { content: "Escreva aqui...", variant: "text" } },
   { variant: "divider", label: "Divisória",     icon: "ti-separator-horizontal", w: 50,    h: 24, config: { variant: "divider" } },
   { variant: "block",   label: "Bloco de cor",  icon: "ti-square-rounded",       w: 25,    h: 80, config: { variant: "block", style: { backgroundColor: "#7a9b5c", borderRadius: 8 } } },
+  { variant: "icon",    label: "Ícone",         icon: "ti-map-pin",              w: 16.66, h: 80, config: { variant: "icon", iconName: "map-pin" } },
 ];
 
 // Modelos de início — só tipo/posição/tamanho, sem campo vinculado (isso
@@ -873,6 +874,7 @@ function WidgetInspector({
                 <option value="text">Texto</option>
                 <option value="divider">Divisória</option>
                 <option value="block">Bloco de cor</option>
+                <option value="icon">Ícone</option>
               </select>
             </div>
             {variant === "text" && (
@@ -922,6 +924,37 @@ function WidgetInspector({
                   value={textStyle.color ?? "#e8d8be"} onChange={e => updateTextStyle({ color: e.target.value })} />
               </div>
             )}
+            {variant === "icon" && (
+              <>
+                <div>
+                  <label {...label}>Ícone</label>
+                  <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-md max-h-32 overflow-y-auto" style={{ border: BRD, background: "#fff" }}>
+                    {DECORATIVE_ICON_OPTIONS.map(opt => {
+                      const active = (widget.config.iconName as string) === opt.name;
+                      return (
+                        <button key={opt.name} title={opt.label} onClick={() => onUpdateConfig({ iconName: opt.name })}
+                          className="aspect-square flex items-center justify-center rounded-md text-base"
+                          style={{ border: active ? "2px solid #c48a42" : "1px solid transparent", color: "#5c3f13", background: active ? "#fbf3e7" : "transparent" }}>
+                          <i className={`ti ti-${opt.name}`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label {...label}>Tamanho</label>
+                    <input type="number" min={12} max={96} className={input} style={inputStyle}
+                      value={textStyle.fontSize ?? 32} onChange={e => updateTextStyle({ fontSize: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label {...label}>Cor</label>
+                    <input type="color" className="w-full h-8 rounded-md" style={{ border: BRD }}
+                      value={textStyle.color ?? "#c48a42"} onChange={e => updateTextStyle({ color: e.target.value })} />
+                  </div>
+                </div>
+              </>
+            )}
           </>
         );
       })()}
@@ -958,17 +991,55 @@ function WidgetInspector({
         <ImageWidgetFields config={widget.config} onUpdateConfig={onUpdateConfig} />
       )}
 
-      {widget.type === "map" && (
-        <div>
-          <label {...label}>Campo de coordenadas</label>
-          <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
-            onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
-            <option value="">Selecione...</option>
-            {geoCoordsFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-          </select>
-          {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
-        </div>
-      )}
+      {widget.type === "map" && (() => {
+        const categoryFieldId = (widget.config.categoryFieldId as string) ?? "";
+        const categoryField = fields.find(f => f.id === categoryFieldId);
+        const categoryOptions = categoryField
+          ? (categoryField.type === "yes_no" ? [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }]
+            : ((categoryField.config as { options?: { id: string; label: string }[] } | null)?.options ?? []))
+          : [];
+        const categoryStyles = (widget.config.categoryStyles ?? {}) as Record<string, { icon?: string; color?: string }>;
+        function updateCategoryStyle(optionId: string, patch: { icon?: string; color?: string }) {
+          onUpdateConfig({ categoryStyles: { ...categoryStyles, [optionId]: { ...categoryStyles[optionId], ...patch } } });
+        }
+        return (
+          <>
+            <div>
+              <label {...label}>Campo de coordenadas</label>
+              <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
+                onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
+                <option value="">Selecione...</option>
+                {geoCoordsFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
+            </div>
+            <div>
+              <label {...label}>Categorizar marcador por (opcional)</label>
+              <select className={input} style={inputStyle} value={categoryFieldId}
+                onChange={e => onUpdateConfig({ categoryFieldId: e.target.value || undefined, categoryStyles: undefined })}>
+                <option value="">Sem categoria (círculo padrão)</option>
+                {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+            </div>
+            {categoryField && categoryOptions.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <label {...label} className="mb-0">Ícone e cor por opção</label>
+                {categoryOptions.map(opt => (
+                  <div key={opt.id} className="flex items-center gap-1.5 p-1.5 rounded-md" style={{ border: BRD, background: "#fff" }}>
+                    <span className="text-xs flex-1 truncate" style={{ color: "#5c3f13" }}>{opt.label}</span>
+                    <select className="text-xs rounded-md px-1 py-1" style={inputStyle} value={categoryStyles[opt.id]?.icon ?? "map-pin"}
+                      onChange={e => updateCategoryStyle(opt.id, { icon: e.target.value })}>
+                      {DECORATIVE_ICON_OPTIONS.map(ic => <option key={ic.name} value={ic.name}>{ic.label}</option>)}
+                    </select>
+                    <input type="color" className="w-8 h-7 rounded-md flex-shrink-0" style={{ border: BRD }}
+                      value={categoryStyles[opt.id]?.color ?? "#c48a42"} onChange={e => updateCategoryStyle(opt.id, { color: e.target.value })} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {widget.type === "heatmap" && (
         <>

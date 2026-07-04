@@ -29,10 +29,14 @@ export interface WidgetAppearance {
 
 // "text" também cobre os elementos decorativos (sem fonte de dado, igual
 // texto): variant "divider" ignora o conteúdo e desenha uma linha; "block"
-// ignora o conteúdo e desenha um retângulo de cor sólida.
+// ignora o conteúdo e desenha um retângulo de cor sólida; "icon" ignora o
+// conteúdo e desenha um ícone Tabler (mesma fonte de ícone já usada em toda
+// a UI) — reaproveita textStyle.fontSize como tamanho e textStyle.color
+// como cor do ícone, sem precisar de um bloco de estilo próprio.
 export interface TextConfig {
   content: string;
-  variant?: "text" | "divider" | "block";
+  variant?: "text" | "divider" | "block" | "icon";
+  iconName?: string;
   textStyle?: {
     fontSize?: number;
     fontWeight?: "normal" | "bold";
@@ -42,10 +46,40 @@ export interface TextConfig {
   style?: WidgetAppearance;
 }
 
+// Ícones curados pro contexto territorial/científico do Dataº — todos já
+// existem na fonte Tabler carregada globalmente (classe `ti ti-<nome>`).
+export const DECORATIVE_ICON_OPTIONS: { name: string; label: string }[] = [
+  { name: "home",            label: "Casa" },
+  { name: "school",          label: "Escola" },
+  { name: "droplet",         label: "Água" },
+  { name: "plant-2",         label: "Agricultura" },
+  { name: "users",           label: "Comunidade" },
+  { name: "map-pin",         label: "Localização" },
+  { name: "building-church", label: "Terreiro/Templo" },
+  { name: "fish",            label: "Pesca" },
+  { name: "tree",            label: "Território" },
+  { name: "file-text",       label: "Documento" },
+  { name: "certificate",     label: "Certificação" },
+  { name: "shield-check",    label: "Proteção" },
+  { name: "book",            label: "Educação" },
+  { name: "heart",           label: "Saúde" },
+  { name: "sun",             label: "Clima" },
+  { name: "tractor",         label: "Agricultura familiar" },
+  { name: "tent",            label: "Assentamento" },
+  { name: "star",            label: "Destaque" },
+  { name: "flag",            label: "Marco" },
+  { name: "world",           label: "Nacional" },
+];
+
 // Mapa de pontos — um marcador por resposta que tenha respondido um campo
-// geo_coords.
+// geo_coords. categoryFieldId é opcional: se configurado (um campo de
+// escolha), cada marcador vira um ícone Tabler colorido por opção em vez
+// do círculo padrão — categoryStyles guarda a escolha de ícone/cor por
+// optionId, preenchida no editor.
 export interface MapConfig {
   geoFieldId: string;
+  categoryFieldId?: string;
+  categoryStyles?: Record<string, { icon?: string; color?: string }>;
 }
 
 // Imagem estática (logo, foto, brasão) — conteúdo posto pelo pesquisador,
@@ -131,11 +165,14 @@ export interface MapPoint {
   lat: number;
   lng: number;
   label: string;
+  categoryValue?: string;
 }
 
 export interface MapResult {
   kind: "map";
   points: MapPoint[];
+  categories?: ChoiceOption[];
+  categoryStyles?: Record<string, { icon?: string; color?: string }>;
 }
 
 export interface ImageResult {
