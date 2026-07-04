@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData } from "@/lib/dashboard/aggregate";
-import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
+import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, COLOR_PALETTES, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
 
 // react-moveable manipula o DOM direto (tamanho/posição via window/document)
@@ -168,6 +168,7 @@ export function DashboardBuilderClient({
 
   const [dashboardTheme,    setDashboardTheme]    = useState(dashboard.theme ?? "light");
   const [dashboardCoverUrl, setDashboardCoverUrl]  = useState(dashboard.coverUrl);
+  const [dashboardPalette, setDashboardPalette]    = useState(dashboard.colorPalette ?? "terracota");
   const [appearanceOpen,    setAppearanceOpen]     = useState(false);
   const [coverUploading,    setCoverUploading]     = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -236,7 +237,7 @@ export function DashboardBuilderClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds, undo, redo]);
 
-  const saveAppearance = useCallback(async (patch: { theme?: string; coverUrl?: string | null }) => {
+  const saveAppearance = useCallback(async (patch: { theme?: string; coverUrl?: string | null; colorPalette?: string }) => {
     await fetch(`/api/dashboards/${dashboard.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -263,6 +264,11 @@ export function DashboardBuilderClient({
   function setTheme(theme: string) {
     setDashboardTheme(theme);
     saveAppearance({ theme });
+  }
+
+  function setPalette(colorPalette: string) {
+    setDashboardPalette(colorPalette);
+    saveAppearance({ colorPalette });
   }
 
   // Carrega os widgets salvos ao montar
@@ -496,12 +502,25 @@ export function DashboardBuilderClient({
                 )}
               </div>
               <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Tom</p>
-              <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+              <div className="flex rounded-md overflow-hidden mb-3" style={{ border: BRD }}>
                 {[{ v: "light", l: "Claro" }, { v: "dark", l: "Escuro" }].map(t => (
                   <button key={t.v} onClick={() => setTheme(t.v)}
                     className="flex-1 py-1.5 text-2xs font-semibold"
                     style={{ background: dashboardTheme === t.v ? "#c48a42" : "#fff", color: dashboardTheme === t.v ? "#fff" : "#5c3f13" }}>
                     {t.l}
+                  </button>
+                ))}
+              </div>
+              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Paleta de cores</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {Object.entries(COLOR_PALETTES).map(([key, p]) => (
+                  <button key={key} onClick={() => setPalette(key)}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left"
+                    style={{ border: dashboardPalette === key ? "2px solid #c48a42" : BRD, background: "#fff" }}>
+                    <span className="flex flex-shrink-0" style={{ width: 18, height: 18, borderRadius: 4, overflow: "hidden" }}>
+                      {p.chartColors.slice(0, 3).map((c, i) => <span key={i} className="flex-1 h-full" style={{ background: c }} />)}
+                    </span>
+                    <span className="text-2xs font-medium truncate" style={{ color: "#5c3f13" }}>{p.label}</span>
                   </button>
                 ))}
               </div>
@@ -590,6 +609,7 @@ export function DashboardBuilderClient({
                   widget={w}
                   selected={selectedIds.has(w.id)}
                   data={computeWidgetData({ type: w.type, config: w.config }, fields, responses)}
+                  palette={dashboardPalette}
                   registerRef={registerWidgetRef(w.id)}
                   onSelect={additive => selectWidget(w.id, additive)}
                   onDelete={() => deleteWidget(w.id)}
@@ -713,9 +733,9 @@ export function DashboardBuilderClient({
 // componente só se posiciona a partir de x/y/w/h e expõe seu ref.
 
 function GridWidget({
-  widget, selected, data, registerRef, onSelect, onDelete,
+  widget, selected, data, palette, registerRef, onSelect, onDelete,
 }: {
-  widget: WidgetDraft; selected: boolean; data: ReturnType<typeof computeWidgetData>;
+  widget: WidgetDraft; selected: boolean; data: ReturnType<typeof computeWidgetData>; palette: string;
   registerRef: (el: HTMLDivElement | null) => void;
   onSelect: (additive: boolean) => void; onDelete: () => void;
 }) {
@@ -741,7 +761,7 @@ function GridWidget({
         </button>
       )}
       <div className="absolute inset-0">
-        <WidgetRenderer type={widget.type} title={widget.title} data={data} config={widget.config} />
+        <WidgetRenderer type={widget.type} title={widget.title} data={data} config={widget.config} palette={palette} />
       </div>
     </div>
   );
@@ -868,7 +888,7 @@ function WidgetInspector({
 
       {widget.type === "text" && (() => {
         const variant = (widget.config.variant as string) ?? "text";
-        const textStyle = (widget.config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; color?: string; align?: "left" | "center" | "right" };
+        const textStyle = (widget.config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; fontFamily?: "sans" | "serif"; color?: string; align?: "left" | "center" | "right" };
         const updateTextStyle = (patch: Record<string, unknown>) => onUpdateConfig({ textStyle: { ...textStyle, ...patch } });
         return (
           <>
@@ -902,6 +922,14 @@ function WidgetInspector({
                       <option value="bold">Negrito</option>
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label {...label}>Fonte</label>
+                  <select className={input} style={inputStyle} value={textStyle.fontFamily ?? "sans"}
+                    onChange={e => updateTextStyle({ fontFamily: e.target.value })}>
+                    <option value="sans">Regular</option>
+                    <option value="serif">Serifada (títulos, destaques)</option>
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>

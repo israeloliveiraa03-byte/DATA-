@@ -3,13 +3,10 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
-import type { MapResult } from "@/lib/dashboard/types";
+import type { ColorPalette, MapResult } from "@/lib/dashboard/types";
+import { COLOR_PALETTES } from "@/lib/dashboard/types";
 
 const BRAZIL_CENTER: [number, number] = [-14.235, -51.9253];
-
-// Paleta padrão pra categoria sem cor escolhida no editor — mesmo espírito
-// terracota/verde-mata do resto do produto.
-const CATEGORY_FALLBACK_COLORS = ["#c48a42", "#4c6b3c", "#1a56db", "#7a5218", "#c0392b", "#534ab7"];
 
 function categoryIcon(iconName: string | undefined, color: string) {
   return L.divIcon({
@@ -24,6 +21,7 @@ function categoryIcon(iconName: string | undefined, color: string) {
 
 interface MapWidgetProps {
   data: MapResult;
+  palette?: ColorPalette;
 }
 
 function FitToPoints({ points }: { points: MapResult["points"] }) {
@@ -55,11 +53,12 @@ function FitToPoints({ points }: { points: MapResult["points"] }) {
   return null;
 }
 
-export function MapWidget({ data }: MapWidgetProps) {
+export function MapWidget({ data, palette }: MapWidgetProps) {
+  const colors = (palette ?? COLOR_PALETTES.terracota).chartColors;
   const hasCategories = !!data.categories && data.categories.length > 0;
 
   function styleFor(optionId: string | undefined, index: number) {
-    const fallback = CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length];
+    const fallback = colors[index % colors.length];
     if (!optionId) return { color: fallback, icon: undefined };
     const configured = data.categoryStyles?.[optionId];
     return { color: configured?.color ?? fallback, icon: configured?.icon };
@@ -77,7 +76,7 @@ export function MapWidget({ data }: MapWidgetProps) {
           {data.points.map((p, i) => {
             if (!hasCategories) {
               return (
-                <CircleMarker key={i} center={[p.lat, p.lng]} radius={6} pathOptions={{ color: "#4c6539", fillColor: "#7a9b5c", fillOpacity: 0.85, weight: 1.5 }}>
+                <CircleMarker key={i} center={[p.lat, p.lng]} radius={6} pathOptions={{ color: colors[0], fillColor: colors[0], fillOpacity: 0.85, weight: 1.5 }}>
                   <Tooltip>{p.label}</Tooltip>
                 </CircleMarker>
               );

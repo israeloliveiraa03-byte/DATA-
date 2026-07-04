@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import type { SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
+import { COLOR_PALETTES, type ColorPalette, type SupportedWidgetType, type WidgetData } from "@/lib/dashboard/types";
 
 // Leaflet e three.js (via react-globe.gl) acessam `window`/`document`/WebGL
 // direto — não rodam em SSR. Aprendido do jeito difícil com o
@@ -13,26 +13,26 @@ const MapWidget          = dynamic(() => import("@/components/dashboard/widgets/
 const GlobePointsWidget  = dynamic(() => import("@/components/dashboard/widgets/globe-widget").then(m => m.GlobePointsWidget), { ssr: false });
 const GlobeHeatmapWidget = dynamic(() => import("@/components/dashboard/widgets/globe-widget").then(m => m.GlobeHeatmapWidget), { ssr: false });
 
-const CHART_COLORS = ["#c48a42", "#4c6b3c", "#1a56db", "#534ab7", "#c0392b", "#0c447c", "#7a5218", "#3a5430"];
-
 function formatNumber(n: number, decimals?: number): string {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: decimals ?? 0, maximumFractionDigits: decimals ?? 2 });
 }
 
 interface WidgetRendererProps {
-  type:   SupportedWidgetType;
-  title?: string | null;
-  data:   WidgetData;
-  config: Record<string, unknown>;
+  type:    SupportedWidgetType;
+  title?:  string | null;
+  data:    WidgetData;
+  config:  Record<string, unknown>;
+  palette?: string; // chave de COLOR_PALETTES — nível do dashboard, não do widget
 }
 
-export function WidgetRenderer({ type, title, data, config }: WidgetRendererProps) {
+export function WidgetRenderer({ type, title, data, config, palette }: WidgetRendererProps) {
   // Aparência genérica (fundo/borda) — qualquer tipo de widget aceita.
   // Decorativos (divisória/bloco de cor) não têm padding: a cor precisa
   // preencher a caixa inteira, não uma caixa branca com um retângulo dentro.
   const appearance = (config.style ?? {}) as { backgroundColor?: string; borderRadius?: number };
   const variant = config.variant as string | undefined;
   const isDecorative = type === "text" && (variant === "divider" || variant === "block" || variant === "icon");
+  const resolvedPalette = COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota;
 
   return (
     <div className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-3 overflow-hidden"}
@@ -42,25 +42,25 @@ export function WidgetRenderer({ type, title, data, config }: WidgetRendererProp
       }}>
       {title && !isDecorative && <p className="text-xs font-bold mb-2 flex-shrink-0" style={{ color: "#5c3f13" }}>{title}</p>}
       <div className="flex-1 min-h-0">
-        <WidgetBody type={type} data={data} config={config} />
+        <WidgetBody type={type} data={data} config={config} palette={resolvedPalette} />
       </div>
     </div>
   );
 }
 
-function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) {
+function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "title" | "palette"> & { palette: ColorPalette }) {
   // "globe" reaproveita os mesmos dados de map/heatmap (mesmo "kind"), só
   // troca a visualização — precisa vir antes das checagens genéricas de
   // data.kind === "map"/"heatmap" que renderizam a versão 2D.
   if (type === "globe") {
     if (data.kind === "map") {
       if (data.points.length === 0) return <EmptyState />;
-      return <GlobePointsWidget data={data} />;
+      return <GlobePointsWidget data={data} palette={palette} />;
     }
     if (data.kind === "heatmap") {
       const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
       if (!hasAnyData) return <EmptyState />;
-      return <GlobeHeatmapWidget data={data} />;
+      return <GlobeHeatmapWidget data={data} palette={palette} />;
     }
     return <EmptyState />;
   }
@@ -79,8 +79,8 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
 
   if (data.kind === "choice") {
     if (data.buckets.length === 0) return <EmptyState />;
-    if (type === "bar_chart") return <BarChartView data={data.buckets} />;
-    return <PieChartView data={data.buckets} donut={type === "donut_chart"} />;
+    if (type === "bar_chart") return <BarChartView data={data.buckets} colors={palette.chartColors} />;
+    return <PieChartView data={data.buckets} donut={type === "donut_chart"} colors={palette.chartColors} />;
   }
 
   if (data.kind === "table") {
@@ -93,12 +93,13 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
     if (variant === "divider") return <DividerView config={config} />;
     if (variant === "block") return null; // a cor já vem do fundo do container (config.style)
     if (variant === "icon") return <IconView config={config} />;
-    const textStyle = (config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; color?: string; align?: "left" | "center" | "right" };
+    const textStyle = (config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; fontFamily?: "sans" | "serif"; color?: string; align?: "left" | "center" | "right" };
     return (
       <p className="whitespace-pre-wrap h-full" style={{
         color: textStyle.color ?? "#111",
         fontSize: textStyle.fontSize ? `${textStyle.fontSize}px` : "14px",
         fontWeight: textStyle.fontWeight ?? "normal",
+        fontFamily: textStyle.fontFamily === "serif" ? "var(--font-serif), Georgia, serif" : "var(--font-sans), Inter, sans-serif",
         textAlign: textStyle.align ?? "left",
       }}>
         {data.content || "—"}
@@ -108,7 +109,7 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
 
   if (data.kind === "map") {
     if (data.points.length === 0) return <EmptyState />;
-    return <MapWidget data={data} />;
+    return <MapWidget data={data} palette={palette} />;
   }
 
   if (data.kind === "image") {
@@ -120,12 +121,12 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
   if (data.kind === "heatmap") {
     const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
     if (!hasAnyData) return <EmptyState />;
-    return <HeatmapWidget data={data} />;
+    return <HeatmapWidget data={data} palette={palette} />;
   }
 
   if (data.kind === "crosstab") {
     if (data.rows.length === 0 || data.cols.length === 0 || data.grandTotal === 0) return <EmptyState />;
-    return <CrosstabView data={data} valueMode={(config.valueMode as string) ?? "count"} />;
+    return <CrosstabView data={data} valueMode={(config.valueMode as string) ?? "count"} palette={palette} />;
   }
 
   return null;
@@ -164,12 +165,12 @@ function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: st
   );
 }
 
-function ChartLegend({ data }: { data: { label: string }[] }) {
+function ChartLegend({ data, colors }: { data: { label: string }[]; colors: string[] }) {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center px-1 pt-1 flex-shrink-0">
       {data.map((d, i) => (
         <span key={i} className="flex items-center gap-1 text-2xs" style={{ color: "#5c3f13" }}>
-          <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+          <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[i % colors.length] }} />
           {d.label}
         </span>
       ))}
@@ -177,7 +178,7 @@ function ChartLegend({ data }: { data: { label: string }[] }) {
   );
 }
 
-function BarChartView({ data }: { data: { optionId: string; label: string; count: number }[] }) {
+function BarChartView({ data, colors }: { data: { optionId: string; label: string; count: number }[]; colors: string[] }) {
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
@@ -187,37 +188,36 @@ function BarChartView({ data }: { data: { optionId: string; label: string; count
             <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} />
             <Tooltip />
             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-              {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <ChartLegend data={data} />
+      <ChartLegend data={data} colors={colors} />
     </div>
   );
 }
 
-function PieChartView({ data, donut }: { data: { optionId: string; label: string; count: number }[]; donut: boolean }) {
+function PieChartView({ data, donut, colors }: { data: { optionId: string; label: string; count: number }[]; donut: boolean; colors: string[] }) {
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%">
-              {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
             </Pie>
             <Tooltip />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <ChartLegend data={data} />
+      <ChartLegend data={data} colors={colors} />
     </div>
   );
 }
 
-const CROSSTAB_ACCENT = "196, 138, 66"; // brand terracota, mesma família de cor do resto do produto
-
-function CrosstabView({ data, valueMode }: { data: Extract<WidgetData, { kind: "crosstab" }>; valueMode: string }) {
+function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, { kind: "crosstab" }>; valueMode: string; palette: ColorPalette }) {
+  const accent = palette.accent;
   function cellValue(ri: number, ci: number): number {
     const raw = data.cells[ri][ci];
     if (valueMode === "row_percent") return data.rowTotals[ri] > 0 ? (raw / data.rowTotals[ri]) * 100 : 0;
@@ -232,9 +232,11 @@ function CrosstabView({ data, valueMode }: { data: Extract<WidgetData, { kind: "
   function formatCell(v: number): string {
     return valueMode === "count" ? formatNumber(v) : `${formatNumber(v, 1)}%`;
   }
+  const legendMax = valueMode === "count" ? maxCount : 100;
 
   return (
-    <div className="h-full overflow-auto">
+    <div className="h-full flex flex-col gap-1.5">
+    <div className="flex-1 min-h-0 overflow-auto">
       <table className="text-xs" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -250,7 +252,7 @@ function CrosstabView({ data, valueMode }: { data: Extract<WidgetData, { kind: "
             <tr key={r.id}>
               <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "#5c3f13", background: "#fff", borderRight: "1px solid #e8d8be" }}>{r.label}</td>
               {data.cols.map((c, ci) => (
-                <td key={c.id} className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "#111", background: `rgba(${CROSSTAB_ACCENT}, ${(0.08 + intensity(ri, ci) * 0.55).toFixed(2)})` }}>
+                <td key={c.id} className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "#111", background: `rgba(${accent}, ${(0.08 + intensity(ri, ci) * 0.55).toFixed(2)})` }}>
                   {formatCell(cellValue(ri, ci))}
                 </td>
               ))}
@@ -266,6 +268,12 @@ function CrosstabView({ data, valueMode }: { data: Extract<WidgetData, { kind: "
           </tr>
         </tbody>
       </table>
+    </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
+        <span className="text-2xs" style={{ color: "#a06d28" }}>0</span>
+        <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${accent},0.08), rgba(${accent},0.63))` }} />
+        <span className="text-2xs font-semibold" style={{ color: "#5c3f13" }}>{valueMode === "count" ? formatNumber(legendMax) : `${formatNumber(legendMax, 0)}%`}</span>
+      </div>
     </div>
   );
 }

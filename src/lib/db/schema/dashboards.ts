@@ -18,6 +18,12 @@ export const dashboards = pgTable("dashboards", {
   publicSlug:  varchar("public_slug", { length: 200 }).unique(),
   theme:       varchar("theme",       { length: 50  }).notNull().default("light"),
   coverUrl:    text("cover_url"),
+  // Paleta de cores dos widgets (gráficos/mapas/globo) — ver COLOR_PALETTES
+  // em src/lib/dashboard/types.ts. Coluna adicionada via SQL direto
+  // (ALTER TABLE ADD COLUMN, aditivo com default) — mesmo motivo do enum
+  // widget_type: drizzle-kit push tentaria remover NOT NULL de tudo no
+  // Postgres 18/Neon (ver CLAUDE.md).
+  colorPalette: varchar("color_palette", { length: 50 }).notNull().default("terracota"),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:   timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

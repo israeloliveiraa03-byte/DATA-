@@ -1,5 +1,39 @@
 export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image" | "crosstab" | "globe";
 
+// Paleta de cores do dashboard inteiro (gráficos, mapa de calor, cruzamento,
+// globo) — guardada em dashboards.colorPalette, default "terracota" (visual
+// de hoje, zero regressão). accent é o rgb "r, g, b" usado em fundos com
+// opacidade variável (mapa de calor, células de cruzamento); chartColors
+// colore barra/pizza/rosca e os pontos categorizados do mapa/globo.
+export interface ColorPalette {
+  label: string;
+  chartColors: string[];
+  accent: string; // "r, g, b"
+}
+
+export const COLOR_PALETTES: Record<string, ColorPalette> = {
+  terracota: {
+    label: "Terracota (padrão)",
+    chartColors: ["#c48a42", "#4c6b3c", "#1a56db", "#534ab7", "#c0392b", "#0c447c", "#7a5218", "#3a5430"],
+    accent: "126, 155, 92",
+  },
+  oceano: {
+    label: "Oceano",
+    chartColors: ["#1a56db", "#0c447c", "#0891b2", "#155e75", "#3b82f6", "#075985", "#164e63", "#5b8fd1"],
+    accent: "26, 86, 219",
+  },
+  "verde-mata": {
+    label: "Verde-mata",
+    chartColors: ["#4c6b3c", "#7a9b5c", "#2d4025", "#8fb37a", "#3a5430", "#1f2e19", "#6b8752", "#527a3f"],
+    accent: "76, 107, 60",
+  },
+  "alto-contraste": {
+    label: "Alto contraste",
+    chartColors: ["#111111", "#c0392b", "#1a56db", "#0f6b3a", "#7a5218", "#534ab7", "#0c2340", "#8a1538"],
+    accent: "17, 17, 17",
+  },
+};
+
 export interface NumberCardConfig {
   fieldId?: string;
   aggregation: "count" | "count_completed" | "avg" | "sum" | "min" | "max";
@@ -40,6 +74,7 @@ export interface TextConfig {
   textStyle?: {
     fontSize?: number;
     fontWeight?: "normal" | "bold";
+    fontFamily?: "sans" | "serif";
     color?: string;
     align?: "left" | "center" | "right";
   };

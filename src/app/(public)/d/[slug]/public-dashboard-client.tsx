@@ -15,7 +15,7 @@ interface PublicWidget {
 interface PublicDashboard {
   title: string; description: string | null; researchTitle: string;
   showAds: boolean; widgets: PublicWidget[];
-  theme: string | null; coverUrl: string | null;
+  theme: string | null; coverUrl: string | null; colorPalette: string | null;
 }
 
 export function PublicDashboardClient({ slug }: { slug: string }) {
@@ -97,7 +97,7 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
                   width: `${w.w}%`, height: w.h,
                   border: `1px solid ${cardBorder}`,
                 }}>
-                <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} />
+                <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} />
               </div>
             ))}
           </div>

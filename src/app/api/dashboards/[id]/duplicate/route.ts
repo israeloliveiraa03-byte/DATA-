@@ -26,6 +26,7 @@ export async function POST(
     description: dashboard.description,
     layout:      dashboard.layout,
     theme:       dashboard.theme,
+    colorPalette: dashboard.colorPalette,
     // isPublic/publicSlug propositalmente não copiados — a cópia nasce despublicada.
   }).returning();
 

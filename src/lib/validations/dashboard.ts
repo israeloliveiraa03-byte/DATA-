@@ -20,6 +20,7 @@ export const updateDashboardSchema = z.object({
   // pesquisa/perfil) — limite generoso o bastante pra uma imagem comprimida
   // (redimensionada no cliente antes de enviar, ver dashboard-builder-client.tsx).
   coverUrl:    z.string().max(3000000).nullable().optional(),
+  colorPalette: z.string().max(50).optional(),
 });
 
 // Grade livre (não mais célula de 12 colunas): x/w em % da largura do

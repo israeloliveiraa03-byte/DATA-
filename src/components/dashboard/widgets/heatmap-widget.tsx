@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import L, { type Layer, type PathOptions } from "leaflet";
 import type { Feature, FeatureCollection } from "geojson";
-import type { HeatmapResult } from "@/lib/dashboard/types";
+import type { ColorPalette, HeatmapResult } from "@/lib/dashboard/types";
+import { COLOR_PALETTES } from "@/lib/dashboard/types";
 import { CODAREA_TO_SIGLA } from "@/lib/geo/uf";
 import { resolveMunicipioName } from "@/lib/geo/municipios";
 
-const ACCENT = "126, 155, 92"; // brand-500 #7a9b5c em rgb, pra variar só a opacidade
 const NO_DATA_STYLE: PathOptions = { fillColor: "#5c5847", weight: 1, color: "#302e22", fillOpacity: 0.25 };
 
 interface HeatmapWidgetProps {
   data: HeatmapResult;
+  palette?: ColorPalette;
 }
 
 // Ajusta o mapa pro contorno do Brasil sempre que o container montar ou
@@ -40,7 +41,8 @@ function FitToBrazil({ geo }: { geo: FeatureCollection }) {
   return null;
 }
 
-export function HeatmapWidget({ data }: HeatmapWidgetProps) {
+export function HeatmapWidget({ data, palette }: HeatmapWidgetProps) {
+  const ACCENT = (palette ?? COLOR_PALETTES.terracota).accent;
   const isCity = data.granularity === "city";
   const [estados, setEstados] = useState<FeatureCollection | null>(null);
   const [indicatorKey, setIndicatorKey] = useState(data.indicators[0]?.key);
@@ -121,9 +123,9 @@ export function HeatmapWidget({ data }: HeatmapWidgetProps) {
         </MapContainer>
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
-        <span className="text-2xs" style={{ color: "#a06d28" }}>Baixo</span>
+        <span className="text-2xs" style={{ color: "#a06d28" }}>0{max > 100 ? "" : "%"}</span>
         <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${ACCENT},0.15), rgba(${ACCENT},0.9))` }} />
-        <span className="text-2xs" style={{ color: "#a06d28" }}>Alto</span>
+        <span className="text-2xs font-semibold" style={{ color: "#5c3f13" }}>{max > 100 ? `${Math.round(max)} respostas` : `${max.toFixed(0)}%`}</span>
       </div>
     </div>
   );

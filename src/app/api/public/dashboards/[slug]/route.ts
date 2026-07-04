@@ -49,6 +49,7 @@ export async function GET(
     description:  dashboard.description,
     theme:        dashboard.theme,
     coverUrl:      dashboard.coverUrl,
+    colorPalette:  dashboard.colorPalette,
     researchTitle: research.title,
     showAds:      owner?.plan === "free" || !owner,
     widgets:      widgetsWithData,
