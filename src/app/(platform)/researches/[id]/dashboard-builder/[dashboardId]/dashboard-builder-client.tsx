@@ -35,6 +35,7 @@ const DEFAULT_SIZE: Record<SupportedWidgetType, { w: number; h: number }> = {
   heatmap:      { w: 50,        h: 320 },
   image:        { w: 33.333333, h: 192 },
   crosstab:     { w: 50,        h: 224 },
+  globe:        { w: 50,        h: 360 },
 };
 
 // Redimensiona uma imagem no cliente antes de guardar como base64 — usado
@@ -292,6 +293,7 @@ export function DashboardBuilderClient({
       config: type === "number_card" ? { aggregation: "count" }
         : type === "table" ? { fieldIds: [] }
         : type === "heatmap" ? { indicators: [{ key: crypto.randomUUID(), label: "Volume de respostas", mode: "count" as const }] }
+        : type === "globe" ? { mode: "points" as const }
         : {},
     }]);
     setSelectedIds(new Set([id]));
@@ -1137,6 +1139,44 @@ function WidgetInspector({
           </div>
         </>
       )}
+
+      {widget.type === "globe" && (() => {
+        const mode = (widget.config.mode as string) ?? "points";
+        return (
+          <>
+            <div>
+              <label {...label}>Modo</label>
+              <select className={input} style={inputStyle} value={mode} onChange={e => onUpdateConfig({ mode: e.target.value })}>
+                <option value="points">Marcadores por resposta (GPS)</option>
+                <option value="heatmap">Mapa de calor por estado</option>
+              </select>
+            </div>
+            {mode === "points" && (
+              <div>
+                <label {...label}>Campo de coordenadas</label>
+                <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
+                  onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
+                  <option value="">Selecione...</option>
+                  {geoCoordsFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+                {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
+              </div>
+            )}
+            {mode === "heatmap" && (
+              <div>
+                <label {...label}>Campo de estado</label>
+                <select className={input} style={inputStyle} value={(widget.config.geoFieldId as string) ?? ""}
+                  onChange={e => onUpdateConfig({ geoFieldId: e.target.value || undefined })}>
+                  <option value="">Selecione...</option>
+                  {geoStateFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+                {geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de estado neste formulário ainda.</p>}
+                <p className="text-2xs mt-2" style={{ color: "#a06d28" }}>Usa o volume de respostas por estado — pra indicadores por opção, monte primeiro um widget de mapa de calor 2D e depois troque pra &ldquo;Globo 3D&rdquo;.</p>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <button onClick={onDelete}
         className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold mt-2"

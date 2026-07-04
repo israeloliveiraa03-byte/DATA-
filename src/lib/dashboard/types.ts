@@ -1,4 +1,4 @@
-export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image" | "crosstab";
+export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image" | "crosstab" | "globe";
 
 export interface NumberCardConfig {
   fieldId?: string;
@@ -119,7 +119,19 @@ export interface CrosstabConfig {
   valueMode?: "count" | "row_percent" | "col_percent";
 }
 
-export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig | CrosstabConfig;
+// Globo 3D interativo — visualização alternativa dos mesmos dados que
+// map/heatmap já calculam (sem motor de agregação próprio). mode "points"
+// reaproveita geoFieldId/categoryFieldId/categoryStyles do MapConfig; mode
+// "heatmap" reaproveita geoFieldId/indicators do HeatmapConfig.
+export interface GlobeConfig {
+  mode: "points" | "heatmap";
+  geoFieldId?: string;
+  categoryFieldId?: string;
+  categoryStyles?: Record<string, { icon?: string; color?: string }>;
+  indicators?: HeatmapIndicatorConfig[];
+}
+
+export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig | CrosstabConfig | GlobeConfig;
 
 export interface ChoiceOption {
   id: string;
@@ -229,4 +241,5 @@ export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string
   { value: "heatmap",     label: "Mapa de calor",  icon: "ti-map-2",           description: "Colore o Brasil por estado" },
   { value: "image",       label: "Imagem",  icon: "ti-photo",                   description: "Logo, foto ou brasão — conteúdo fixo, sem dado" },
   { value: "crosstab",    label: "Cruzamento", icon: "ti-table-options",        description: "Categoria A × categoria B, tipo tabela cruzada" },
+  { value: "globe",       label: "Globo 3D",   icon: "ti-world",                description: "Mapa ou mapa de calor num globo interativo" },
 ];

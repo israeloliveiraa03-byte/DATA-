@@ -309,42 +309,62 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
       return categoryStyles ? { ...result, categoryStyles } : result;
     }
 
-    case "heatmap": {
+    case "heatmap":
+      return computeHeatmapResult(config, fields, responses);
+
+    case "globe": {
+      const mode = config.mode === "heatmap" ? "heatmap" : "points";
+      if (mode === "heatmap") return computeHeatmapResult(config, fields, responses);
+
       const geoFieldId = typeof config.geoFieldId === "string" ? config.geoFieldId : "";
       const geoField = fields.find(f => f.id === geoFieldId);
-      if (!geoField) return { kind: "heatmap", indicators: [], byIndicator: {}, maxByIndicator: {} };
-
-      type RawIndicator = { key?: string; label?: string; mode?: string; fieldId?: string; optionId?: string };
-      let rawIndicators: RawIndicator[] = Array.isArray(config.indicators) ? (config.indicators as RawIndicator[]) : [];
-
-      // Compatibilidade: widgets salvos antes de existir a lista de
-      // indicadores tinham indicatorMode/indicatorFieldId/indicatorOptionId
-      // soltos — normaliza pra uma lista de 1 item, nada quebra.
-      if (rawIndicators.length === 0 && (config.indicatorMode || config.indicatorFieldId)) {
-        rawIndicators = [{
-          key: "legacy",
-          label: "Indicador",
-          mode: config.indicatorMode === "choice_percent" ? "choice_percent" : "count",
-          fieldId: typeof config.indicatorFieldId === "string" ? config.indicatorFieldId : undefined,
-          optionId: typeof config.indicatorOptionId === "string" ? config.indicatorOptionId : undefined,
-        }];
-      }
-      if (rawIndicators.length === 0) {
-        rawIndicators = [{ key: "count", label: "Volume de respostas", mode: "count" }];
-      }
-
-      const indicators = rawIndicators.map((ind, i) => ({
-        key: ind.key || `ind_${i}`,
-        label: ind.label || (ind.mode === "choice_percent" ? "Indicador" : "Volume de respostas"),
-        mode: (ind.mode === "choice_percent" ? "choice_percent" : "count") as "count" | "choice_percent",
-        field: ind.fieldId ? fields.find(f => f.id === ind.fieldId) : undefined,
-        optionId: ind.optionId,
-      }));
-
-      return aggregateHeatmapByState(responses, geoField, indicators);
+      if (!geoField) return { kind: "map", points: [] };
+      const categoryFieldId = typeof config.categoryFieldId === "string" ? config.categoryFieldId : undefined;
+      const categoryField = categoryFieldId ? fields.find(f => f.id === categoryFieldId) : undefined;
+      const result = aggregateMapPoints(responses, geoField, categoryField);
+      const categoryStyles = config.categoryStyles as MapResult["categoryStyles"];
+      return categoryStyles ? { ...result, categoryStyles } : result;
     }
 
     default:
       return { kind: "text", content: "" };
   }
+}
+
+// Compartilhado entre o widget "heatmap" e o modo heatmap do "globe" — mesma
+// normalização de indicadores (com compatibilidade pra widgets salvos antes
+// de existir a lista) e mesmo motor de agregação por estado.
+function computeHeatmapResult(config: Record<string, unknown>, fields: FormField[], responses: Response[]): HeatmapResult {
+  const geoFieldId = typeof config.geoFieldId === "string" ? config.geoFieldId : "";
+  const geoField = fields.find(f => f.id === geoFieldId);
+  if (!geoField) return { kind: "heatmap", indicators: [], byIndicator: {}, maxByIndicator: {} };
+
+  type RawIndicator = { key?: string; label?: string; mode?: string; fieldId?: string; optionId?: string };
+  let rawIndicators: RawIndicator[] = Array.isArray(config.indicators) ? (config.indicators as RawIndicator[]) : [];
+
+  // Compatibilidade: widgets salvos antes de existir a lista de
+  // indicadores tinham indicatorMode/indicatorFieldId/indicatorOptionId
+  // soltos — normaliza pra uma lista de 1 item, nada quebra.
+  if (rawIndicators.length === 0 && (config.indicatorMode || config.indicatorFieldId)) {
+    rawIndicators = [{
+      key: "legacy",
+      label: "Indicador",
+      mode: config.indicatorMode === "choice_percent" ? "choice_percent" : "count",
+      fieldId: typeof config.indicatorFieldId === "string" ? config.indicatorFieldId : undefined,
+      optionId: typeof config.indicatorOptionId === "string" ? config.indicatorOptionId : undefined,
+    }];
+  }
+  if (rawIndicators.length === 0) {
+    rawIndicators = [{ key: "count", label: "Volume de respostas", mode: "count" }];
+  }
+
+  const indicators = rawIndicators.map((ind, i) => ({
+    key: ind.key || `ind_${i}`,
+    label: ind.label || (ind.mode === "choice_percent" ? "Indicador" : "Volume de respostas"),
+    mode: (ind.mode === "choice_percent" ? "choice_percent" : "count") as "count" | "choice_percent",
+    field: ind.fieldId ? fields.find(f => f.id === ind.fieldId) : undefined,
+    optionId: ind.optionId,
+  }));
+
+  return aggregateHeatmapByState(responses, geoField, indicators);
 }

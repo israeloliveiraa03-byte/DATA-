@@ -4,9 +4,14 @@ import dynamic from "next/dynamic";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
 
-// Leaflet acessa `window`/`document` direto — não roda em SSR.
-const HeatmapWidget = dynamic(() => import("@/components/dashboard/widgets/heatmap-widget").then(m => m.HeatmapWidget), { ssr: false });
-const MapWidget     = dynamic(() => import("@/components/dashboard/widgets/map-widget").then(m => m.MapWidget), { ssr: false });
+// Leaflet e three.js (via react-globe.gl) acessam `window`/`document`/WebGL
+// direto — não rodam em SSR. Aprendido do jeito difícil com o
+// react-moveable: toda lib que mexe em DOM/GPU direto entra assim desde o
+// primeiro commit, nunca depois.
+const HeatmapWidget      = dynamic(() => import("@/components/dashboard/widgets/heatmap-widget").then(m => m.HeatmapWidget), { ssr: false });
+const MapWidget          = dynamic(() => import("@/components/dashboard/widgets/map-widget").then(m => m.MapWidget), { ssr: false });
+const GlobePointsWidget  = dynamic(() => import("@/components/dashboard/widgets/globe-widget").then(m => m.GlobePointsWidget), { ssr: false });
+const GlobeHeatmapWidget = dynamic(() => import("@/components/dashboard/widgets/globe-widget").then(m => m.GlobeHeatmapWidget), { ssr: false });
 
 const CHART_COLORS = ["#c48a42", "#4c6b3c", "#1a56db", "#534ab7", "#c0392b", "#0c447c", "#7a5218", "#3a5430"];
 
@@ -44,6 +49,22 @@ export function WidgetRenderer({ type, title, data, config }: WidgetRendererProp
 }
 
 function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) {
+  // "globe" reaproveita os mesmos dados de map/heatmap (mesmo "kind"), só
+  // troca a visualização — precisa vir antes das checagens genéricas de
+  // data.kind === "map"/"heatmap" que renderizam a versão 2D.
+  if (type === "globe") {
+    if (data.kind === "map") {
+      if (data.points.length === 0) return <EmptyState />;
+      return <GlobePointsWidget data={data} />;
+    }
+    if (data.kind === "heatmap") {
+      const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
+      if (!hasAnyData) return <EmptyState />;
+      return <GlobeHeatmapWidget data={data} />;
+    }
+    return <EmptyState />;
+  }
+
   if (data.kind === "count") {
     const aggregation = typeof config.aggregation === "string" ? config.aggregation : "count";
     const value = aggregation === "count_completed" ? data.completed : data.total;
