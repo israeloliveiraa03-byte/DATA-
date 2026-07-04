@@ -106,15 +106,33 @@ export const DECORATIVE_ICON_OPTIONS: { name: string; label: string }[] = [
   { name: "world",           label: "Nacional" },
 ];
 
+// Mapa-base ("relevo") dos widgets de mapa — só metadados aqui (chave e
+// rótulo, usados no inspetor do builder); as URLs de tile ficam em
+// map-common.tsx, junto do resto do código Leaflet (que nunca entra em SSR).
+// Todos os provedores são XYZ gratuitos, sem chave de API.
+export type BasemapKey = "light" | "dark" | "satellite" | "topo";
+
+export const BASEMAP_OPTIONS: { key: BasemapKey; label: string }[] = [
+  { key: "light",     label: "Claro (padrão)" },
+  { key: "dark",      label: "Escuro" },
+  { key: "satellite", label: "Satélite" },
+  { key: "topo",      label: "Relevo (topográfico)" },
+];
+
 // Mapa de pontos — um marcador por resposta que tenha respondido um campo
 // geo_coords. categoryFieldId é opcional: se configurado (um campo de
 // escolha), cada marcador vira um ícone Tabler colorido por opção em vez
 // do círculo padrão — categoryStyles guarda a escolha de ícone/cor por
 // optionId, preenchida no editor.
+// colorPalette (opcional) sobrepõe a paleta do dashboard só neste widget;
+// basemap (opcional) escolhe o mapa-base padrão — undefined mantém o
+// comportamento de hoje (paleta herdada + mapa claro), zero regressão.
 export interface MapConfig {
   geoFieldId: string;
   categoryFieldId?: string;
   categoryStyles?: Record<string, { icon?: string; color?: string }>;
+  colorPalette?: string;
+  basemap?: BasemapKey;
 }
 
 // Imagem estática (logo, foto, brasão) — conteúdo posto pelo pesquisador,
@@ -141,10 +159,14 @@ export interface HeatmapIndicatorConfig {
 // o geo_state irmão pra resolver o código IBGE); permite vários
 // indicadores configurados, trocáveis no próprio mapa renderizado (ver
 // HeatmapWidget) sem precisar reabrir o editor.
+// colorPalette/basemap: mesma semântica do MapConfig (override opcional
+// por widget, undefined = comportamento atual).
 export interface HeatmapConfig {
   geoFieldId: string;
   indicators: HeatmapIndicatorConfig[];
   granularity?: "state" | "city";
+  colorPalette?: string;
+  basemap?: BasemapKey;
 }
 
 // Cruzamento de dados — categoria A (linha) × categoria B (coluna), tipo

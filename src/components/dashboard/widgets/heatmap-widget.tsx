@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
+import { MapContainer, GeoJSON, useMap } from "react-leaflet";
 import L, { type Layer, type PathOptions } from "leaflet";
 import type { Feature, FeatureCollection } from "geojson";
 import type { ColorPalette, HeatmapResult } from "@/lib/dashboard/types";
 import { COLOR_PALETTES } from "@/lib/dashboard/types";
 import { CODAREA_TO_SIGLA } from "@/lib/geo/uf";
 import { resolveMunicipioName } from "@/lib/geo/municipios";
+import { BasemapLayers, ScrollZoomOnFocus } from "./map-common";
 
 const NO_DATA_STYLE: PathOptions = { fillColor: "#5c5847", weight: 1, color: "#302e22", fillOpacity: 0.25 };
 
 interface HeatmapWidgetProps {
   data: HeatmapResult;
   palette?: ColorPalette;
+  basemap?: string;
 }
 
 // Ajusta o mapa pro contorno do Brasil sempre que o container montar ou
@@ -41,7 +43,7 @@ function FitToBrazil({ geo }: { geo: FeatureCollection }) {
   return null;
 }
 
-export function HeatmapWidget({ data, palette }: HeatmapWidgetProps) {
+export function HeatmapWidget({ data, palette, basemap }: HeatmapWidgetProps) {
   const ACCENT = (palette ?? COLOR_PALETTES.terracota).accent;
   const isCity = data.granularity === "city";
   const [estados, setEstados] = useState<FeatureCollection | null>(null);
@@ -113,11 +115,11 @@ export function HeatmapWidget({ data, palette }: HeatmapWidgetProps) {
         </select>
       )}
       <div className="flex-1 min-h-0 rounded-md overflow-hidden">
+        {/* scrollWheelZoom liga só depois do primeiro clique/toque no mapa
+            (ScrollZoomOnFocus) — os botões +/- ficam sempre disponíveis. */}
         <MapContainer center={[-14.235, -51.9253]} zoom={3} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} preferCanvas={isCity}>
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          />
+          <BasemapLayers defaultBasemap={basemap} />
+          <ScrollZoomOnFocus />
           <GeoJSON key={isCity + activeKey + JSON.stringify(byState)} data={estados} style={styleFeature} onEachFeature={onEachFeature} />
           <FitToBrazil geo={estados} />
         </MapContainer>

@@ -32,7 +32,10 @@ export function WidgetRenderer({ type, title, data, config, palette }: WidgetRen
   const appearance = (config.style ?? {}) as { backgroundColor?: string; borderRadius?: number };
   const variant = config.variant as string | undefined;
   const isDecorative = type === "text" && (variant === "divider" || variant === "block" || variant === "icon");
-  const resolvedPalette = COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota;
+  // Tonalidade por widget (config.colorPalette, hoje configurável nos mapas)
+  // vence a paleta do dashboard; sem ela, herda o comportamento de sempre.
+  const widgetPalette = typeof config.colorPalette === "string" ? COLOR_PALETTES[config.colorPalette] : undefined;
+  const resolvedPalette = widgetPalette ?? COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota;
 
   return (
     <div className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-3 overflow-hidden"}
@@ -109,7 +112,7 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
 
   if (data.kind === "map") {
     if (data.points.length === 0) return <EmptyState />;
-    return <MapWidget data={data} palette={palette} />;
+    return <MapWidget data={data} palette={palette} basemap={config.basemap as string | undefined} />;
   }
 
   if (data.kind === "image") {
@@ -121,7 +124,7 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
   if (data.kind === "heatmap") {
     const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
     if (!hasAnyData) return <EmptyState />;
-    return <HeatmapWidget data={data} palette={palette} />;
+    return <HeatmapWidget data={data} palette={palette} basemap={config.basemap as string | undefined} />;
   }
 
   if (data.kind === "crosstab") {

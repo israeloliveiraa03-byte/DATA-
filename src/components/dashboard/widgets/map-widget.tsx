@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, CircleMarker, Marker, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { ColorPalette, MapResult } from "@/lib/dashboard/types";
 import { COLOR_PALETTES } from "@/lib/dashboard/types";
+import { BasemapLayers, ScrollZoomOnFocus } from "./map-common";
 
 const BRAZIL_CENTER: [number, number] = [-14.235, -51.9253];
 
@@ -22,6 +23,7 @@ function categoryIcon(iconName: string | undefined, color: string) {
 interface MapWidgetProps {
   data: MapResult;
   palette?: ColorPalette;
+  basemap?: string;
 }
 
 function FitToPoints({ points }: { points: MapResult["points"] }) {
@@ -53,9 +55,32 @@ function FitToPoints({ points }: { points: MapResult["points"] }) {
   return null;
 }
 
-export function MapWidget({ data, palette }: MapWidgetProps) {
+export function MapWidget({ data, palette, basemap }: MapWidgetProps) {
   const colors = (palette ?? COLOR_PALETTES.terracota).chartColors;
   const hasCategories = !!data.categories && data.categories.length > 0;
+
+  // Filtro por categoria: clicar num item da legenda esconde/mostra os
+  // marcadores daquela opção (estado local do leitor, não é config salva).
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
+  function toggleCategory(id: string) {
+    setHiddenCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const countByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of data.points) {
+      if (p.categoryValue) counts[p.categoryValue] = (counts[p.categoryValue] ?? 0) + 1;
+    }
+    return counts;
+  }, [data.points]);
+
+  const visiblePoints = hasCategories
+    ? data.points.filter(p => !p.categoryValue || !hiddenCategories.has(p.categoryValue))
+    : data.points;
 
   function styleFor(optionId: string | undefined, index: number) {
     const fallback = colors[index % colors.length];
@@ -67,13 +92,17 @@ export function MapWidget({ data, palette }: MapWidgetProps) {
   return (
     <div className="w-full h-full flex flex-col gap-1.5">
       <div className="flex-1 min-h-0 rounded-md overflow-hidden">
+        {/* scrollWheelZoom nasce desligado e é ligado pelo ScrollZoomOnFocus
+            no primeiro clique/toque — os botões +/- do Leaflet ficam sempre
+            visíveis (zoomControl é o padrão, dentro do próprio container do
+            mapa, então o overflow-hidden do widget não corta eles). */}
         <MapContainer center={BRAZIL_CENTER} zoom={4} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          />
+          <BasemapLayers defaultBasemap={basemap} />
+          <ScrollZoomOnFocus />
+          {/* Enquadramento usa o conjunto completo de pontos (não o filtrado)
+              de propósito: o mapa não "pula" a cada clique na legenda. */}
           <FitToPoints points={data.points} />
-          {data.points.map((p, i) => {
+          {visiblePoints.map((p, i) => {
             if (!hasCategories) {
               return (
                 <CircleMarker key={i} center={[p.lat, p.lng]} radius={6} pathOptions={{ color: colors[0], fillColor: colors[0], fillOpacity: 0.85, weight: 1.5 }}>
@@ -91,17 +120,38 @@ export function MapWidget({ data, palette }: MapWidgetProps) {
           })}
         </MapContainer>
       </div>
-      {hasCategories && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center px-1 flex-shrink-0">
+      {/* Legenda sempre presente: com categorias vira filtro clicável (com
+          contagem por opção); sem categoria, mostra o total de pontos. */}
+      {hasCategories ? (
+        <div className="flex flex-wrap gap-1 justify-center px-1 flex-shrink-0">
           {data.categories!.map((c, i) => {
             const { color } = styleFor(c.id, i);
+            const hidden = hiddenCategories.has(c.id);
             return (
-              <span key={c.id} className="flex items-center gap-1 text-2xs" style={{ color: "#5c3f13" }}>
+              <button key={c.id} onClick={() => toggleCategory(c.id)}
+                title={hidden ? "Mostrar esta categoria" : "Ocultar esta categoria"}
+                className="flex items-center gap-1 text-2xs rounded-full px-2 py-0.5 transition-all"
+                style={{
+                  color: "#5c3f13",
+                  border: "1px solid #e8d8be",
+                  background: hidden ? "transparent" : "#fdfaf4",
+                  opacity: hidden ? 0.45 : 1,
+                  textDecoration: hidden ? "line-through" : "none",
+                }}>
                 <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
                 {c.label}
-              </span>
+                <span style={{ color: "#a06d28" }}>{countByCategory[c.id] ?? 0}</span>
+              </button>
             );
           })}
+        </div>
+      ) : (
+        <div className="flex justify-center px-1 flex-shrink-0">
+          <span className="flex items-center gap-1 text-2xs rounded-full px-2 py-0.5"
+            style={{ color: "#5c3f13", border: "1px solid #e8d8be", background: "#fdfaf4" }}>
+            <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[0] }} />
+            {data.points.length} ponto{data.points.length === 1 ? "" : "s"} coletado{data.points.length === 1 ? "" : "s"}
+          </span>
         </div>
       )}
     </div>

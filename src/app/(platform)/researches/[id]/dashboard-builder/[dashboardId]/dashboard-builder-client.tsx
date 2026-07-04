@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData } from "@/lib/dashboard/aggregate";
-import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, COLOR_PALETTES, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
+import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, COLOR_PALETTES, BASEMAP_OPTIONS, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
 
 // react-moveable manipula o DOM direto (tamanho/posição via window/document)
@@ -771,6 +771,39 @@ function GridWidget({
 
 // ─── Inspetor de propriedades ─────────────────────────────────────────────
 
+// Aparência dos widgets de mapa (pontos e calor): tonalidade própria do
+// widget (sobrepõe a paleta do dashboard só aqui — vazio = herdar) e
+// mapa-base padrão ("relevo"). O leitor ainda pode trocar o mapa-base no
+// controle de camadas do próprio mapa; isto define só o inicial.
+function MapAppearanceFields({ config, onUpdateConfig }: {
+  config: Record<string, unknown>;
+  onUpdateConfig: (patch: Record<string, unknown>) => void;
+}) {
+  const label = { className: "text-xs font-semibold mb-1 block", style: { color: "#5c3f13" } };
+  const input = "w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none";
+  const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+  return (
+    <div className="pt-2 flex flex-col gap-3" style={{ borderTop: BRD }}>
+      <div>
+        <label {...label}>Tonalidade deste mapa</label>
+        <select className={input} style={inputStyle} value={(config.colorPalette as string) ?? ""}
+          onChange={e => onUpdateConfig({ colorPalette: e.target.value || undefined })}>
+          <option value="">Herdar do dashboard</option>
+          {Object.entries(COLOR_PALETTES).map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
+        </select>
+      </div>
+      <div>
+        <label {...label}>Mapa-base (relevo)</label>
+        <select className={input} style={inputStyle} value={(config.basemap as string) ?? "light"}
+          onChange={e => onUpdateConfig({ basemap: e.target.value === "light" ? undefined : e.target.value })}>
+          {BASEMAP_OPTIONS.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
+        </select>
+        <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Quem visualiza ainda pode trocar pelo controle de camadas no canto do mapa.</p>
+      </div>
+    </div>
+  );
+}
+
 function WidgetInspector({
   widget, fields, onUpdate, onUpdateConfig, onDelete,
 }: {
@@ -1071,6 +1104,7 @@ function WidgetInspector({
                 ))}
               </div>
             )}
+            <MapAppearanceFields config={widget.config} onUpdateConfig={onUpdateConfig} />
           </>
         );
       })()}
@@ -1150,6 +1184,7 @@ function WidgetInspector({
               <i className="ti ti-plus" /> Adicionar indicador
             </button>
             </div>
+            <MapAppearanceFields config={widget.config} onUpdateConfig={onUpdateConfig} />
           </>
         );
       })()}
