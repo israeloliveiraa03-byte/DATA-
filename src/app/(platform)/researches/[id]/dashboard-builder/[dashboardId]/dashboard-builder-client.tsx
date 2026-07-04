@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { DndContext, useDraggable, type DragEndEvent } from "@dnd-kit/core";
+import Moveable from "react-moveable";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData } from "@/lib/dashboard/aggregate";
@@ -11,25 +11,28 @@ import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/
 
 const BRD = "1px solid #e8d8be";
 const TS  = { color: "#c48a42", fontSize: "9px" } as const;
-const COLUMNS    = 12;
-const ROW_HEIGHT = 32; // px por unidade de altura
+// Grade de fundo só como referência visual solta — não trava mais o
+// posicionamento (isso agora é livre, com guias de alinhamento via
+// react-moveable). Mantém a mesma malha de 12 "colunas" que já existia.
+const GRID_COLUMNS  = 12;
+const GRID_ROW      = 32;
 
-const DEFAULT_SIZE: Record<SupportedWidgetType, { width: number; height: number }> = {
-  number_card:  { width: 3, height: 2 },
-  bar_chart:    { width: 6, height: 5 },
-  pie_chart:    { width: 5, height: 5 },
-  donut_chart:  { width: 5, height: 5 },
-  table:        { width: 8, height: 6 },
-  text:         { width: 4, height: 2 },
-  map:          { width: 6, height: 10 },
-  heatmap:      { width: 6, height: 10 },
+const DEFAULT_SIZE: Record<SupportedWidgetType, { w: number; h: number }> = {
+  number_card:  { w: 25,        h: 64 },
+  bar_chart:    { w: 50,        h: 160 },
+  pie_chart:    { w: 41.666666, h: 160 },
+  donut_chart:  { w: 41.666666, h: 160 },
+  table:        { w: 66.666666, h: 192 },
+  text:         { w: 33.333333, h: 64 },
+  map:          { w: 50,        h: 320 },
+  heatmap:      { w: 50,        h: 320 },
 };
 
 interface WidgetDraft {
   id: string;
   type: SupportedWidgetType;
   title: string;
-  col: number; row: number; width: number; height: number;
+  x: number; y: number; w: number; h: number; // x/w em %, y/h em px — grade livre
   config: Record<string, unknown>;
 }
 
@@ -37,14 +40,14 @@ function clamp(n: number, min: number, max: number) { return Math.min(Math.max(n
 
 interface SavedWidget {
   id: string; type: string; title: string | null;
-  col: number; row: number; width: number; height: number;
+  x: number; y: number; w: number; h: number;
   config: unknown;
 }
 
 function hydrate(saved: SavedWidget[]): WidgetDraft[] {
   return saved.map(w => ({
     id: w.id, type: w.type as SupportedWidgetType, title: w.title ?? "",
-    col: w.col, row: w.row, width: w.width, height: w.height,
+    x: w.x, y: w.y, w: w.w, h: w.h,
     config: (w.config as Record<string, unknown>) ?? {},
   }));
 }
@@ -56,6 +59,7 @@ export function DashboardBuilderClient({
 }) {
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
+  const widgetRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const [title,      setTitle]      = useState(dashboard.title);
   const [isPublic,   setIsPublic]   = useState(dashboard.isPublic);
@@ -136,11 +140,11 @@ export function DashboardBuilderClient({
 
   const addWidget = useCallback((type: SupportedWidgetType) => {
     const size = DEFAULT_SIZE[type];
-    const maxRow = widgets.reduce((m, w) => Math.max(m, w.row + w.height), 0);
+    const maxY = widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0);
     const id = crypto.randomUUID();
     setWidgets(prev => [...prev, {
       id, type, title: SUPPORTED_WIDGET_TYPES.find(t => t.value === type)?.label ?? type,
-      col: 0, row: maxRow, width: size.width, height: size.height,
+      x: 0, y: maxY, w: size.w, h: size.h,
       config: type === "number_card" ? { aggregation: "count" }
         : type === "table" ? { fieldIds: [] }
         : type === "heatmap" ? { indicators: [{ key: crypto.randomUUID(), label: "Volume de respostas", mode: "count" as const }] }
@@ -162,45 +166,25 @@ export function DashboardBuilderClient({
     setSelectedId(prev => prev === id ? null : prev);
   }, []);
 
-  const handleDragEnd = useCallback((e: DragEndEvent) => {
-    const { active, delta } = e;
-    if (!canvasRef.current || (delta.x === 0 && delta.y === 0)) return;
-    const cellWidth = canvasRef.current.getBoundingClientRect().width / COLUMNS;
-    const deltaCol = Math.round(delta.x / cellWidth);
-    const deltaRow = Math.round(delta.y / ROW_HEIGHT);
-    if (deltaCol === 0 && deltaRow === 0) return;
-    setWidgets(prev => prev.map(w => w.id === active.id ? {
-      ...w,
-      col: clamp(w.col + deltaCol, 0, COLUMNS - w.width),
-      row: Math.max(0, w.row + deltaRow),
-    } : w));
-  }, []);
+  // Arrastar/redimensionar livre (react-moveable) — só o widget selecionado
+  // vira alvo; os outros entram como `elementGuidelines` pra desenhar linha
+  // de alinhamento contra borda/centro deles durante o gesto.
+  function commitDrag(id: string, left: number, top: number) {
+    if (!canvasRef.current) return;
+    const canvasWidth = canvasRef.current.getBoundingClientRect().width;
+    const widget = widgets.find(w => w.id === id);
+    if (!widget) return;
+    const xPercent = clamp((left / canvasWidth) * 100, 0, 100 - widget.w);
+    updateWidget(id, { x: xPercent, y: Math.max(0, top) });
+  }
 
-  const startResize = useCallback((e: React.PointerEvent, widgetId: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const widget = widgets.find(w => w.id === widgetId);
-    if (!widget || !canvasRef.current) return;
-    const cellWidth = canvasRef.current.getBoundingClientRect().width / COLUMNS;
-    const startX = e.clientX, startY = e.clientY;
-    const startWidth = widget.width, startHeight = widget.height, col = widget.col;
-
-    function onMove(ev: PointerEvent) {
-      const deltaCol = Math.round((ev.clientX - startX) / cellWidth);
-      const deltaRow = Math.round((ev.clientY - startY) / ROW_HEIGHT);
-      setWidgets(prev => prev.map(w => w.id === widgetId ? {
-        ...w,
-        width:  clamp(startWidth + deltaCol, 2, COLUMNS - col),
-        height: Math.max(2, startHeight + deltaRow),
-      } : w));
-    }
-    function onUp() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    }
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  }, [widgets]);
+  function commitResize(id: string, width: number, height: number, left: number, top: number) {
+    if (!canvasRef.current) return;
+    const canvasWidth = canvasRef.current.getBoundingClientRect().width;
+    const wPercent = clamp((width / canvasWidth) * 100, 4, 100);
+    const xPercent = clamp((left / canvasWidth) * 100, 0, 100 - wPercent);
+    updateWidget(id, { x: xPercent, y: Math.max(0, top), w: wPercent, h: Math.max(40, height) });
+  }
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -216,7 +200,7 @@ export function DashboardBuilderClient({
         body: JSON.stringify({
           widgets: widgets.map((w, idx) => ({
             type: w.type, title: w.title || undefined,
-            col: w.col, row: w.row, width: w.width, height: w.height,
+            x: w.x, y: w.y, w: w.w, h: w.h,
             config: w.config, order: idx,
           })),
         }),
@@ -246,7 +230,7 @@ export function DashboardBuilderClient({
     }
   }, [dashboard.id, isPublic]);
 
-  const totalHeightPx = Math.max(400, widgets.reduce((m, w) => Math.max(m, (w.row + w.height) * ROW_HEIGHT), 0) + ROW_HEIGHT * 2);
+  const totalHeightPx = Math.max(400, widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) + 64);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#fbf3e7" }}>
@@ -369,26 +353,55 @@ export function DashboardBuilderClient({
               <p className="text-xs" style={{ color: "#a06d28" }}>Clique em um tipo de widget no painel esquerdo pra adicionar</p>
             </div>
           ) : (
-            <DndContext onDragEnd={handleDragEnd}>
-              <div ref={canvasRef} className="relative rounded-xl" style={{
-                height: totalHeightPx, background: "#fff", border: BRD,
-                // Grade sutil de fundo (colunas + linhas de altura) — guia visual de
-                // alinhamento enquanto arrasta/redimensiona, igual Metabase/Grafana.
-                backgroundImage: `repeating-linear-gradient(to right, transparent, transparent calc(${100 / COLUMNS}% - 1px), #f3e4cb calc(${100 / COLUMNS}% - 1px), #f3e4cb ${100 / COLUMNS}%), repeating-linear-gradient(to bottom, transparent, transparent ${ROW_HEIGHT - 1}px, #f3e4cb ${ROW_HEIGHT - 1}px, #f3e4cb ${ROW_HEIGHT}px)`,
-              }}>
-                {widgets.map(w => (
-                  <GridWidget
-                    key={w.id}
-                    widget={w}
-                    selected={w.id === selectedId}
-                    data={computeWidgetData({ type: w.type, config: w.config }, fields, responses)}
-                    onSelect={() => setSelectedId(w.id)}
-                    onResizeStart={e => startResize(e, w.id)}
-                    onDelete={() => deleteWidget(w.id)}
-                  />
-                ))}
-              </div>
-            </DndContext>
+            <div ref={canvasRef} className="relative rounded-xl" style={{
+              height: totalHeightPx, background: "#fff", border: BRD,
+              // Grade sutil de fundo — só referência visual solta agora, não
+              // trava mais o posicionamento (isso é livre, com guias via
+              // react-moveable abaixo).
+              backgroundImage: `repeating-linear-gradient(to right, transparent, transparent calc(${100 / GRID_COLUMNS}% - 1px), #f3e4cb calc(${100 / GRID_COLUMNS}% - 1px), #f3e4cb ${100 / GRID_COLUMNS}%), repeating-linear-gradient(to bottom, transparent, transparent ${GRID_ROW - 1}px, #f3e4cb ${GRID_ROW - 1}px, #f3e4cb ${GRID_ROW}px)`,
+            }}
+              onClick={e => { if (e.target === e.currentTarget) setSelectedId(null); }}>
+              {widgets.map(w => (
+                <GridWidget
+                  key={w.id}
+                  widget={w}
+                  selected={w.id === selectedId}
+                  data={computeWidgetData({ type: w.type, config: w.config }, fields, responses)}
+                  registerRef={el => { if (el) widgetRefs.current.set(w.id, el); else widgetRefs.current.delete(w.id); }}
+                  onSelect={() => setSelectedId(w.id)}
+                  onDelete={() => deleteWidget(w.id)}
+                />
+              ))}
+              {selectedId && widgetRefs.current.get(selectedId) && (
+                <Moveable
+                  target={widgetRefs.current.get(selectedId)!}
+                  draggable
+                  resizable
+                  keepRatio={false}
+                  snappable
+                  snapCenter
+                  elementGuidelines={Array.from(widgetRefs.current.entries())
+                    .filter(([wid]) => wid !== selectedId)
+                    .map(([, el]) => el)}
+                  onDrag={({ target, left, top }) => {
+                    target.style.left = `${left}px`;
+                    target.style.top = `${top}px`;
+                  }}
+                  onDragEnd={({ lastEvent }) => {
+                    if (lastEvent) commitDrag(selectedId, lastEvent.left, lastEvent.top);
+                  }}
+                  onResize={({ target, width, height, drag }) => {
+                    target.style.width = `${width}px`;
+                    target.style.height = `${height}px`;
+                    target.style.left = `${drag.left}px`;
+                    target.style.top = `${drag.top}px`;
+                  }}
+                  onResizeEnd={({ lastEvent }) => {
+                    if (lastEvent) commitResize(selectedId, lastEvent.width, lastEvent.height, lastEvent.drag.left, lastEvent.drag.top);
+                  }}
+                />
+              )}
+            </div>
           )}
         </main>
 
@@ -417,47 +430,41 @@ export function DashboardBuilderClient({
   );
 }
 
-// ─── Widget posicionado na grade ──────────────────────────────────────────
+// ─── Widget posicionado na grade livre ────────────────────────────────────
+// Arrastar/redimensionar são feitos pelo <Moveable> (react-moveable) que o
+// componente pai liga a este elemento quando ele está selecionado — este
+// componente só se posiciona a partir de x/y/w/h e expõe seu ref.
 
 function GridWidget({
-  widget, selected, data, onSelect, onResizeStart, onDelete,
+  widget, selected, data, registerRef, onSelect, onDelete,
 }: {
   widget: WidgetDraft; selected: boolean; data: ReturnType<typeof computeWidgetData>;
-  onSelect: () => void; onResizeStart: (e: React.PointerEvent) => void; onDelete: () => void;
+  registerRef: (el: HTMLDivElement | null) => void;
+  onSelect: () => void; onDelete: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: widget.id });
-
-  const cellPercent = 100 / COLUMNS;
   const style: React.CSSProperties = {
     position: "absolute",
-    left:   `${widget.col * cellPercent}%`,
-    top:    widget.row * ROW_HEIGHT,
-    width:  `${widget.width * cellPercent}%`,
-    height: widget.height * ROW_HEIGHT,
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    zIndex: isDragging ? 20 : selected ? 10 : 1,
+    left:   `${widget.x}%`,
+    top:    widget.y,
+    width:  `${widget.w}%`,
+    height: widget.h,
+    zIndex: selected ? 10 : 1,
     border: selected ? "2px solid #c48a42" : BRD,
-    boxShadow: selected ? "0 0 0 3px rgba(196,138,66,0.1)" : isDragging ? "0 8px 20px rgba(0,0,0,0.15)" : "none",
+    boxShadow: selected ? "0 0 0 3px rgba(196,138,66,0.1)" : "none",
     background: "#fff",
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="rounded-lg" onClick={onSelect}>
-      <div {...listeners} {...attributes}
-        className="absolute top-0 left-0 right-0 h-5 flex items-center justify-between px-1.5 cursor-grab rounded-t-lg"
-        style={{ background: selected ? "#fbf3e7" : "transparent" }}>
-        <i className="ti ti-grip-vertical text-xs" style={{ color: "#d9bb8c" }} />
+    <div ref={registerRef} style={style} className="rounded-lg" onClick={e => { e.stopPropagation(); onSelect(); }}>
+      {selected && (
         <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(); }}
-          className="w-4 h-4 flex items-center justify-center rounded" style={{ color: "#c0392b" }} aria-label="Remover widget">
+          className="absolute -top-2.5 -right-2.5 w-5 h-5 flex items-center justify-center rounded-full z-20"
+          style={{ background: "#c0392b", color: "#fff" }} aria-label="Remover widget">
           <i className="ti ti-x text-xs" />
         </button>
-      </div>
-      <div className="absolute inset-0 pt-5">
+      )}
+      <div className="absolute inset-0">
         <WidgetRenderer type={widget.type} title={widget.title} data={data} config={widget.config} />
-      </div>
-      <div onPointerDown={onResizeStart}
-        className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize" style={{ color: "#d9bb8c" }}>
-        <i className="ti ti-corner-down-right-double text-xs" style={{ position: "absolute", bottom: 0, right: 0 }} />
       </div>
     </div>
   );

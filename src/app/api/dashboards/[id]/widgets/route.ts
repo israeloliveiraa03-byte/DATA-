@@ -33,16 +33,16 @@ export async function PUT(
 
   if (parsed.data.widgets.length > 0) {
     await db.insert(dashboardWidgets).values(
-      parsed.data.widgets.map((w, idx) => ({
+      parsed.data.widgets.map((widget, idx) => ({
         dashboardId: id,
-        type:        w.type,
-        title:       w.title,
-        col:         w.col,
-        row:         w.row,
-        width:       w.width,
-        height:      w.height,
-        config:      w.config,
-        order:       w.order ?? idx,
+        type:        widget.type,
+        title:       widget.title,
+        x:           widget.x,
+        y:           widget.y,
+        w:           widget.w,
+        h:           widget.h,
+        config:      widget.config,
+        order:       widget.order ?? idx,
       }))
     );
   }

@@ -5,12 +5,9 @@ import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { DataLogo } from "@/components/layout/data-logo";
 import type { SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
 
-const COLUMNS    = 12;
-const ROW_HEIGHT = 32;
-
 interface PublicWidget {
   id: string; type: SupportedWidgetType; title: string | null;
-  col: number; row: number; width: number; height: number;
+  x: number; y: number; w: number; h: number; // x/w em %, y/h em px — grade livre
   config: Record<string, unknown>;
   data: WidgetData;
 }
@@ -58,7 +55,7 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
   }
 
   const dark = dashboard.theme === "dark";
-  const totalHeightPx = Math.max(300, dashboard.widgets.reduce((m, w) => Math.max(m, (w.row + w.height) * ROW_HEIGHT), 0) + ROW_HEIGHT);
+  const totalHeightPx = Math.max(300, dashboard.widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) + 32);
 
   // A página é do pesquisador, não uma extensão do chrome do Dataº — o fundo
   // e o tom seguem o que ele escolheu (imagem de capa + claro/escuro),
@@ -96,8 +93,8 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
             {dashboard.widgets.map(w => (
               <div key={w.id} className="absolute rounded-lg"
                 style={{
-                  left: `${(w.col / COLUMNS) * 100}%`, top: w.row * ROW_HEIGHT,
-                  width: `${(w.width / COLUMNS) * 100}%`, height: w.height * ROW_HEIGHT,
+                  left: `${w.x}%`, top: w.y,
+                  width: `${w.w}%`, height: w.h,
                   border: `1px solid ${cardBorder}`,
                 }}>
                 <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} />

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, timestamp, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, boolean, timestamp, integer, real, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { researches } from "./researches";
 
@@ -23,10 +23,12 @@ export const dashboardWidgets = pgTable("dashboard_widgets", {
   dashboardId: uuid("dashboard_id").notNull().references(() => dashboards.id, { onDelete: "cascade" }),
   type:        widgetTypeEnum("type").notNull(),
   title:       varchar("title", { length: 300 }),
-  col:         integer("col").notNull().default(0),
-  row:         integer("row").notNull().default(0),
-  width:       integer("width").notNull().default(4),
-  height:      integer("height").notNull().default(3),
+  // Grade livre (não mais célula de 12 colunas): x/w em % da largura do
+  // canvas, y/h em pixels — contínuos, não travados em inteiro.
+  x:           real("x").notNull().default(0),
+  y:           real("y").notNull().default(0),
+  w:           real("w").notNull().default(33),
+  h:           real("h").notNull().default(96),
   config:      jsonb("config").notNull().default({}),
   order:       integer("order").notNull().default(0),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

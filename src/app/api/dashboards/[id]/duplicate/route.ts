@@ -31,16 +31,16 @@ export async function POST(
 
   if (widgets.length > 0) {
     await db.insert(dashboardWidgets).values(
-      widgets.map(w => ({
+      widgets.map(widget => ({
         dashboardId: copy.id,
-        type:        w.type,
-        title:       w.title,
-        col:         w.col,
-        row:         w.row,
-        width:       w.width,
-        height:      w.height,
-        config:      w.config,
-        order:       w.order,
+        type:        widget.type,
+        title:       widget.title,
+        x:           widget.x,
+        y:           widget.y,
+        w:           widget.w,
+        h:           widget.h,
+        config:      widget.config,
+        order:       widget.order,
       }))
     );
   }

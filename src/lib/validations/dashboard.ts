@@ -22,14 +22,16 @@ export const updateDashboardSchema = z.object({
   coverUrl:    z.string().max(3000000).nullable().optional(),
 });
 
+// Grade livre (não mais célula de 12 colunas): x/w em % da largura do
+// canvas, y/h em pixels — contínuos, sem limite de "11 colunas".
 const widgetInput = z.object({
   id:     z.string().uuid().optional(),
   type:   z.enum(supportedWidgetTypeValues),
   title:  z.string().max(300).optional(),
-  col:    z.number().int().min(0).max(11).default(0),
-  row:    z.number().int().min(0).default(0),
-  width:  z.number().int().min(1).max(12).default(4),
-  height: z.number().int().min(1).max(20).default(3),
+  x:      z.number().min(0).default(0),
+  y:      z.number().min(0).default(0),
+  w:      z.number().min(1).default(33),
+  h:      z.number().min(1).default(96),
   config: z.record(z.string(), z.unknown()).default({}),
   order:  z.number().int().default(0),
 });

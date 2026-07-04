@@ -38,7 +38,7 @@ export async function GET(
 
   const widgetsWithData = widgets.map(w => ({
     id: w.id, type: w.type as SupportedWidgetType, title: w.title,
-    col: w.col, row: w.row, width: w.width, height: w.height,
+    x: w.x, y: w.y, w: w.w, h: w.h,
     // Config exposto só pra escolher qual valor mostrar (ex.: soma x média) — nunca dados de resposta.
     config: w.config as Record<string, unknown>,
     data: computeWidgetData({ type: w.type, config: w.config }, fields, allResponses),
