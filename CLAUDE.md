@@ -110,6 +110,28 @@ Editor de dashboards por pesquisa (`/researches/[id]/dashboard-builder/[dashboar
 
 **Enum `widget_type` do Postgres**: `crosstab` e `globe` foram adicionados via `ALTER TYPE ... ADD VALUE` direto (aditivo, mesmo motivo do bug do drizzle-kit descrito acima) — `src/lib/db/schema/dashboards.ts` só precisa refletir o enum real do banco.
 
+## Páginas/botões pendentes concluídos + sistema de notificação (2026-07-04)
+
+Levantamento completo do projeto (rotas, links, botões) achou 3 páginas linkadas mas inexistentes e alguns botões decorativos — todos resolvidos:
+
+- **Sistema de toast** (`sonner`): `<Toaster />` global em `src/app/layout.tsx` (`src/components/ui/toaster.tsx`), estilizado na paleta terracota, acompanha o modo claro/escuro do `ThemeProvider`. Substituiu os 5 `alert()` nativos que existiam (`polygon-map-editor.tsx`, `form-builder-client.tsx`, `dashboard-builder-client.tsx`) e ganhou `toast.success()` nas ações de salvar/aprovar/responder em todo o projeto daqui pra frente.
+- **`/researches/[id]/settings`** — existia link, faltava a página: título/descrição editáveis, os 4 toggles de configuração de coleta (antes só decorativos na página principal), e a Zona de risco (Encerrar/Excluir pesquisa, movida pra cá).
+- **`/privacidade`** — conteúdo real alinhado à LGPD, linkada no rodapé do login.
+- **QR Code real** do link público do formulário (lib `qrcode`) com download funcional, substituindo o ícone decorativo.
+- **Acessibilidade no login** (alto contraste, A+, A-) ligada ao `ThemeProvider` (`src/components/theme/theme-provider.tsx`) que já existia — sem infraestrutura nova.
+- Deixados de fora (sem link hoje, dependeriam de decisão maior): `forgot-password`, `register` (só existe login Google), `respondents`.
+
+## Painel Admin + Suporte + Território com aprovação real (2026-07-04)
+
+- **Papel de equipe interna**: `users.role` (`"user"|"support"|"admin"`, coluna `varchar` simples, não enum do Postgres — separado de `plan`, que é nível de cobrança). Injetado na sessão do NextAuth (`src/lib/auth/index.ts`, callback `session()`) — precisou de `src/lib/auth/types.d.ts` (module augmentation) pra tipar `session.user.role`.
+- **Sem `middleware.ts`** — proteção em camadas manuais, igual o resto do projeto: `src/app/(platform)/admin/layout.tsx` faz `notFound()` (não `redirect`, não revela a rota) pra quem não é `admin`/`support`. Dentro do admin, seções restritas a `admin` (Usuários, Território) ficam escondidas da navegação pra quem é só `support`.
+- **`/admin`** (visão geral): contagens simples — usuários, pesquisas ativas, entidades, candidaturas de Território pendentes, chamados de suporte abertos.
+- **`/admin/usuarios`**: lista/busca, trocar `plan` e `role` de qualquer usuário (`PATCH /api/admin/users/[id]`, só `admin`).
+- **Dataº Território ganhou aprovação de verdade**: antes, `POST /api/territorio` só fazia `console.log` e devolvia sucesso fake com "30 dias grátis" — não tinha nenhum efeito real. Agora exige login (a candidatura fica vinculada à conta de quem envia, tabela `territorio_applications`) e aprovar em `/admin/territorio` seta `users.plan = "institution"` direto na conta do candidato.
+- **Suporte v1** (`/suporte` pro usuário, `/admin/suporte` pra fila): chamado simples — assunto + mensagem + uma resposta do admin/suporte + status (`support_tickets`), sem conversa de múltiplas mensagens ainda.
+- **Bootstrap do primeiro admin**: como não existe UI pra promover ninguém antes de existir o primeiro admin, a conta do Israel (`israeloliveiraa03@gmail.com`) foi promovida via script SQL direto (apagado depois de rodar) — dali em diante, promover outros usuários já é possível pela tela `/admin/usuarios`.
+- **Fora de escopo, fase seguinte** (mais estrutural, afeta quem pode editar cada pesquisa existente): Equipe de pesquisa — colaboradores por pesquisa com papel dono/editor/visualizador. Usaria `organizations`/`organization_members` (`src/lib/db/schema/users.ts`), que já existem no schema com um enum `org_role` (`owner|admin|member`) mas nunca foram usados em nenhuma página/rota — são tabelas mortas até essa fase acontecer.
+
 ## Funcionalidades planejadas (visão de longo prazo)
 
 - **Sistema Colaborativo de Território**: editor de mapas (Leaflet — versão básica de desenho de polígono já existe desde 2026-07-02 em `PolygonMapEditor`, sem versionamento/PRs/forks ainda), versionamento estilo Git com conformidade ABNT, pull requests geográficos, forks com atribuição, biblioteca colaborativa de GeoJSON
