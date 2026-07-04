@@ -108,9 +108,23 @@ export function DashboardBuilderClient({
   // elementGuidelines calculado no render fica preso ao commit anterior,
   // sempre um ciclo atrasado, e a guia de alinhamento nunca aparece.
   const [, setRefsVersion] = useState(0);
-  const registerWidgetRef = useCallback((id: string) => (el: HTMLDivElement | null) => {
-    if (el) widgetRefs.current.set(id, el); else widgetRefs.current.delete(id);
-    setRefsVersion(v => v + 1);
+  // Callback de ref precisa ter a MESMA identidade entre renders pro React
+  // não achar que é uma ref diferente — se recriar a função a cada render,
+  // o React chama null na antiga + elemento na nova em TODO render, o que
+  // aciona o setRefsVersion de novo, gerando outro render: loop infinito
+  // (React error #185, "Maximum update depth exceeded"). Por isso cada id
+  // recebe uma função própria, criada uma vez só e reaproveitada.
+  const registerCallbacks = useRef<Map<string, (el: HTMLDivElement | null) => void>>(new Map());
+  const registerWidgetRef = useCallback((id: string) => {
+    let fn = registerCallbacks.current.get(id);
+    if (!fn) {
+      fn = (el: HTMLDivElement | null) => {
+        if (el) widgetRefs.current.set(id, el); else widgetRefs.current.delete(id);
+        setRefsVersion(v => v + 1);
+      };
+      registerCallbacks.current.set(id, fn);
+    }
+    return fn;
   }, []);
 
   const [title,      setTitle]      = useState(dashboard.title);
@@ -298,11 +312,13 @@ export function DashboardBuilderClient({
     pushHistory();
     setWidgets(prev => prev.filter(w => w.id !== id));
     setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+    registerCallbacks.current.delete(id);
   }, [pushHistory]);
 
   const deleteSelected = useCallback(() => {
     pushHistory();
     setWidgets(prev => prev.filter(w => !selectedIds.has(w.id)));
+    selectedIds.forEach(id => registerCallbacks.current.delete(id));
     setSelectedIds(new Set());
   }, [selectedIds, pushHistory]);
 
