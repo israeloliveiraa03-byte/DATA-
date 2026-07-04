@@ -196,6 +196,13 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
     case "text":
       return { kind: "text", content: typeof config.content === "string" ? config.content : "" };
 
+    case "image":
+      return {
+        kind: "image",
+        imageUrl: typeof config.imageUrl === "string" ? config.imageUrl : "",
+        fit: config.fit === "contain" ? "contain" : "cover",
+      };
+
     case "table": {
       const fieldIds = Array.isArray(config.fieldIds) ? (config.fieldIds as string[]) : [];
       return buildTableRows(responses, fields, fieldIds, {

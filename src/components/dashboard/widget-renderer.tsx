@@ -89,6 +89,12 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
     return <MapWidget data={data} />;
   }
 
+  if (data.kind === "image") {
+    if (!data.imageUrl) return <EmptyState />;
+    // eslint-disable-next-line @next/next/no-img-element -- base64 gerado no cliente, não é um asset otimizável pelo next/image
+    return <img src={data.imageUrl} alt="" className="w-full h-full" style={{ objectFit: data.fit }} />;
+  }
+
   if (data.kind === "heatmap") {
     const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
     if (!hasAnyData) return <EmptyState />;
@@ -121,29 +127,54 @@ function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: st
   );
 }
 
+function ChartLegend({ data }: { data: { label: string }[] }) {
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center px-1 pt-1 flex-shrink-0">
+      {data.map((d, i) => (
+        <span key={i} className="flex items-center gap-1 text-2xs" style={{ color: "#5c3f13" }}>
+          <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+          {d.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function BarChartView({ data }: { data: { optionId: string; label: string; count: number }[] }) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
-        <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} />
-        <Tooltip />
-        <Bar dataKey="count" fill="#c48a42" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
+            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+              {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <ChartLegend data={data} />
+    </div>
   );
 }
 
 function PieChartView({ data, donut }: { data: { optionId: string; label: string; count: number }[]; donut: boolean }) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%">
-          {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%">
+              {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <ChartLegend data={data} />
+    </div>
   );
 }
 

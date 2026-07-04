@@ -33,7 +33,33 @@ const DEFAULT_SIZE: Record<SupportedWidgetType, { w: number; h: number }> = {
   text:         { w: 33.333333, h: 64 },
   map:          { w: 50,        h: 320 },
   heatmap:      { w: 50,        h: 320 },
+  image:        { w: 33.333333, h: 192 },
 };
+
+// Redimensiona uma imagem no cliente antes de guardar como base64 — usado
+// tanto pra capa do dashboard quanto pro widget de imagem, evita inchar o
+// banco com upload gigante sem comprimir.
+function resizeImageToDataUrl(file: File, maxWidth: number, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = ev.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 interface WidgetDraft {
   id: string;
@@ -217,26 +243,13 @@ export function DashboardBuilderClient({
   function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setCoverUploading(true);
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        // Redimensiona no cliente antes de guardar (fundo de página tende a
-        // ser maior que avatar/capa — evita inchar o banco com base64 gigante).
-        const maxWidth = 1600;
-        const scale = Math.min(1, maxWidth / img.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    // Fundo de página tende a ser maior que avatar/capa — 1600px de largura.
+    resizeImageToDataUrl(file, 1600)
+      .then(dataUrl => {
         setDashboardCoverUrl(dataUrl);
-        saveAppearance({ coverUrl: dataUrl }).finally(() => setCoverUploading(false));
-      };
-      img.src = ev.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+        return saveAppearance({ coverUrl: dataUrl });
+      })
+      .finally(() => setCoverUploading(false));
   }
 
   function removeCover() {
@@ -941,6 +954,10 @@ function WidgetInspector({
         );
       })()}
 
+      {widget.type === "image" && (
+        <ImageWidgetFields config={widget.config} onUpdateConfig={onUpdateConfig} />
+      )}
+
       {widget.type === "map" && (
         <div>
           <label {...label}>Campo de coordenadas</label>
@@ -1023,6 +1040,57 @@ function WidgetInspector({
         style={{ border: "1px solid #f0b8ab", background: "#fdf0ee", color: "#c0392b" }}>
         <i className="ti ti-trash" /> Remover widget
       </button>
+    </div>
+  );
+}
+
+// ─── Widget de imagem — upload + modo de encaixe ──────────────────────────
+
+function ImageWidgetFields({
+  config, onUpdateConfig,
+}: {
+  config: Record<string, unknown>;
+  onUpdateConfig: (patch: Record<string, unknown>) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const imageUrl = (config.imageUrl as string) ?? "";
+  const fit = (config.fit as string) ?? "cover";
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true);
+    resizeImageToDataUrl(file, 1200)
+      .then(dataUrl => onUpdateConfig({ imageUrl: dataUrl }))
+      .finally(() => setUploading(false));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-xs font-semibold mb-1 block" style={{ color: "#5c3f13" }}>Imagem</label>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      {imageUrl && (
+        <div className="relative h-24 rounded-md overflow-hidden" style={{ border: BRD }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- preview de base64 gerado no cliente */}
+          <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: fit === "contain" ? "contain" : "cover" }} />
+        </div>
+      )}
+      <button onClick={() => inputRef.current?.click()} disabled={uploading}
+        className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold disabled:opacity-50"
+        style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+        <i className={`ti ${uploading ? "ti-loader-2 animate-spin" : "ti-upload"}`} />
+        {imageUrl ? "Trocar imagem" : "Enviar imagem"}
+      </button>
+      {imageUrl && (
+        <div>
+          <label className="text-xs font-semibold mb-1 block" style={{ color: "#5c3f13" }}>Encaixe</label>
+          <select className="w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none" style={{ border: BRD, background: "#fff", color: "#111" }}
+            value={fit} onChange={e => onUpdateConfig({ fit: e.target.value })}>
+            <option value="cover">Preencher (corta as bordas)</option>
+            <option value="contain">Encaixar (mostra a imagem inteira)</option>
+          </select>
+        </div>
+      )}
     </div>
   );
 }

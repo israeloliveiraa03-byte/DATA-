@@ -1,4 +1,4 @@
-export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap";
+export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image";
 
 export interface NumberCardConfig {
   fieldId?: string;
@@ -48,6 +48,14 @@ export interface MapConfig {
   geoFieldId: string;
 }
 
+// Imagem estática (logo, foto, brasão) — conteúdo posto pelo pesquisador,
+// não vem de resposta nenhuma (igual o texto livre).
+export interface ImageConfig {
+  imageUrl: string;
+  fit?: "cover" | "contain";
+  style?: WidgetAppearance;
+}
+
 // Um indicador possível pra colorir o mapa de calor — "count" usa volume de
 // respostas, "choice_percent" usa a % de respostas do estado em que outro
 // campo (de escolha) bate com uma opção.
@@ -67,7 +75,7 @@ export interface HeatmapConfig {
   indicators: HeatmapIndicatorConfig[];
 }
 
-export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig;
+export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig;
 
 export interface ChoiceOption {
   id: string;
@@ -130,6 +138,12 @@ export interface MapResult {
   points: MapPoint[];
 }
 
+export interface ImageResult {
+  kind: "image";
+  imageUrl: string;
+  fit: "cover" | "contain";
+}
+
 export interface HeatmapStateValue {
   value: number;
   count: number;
@@ -142,7 +156,7 @@ export interface HeatmapResult {
   maxByIndicator: Record<string, number>;
 }
 
-export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult | MapResult | HeatmapResult;
+export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult | MapResult | HeatmapResult | ImageResult;
 
 export const NUMERIC_FIELD_TYPES = ["number", "scale", "nps", "stars", "slider"] as const;
 export const CHOICE_FIELD_TYPES = ["single_choice", "multiple_choice", "yes_no", "weighted", "consent"] as const;
@@ -156,4 +170,5 @@ export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string
   { value: "text",        label: "Texto",   icon: "ti-text-size",               description: "Bloco de texto livre, sem dado" },
   { value: "map",         label: "Mapa de pontos", icon: "ti-map-pin",          description: "Um marcador por resposta com GPS" },
   { value: "heatmap",     label: "Mapa de calor",  icon: "ti-map-2",           description: "Colore o Brasil por estado" },
+  { value: "image",       label: "Imagem",  icon: "ti-photo",                   description: "Logo, foto ou brasão — conteúdo fixo, sem dado" },
 ];

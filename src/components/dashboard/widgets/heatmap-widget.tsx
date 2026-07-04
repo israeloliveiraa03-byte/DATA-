@@ -83,14 +83,15 @@ export function HeatmapWidget({ data }: HeatmapWidgetProps) {
   }
 
   if (!estados) {
-    return <div className="w-full h-full flex items-center justify-center text-xs text-ink-300">Carregando mapa...</div>;
+    return <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: "#a06d28" }}>Carregando mapa...</div>;
   }
 
   return (
     <div className="w-full h-full flex flex-col gap-1.5">
       {data.indicators.length > 1 && (
         <select value={activeKey} onChange={e => setIndicatorKey(e.target.value)}
-          className="flex-shrink-0 text-2xs rounded border px-1.5 py-1 bg-ink-900 border-ink-700 text-ink-100 focus:outline-none">
+          className="flex-shrink-0 text-2xs rounded px-1.5 py-1 focus:outline-none"
+          style={{ border: "1px solid #e8d8be", background: "#fff", color: "#5c3f13" }}>
           {data.indicators.map(ind => <option key={ind.key} value={ind.key}>{ind.label}</option>)}
         </select>
       )}
@@ -105,9 +106,9 @@ export function HeatmapWidget({ data }: HeatmapWidgetProps) {
         </MapContainer>
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
-        <span className="text-2xs text-ink-300">Baixo</span>
+        <span className="text-2xs" style={{ color: "#a06d28" }}>Baixo</span>
         <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${ACCENT},0.15), rgba(${ACCENT},0.9))` }} />
-        <span className="text-2xs text-ink-300">Alto</span>
+        <span className="text-2xs" style={{ color: "#a06d28" }}>Alto</span>
       </div>
     </div>
   );
