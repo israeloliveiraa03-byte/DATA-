@@ -102,6 +102,11 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
     return <HeatmapWidget data={data} />;
   }
 
+  if (data.kind === "crosstab") {
+    if (data.rows.length === 0 || data.cols.length === 0 || data.grandTotal === 0) return <EmptyState />;
+    return <CrosstabView data={data} valueMode={(config.valueMode as string) ?? "count"} />;
+  }
+
   return null;
 }
 
@@ -185,6 +190,61 @@ function PieChartView({ data, donut }: { data: { optionId: string; label: string
         </ResponsiveContainer>
       </div>
       <ChartLegend data={data} />
+    </div>
+  );
+}
+
+const CROSSTAB_ACCENT = "196, 138, 66"; // brand terracota, mesma família de cor do resto do produto
+
+function CrosstabView({ data, valueMode }: { data: Extract<WidgetData, { kind: "crosstab" }>; valueMode: string }) {
+  function cellValue(ri: number, ci: number): number {
+    const raw = data.cells[ri][ci];
+    if (valueMode === "row_percent") return data.rowTotals[ri] > 0 ? (raw / data.rowTotals[ri]) * 100 : 0;
+    if (valueMode === "col_percent") return data.colTotals[ci] > 0 ? (raw / data.colTotals[ci]) * 100 : 0;
+    return raw;
+  }
+  const maxCount = Math.max(1, ...data.cells.flat());
+  function intensity(ri: number, ci: number): number {
+    if (valueMode === "count") return data.cells[ri][ci] / maxCount;
+    return cellValue(ri, ci) / 100;
+  }
+  function formatCell(v: number): string {
+    return valueMode === "count" ? formatNumber(v) : `${formatNumber(v, 1)}%`;
+  }
+
+  return (
+    <div className="h-full overflow-auto">
+      <table className="text-xs" style={{ borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th className="px-2 py-1 text-left sticky left-0" style={{ background: "#fff" }} />
+            {data.cols.map(c => (
+              <th key={c.id} className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "#c48a42", borderBottom: "1px solid #e8d8be" }}>{c.label}</th>
+            ))}
+            <th className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "#a06d28", borderBottom: "1px solid #e8d8be" }}>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.rows.map((r, ri) => (
+            <tr key={r.id}>
+              <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "#5c3f13", background: "#fff", borderRight: "1px solid #e8d8be" }}>{r.label}</td>
+              {data.cols.map((c, ci) => (
+                <td key={c.id} className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "#111", background: `rgba(${CROSSTAB_ACCENT}, ${(0.08 + intensity(ri, ci) * 0.55).toFixed(2)})` }}>
+                  {formatCell(cellValue(ri, ci))}
+                </td>
+              ))}
+              <td className="px-2 py-1 text-center font-semibold whitespace-nowrap" style={{ color: "#a06d28" }}>{formatNumber(data.rowTotals[ri])}</td>
+            </tr>
+          ))}
+          <tr>
+            <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "#a06d28", background: "#fff", borderTop: "1px solid #e8d8be" }}>Total</td>
+            {data.colTotals.map((t, i) => (
+              <td key={i} className="px-2 py-1 text-center font-semibold whitespace-nowrap" style={{ color: "#a06d28", borderTop: "1px solid #e8d8be" }}>{formatNumber(t)}</td>
+            ))}
+            <td className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "#5c3f13", borderTop: "1px solid #e8d8be" }}>{formatNumber(data.grandTotal)}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

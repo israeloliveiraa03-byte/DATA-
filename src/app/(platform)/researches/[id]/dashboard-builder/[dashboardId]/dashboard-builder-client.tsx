@@ -34,6 +34,7 @@ const DEFAULT_SIZE: Record<SupportedWidgetType, { w: number; h: number }> = {
   map:          { w: 50,        h: 320 },
   heatmap:      { w: 50,        h: 320 },
   image:        { w: 33.333333, h: 192 },
+  crosstab:     { w: 50,        h: 224 },
 };
 
 // Redimensiona uma imagem no cliente antes de guardar como base64 — usado
@@ -1102,6 +1103,37 @@ function WidgetInspector({
               style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
               <i className="ti ti-plus" /> Adicionar indicador
             </button>
+          </div>
+        </>
+      )}
+
+      {widget.type === "crosstab" && (
+        <>
+          <div>
+            <label {...label}>Categoria A (linhas)</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldIdRows as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldIdRows: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label {...label}>Categoria B (colunas)</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldIdCols as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldIdCols: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de escolha neste formulário ainda.</p>}
+          </div>
+          <div>
+            <label {...label}>Mostrar</label>
+            <select className={input} style={inputStyle} value={(widget.config.valueMode as string) ?? "count"}
+              onChange={e => onUpdateConfig({ valueMode: e.target.value })}>
+              <option value="count">Contagem</option>
+              <option value="row_percent">% da linha</option>
+              <option value="col_percent">% da coluna</option>
+            </select>
           </div>
         </>
       )}

@@ -1,4 +1,4 @@
-export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image";
+export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image" | "crosstab";
 
 export interface NumberCardConfig {
   fieldId?: string;
@@ -109,7 +109,17 @@ export interface HeatmapConfig {
   indicators: HeatmapIndicatorConfig[];
 }
 
-export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig;
+// Cruzamento de dados — categoria A (linha) × categoria B (coluna), tipo
+// tabela de contingência. valueMode define o que cada célula mostra:
+// contagem bruta, % da linha ou % da coluna (a diagonal/comparação entre
+// grupos é o que Israel chamou de "categoria A vs B, pergunta A vs B").
+export interface CrosstabConfig {
+  fieldIdRows: string;
+  fieldIdCols: string;
+  valueMode?: "count" | "row_percent" | "col_percent";
+}
+
+export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig | CrosstabConfig;
 
 export interface ChoiceOption {
   id: string;
@@ -193,7 +203,17 @@ export interface HeatmapResult {
   maxByIndicator: Record<string, number>;
 }
 
-export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult | MapResult | HeatmapResult | ImageResult;
+export interface CrosstabResult {
+  kind: "crosstab";
+  rows: ChoiceOption[];
+  cols: ChoiceOption[];
+  cells: number[][]; // cells[linha][coluna] = contagem bruta (o valueMode calcula % em cima disso na renderização)
+  rowTotals: number[];
+  colTotals: number[];
+  grandTotal: number;
+}
+
+export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult | MapResult | HeatmapResult | ImageResult | CrosstabResult;
 
 export const NUMERIC_FIELD_TYPES = ["number", "scale", "nps", "stars", "slider"] as const;
 export const CHOICE_FIELD_TYPES = ["single_choice", "multiple_choice", "yes_no", "weighted", "consent"] as const;
@@ -208,4 +228,5 @@ export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string
   { value: "map",         label: "Mapa de pontos", icon: "ti-map-pin",          description: "Um marcador por resposta com GPS" },
   { value: "heatmap",     label: "Mapa de calor",  icon: "ti-map-2",           description: "Colore o Brasil por estado" },
   { value: "image",       label: "Imagem",  icon: "ti-photo",                   description: "Logo, foto ou brasão — conteúdo fixo, sem dado" },
+  { value: "crosstab",    label: "Cruzamento", icon: "ti-table-options",        description: "Categoria A × categoria B, tipo tabela cruzada" },
 ];

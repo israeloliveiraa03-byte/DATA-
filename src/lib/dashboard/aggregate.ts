@@ -5,6 +5,7 @@ import {
   type ChoiceAggResult,
   type ChoiceOption,
   type CountResult,
+  type CrosstabResult,
   type HeatmapResult,
   type MapResult,
   type NumericResult,
@@ -69,6 +70,46 @@ export function aggregateChoiceCounts(responses: Response[], field: Pick<FormFie
 
   const buckets = options.map(opt => ({ optionId: opt.id, label: opt.label, count: counts.get(opt.id) ?? 0 }));
   return { kind: "choice", buckets, totalResponses };
+}
+
+// Cruzamento categoria A × categoria B — pra cada resposta que respondeu os
+// dois campos, incrementa a célula [linha][coluna]. Multi-escolha soma em
+// TODAS as combinações relevantes (mesmo espírito de aggregateChoiceCounts:
+// uma resposta com 2 opções marcadas conta pra cada uma).
+export function aggregateCrosstab(
+  responses: Response[],
+  rowField: Pick<FormField, "id" | "type" | "config">,
+  colField: Pick<FormField, "id" | "type" | "config">,
+): CrosstabResult {
+  const rows = fieldOptions(rowField);
+  const cols = fieldOptions(colField);
+  const cells: number[][] = rows.map(() => cols.map(() => 0));
+  const rowIndex = new Map(rows.map((o, i) => [o.id, i]));
+  const colIndex = new Map(cols.map((o, i) => [o.id, i]));
+
+  for (const r of responses) {
+    const data = r.data as Record<string, unknown> | null;
+    const rawRow = data?.[rowField.id];
+    const rawCol = data?.[colField.id];
+    if (!hasValue(rawRow) || !hasValue(rawCol)) continue;
+    const rowIds = Array.isArray(rawRow) ? rawRow : [rawRow];
+    const colIds = Array.isArray(rawCol) ? rawCol : [rawCol];
+    for (const rid of rowIds) {
+      const ri = typeof rid === "string" ? rowIndex.get(rid) : undefined;
+      if (ri === undefined) continue;
+      for (const cid of colIds) {
+        const ci = typeof cid === "string" ? colIndex.get(cid) : undefined;
+        if (ci === undefined) continue;
+        cells[ri][ci]++;
+      }
+    }
+  }
+
+  const rowTotals = cells.map(row => row.reduce((a, b) => a + b, 0));
+  const colTotals = cols.map((_, ci) => cells.reduce((a, row) => a + row[ci], 0));
+  const grandTotal = rowTotals.reduce((a, b) => a + b, 0);
+
+  return { kind: "crosstab", rows, cols, cells, rowTotals, colTotals, grandTotal };
 }
 
 function resolveDisplayValue(field: FormField | undefined, raw: unknown): unknown {
@@ -219,6 +260,16 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
         imageUrl: typeof config.imageUrl === "string" ? config.imageUrl : "",
         fit: config.fit === "contain" ? "contain" : "cover",
       };
+
+    case "crosstab": {
+      const emptyResult: CrosstabResult = { kind: "crosstab", rows: [], cols: [], cells: [], rowTotals: [], colTotals: [], grandTotal: 0 };
+      const rowFieldId = typeof config.fieldIdRows === "string" ? config.fieldIdRows : "";
+      const colFieldId = typeof config.fieldIdCols === "string" ? config.fieldIdCols : "";
+      const rowField = fields.find(f => f.id === rowFieldId);
+      const colField = fields.find(f => f.id === colFieldId);
+      if (!rowField || !colField) return emptyResult;
+      return aggregateCrosstab(responses, rowField, colField);
+    }
 
     case "table": {
       const fieldIds = Array.isArray(config.fieldIds) ? (config.fieldIds as string[]) : [];

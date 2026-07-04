@@ -4,7 +4,7 @@ import { z } from "zod";
 // (o widget_type do banco tem mais opções — line_chart, image — que ainda não
 // têm cálculo nem editor; ficam de fora daqui até serem implementados).
 export const supportedWidgetTypeValues = [
-  "number_card", "bar_chart", "pie_chart", "donut_chart", "table", "text", "map", "heatmap", "image",
+  "number_card", "bar_chart", "pie_chart", "donut_chart", "table", "text", "map", "heatmap", "image", "crosstab",
 ] as const;
 
 export const createDashboardSchema = z.object({

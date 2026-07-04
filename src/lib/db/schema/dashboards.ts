@@ -2,7 +2,11 @@ import { pgTable, uuid, varchar, text, boolean, timestamp, integer, real, jsonb,
 import { relations } from "drizzle-orm";
 import { researches } from "./researches";
 
-export const widgetTypeEnum = pgEnum("widget_type", ["bar_chart","line_chart","pie_chart","donut_chart","map","number_card","table","text","image","heatmap"]);
+// "crosstab" e "globe" adicionados ao enum do Postgres via ALTER TYPE direto
+// (aditivo, script rodado uma vez — ver CLAUDE.md sobre o bug do drizzle-kit
+// com NOT NULL no Postgres 18/Neon). Essa lista só precisa refletir o que já
+// existe no banco pra o TypeScript não reclamar.
+export const widgetTypeEnum = pgEnum("widget_type", ["bar_chart","line_chart","pie_chart","donut_chart","map","number_card","table","text","image","heatmap","crosstab","globe"]);
 
 export const dashboards = pgTable("dashboards", {
   id:          uuid("id").primaryKey().defaultRandom(),
