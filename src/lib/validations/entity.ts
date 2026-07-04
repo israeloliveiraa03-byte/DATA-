@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeBoundaryGeo } from "@/lib/entities/geo-format";
 
 export const entityTypeValues = [
   "territorio", "comunidade", "escola", "associacao", "projeto", "documento",
@@ -31,9 +32,26 @@ const baseEntityFields = z.object({
   cityName:    z.string().max(200).optional(),
   latitude:    z.string().optional(),
   longitude:   z.string().optional(),
-  // Vazio = sem polígono / limpa um polígono existente; senão precisa de pelo menos 3 pontos.
-  boundaryPolygon: z.array(z.object({ lat: z.number(), lng: z.number() }))
-    .refine(arr => arr.length === 0 || arr.length >= 3, { message: "Um polígono precisa de pelo menos 3 pontos" })
+  // Território como FeatureCollection real (ponto/linha/polígono, um ou mais
+  // por entidade) — aceita também o array antigo {lat,lng}[] de entidades
+  // criadas antes desta mudança, tudo normalizado pro formato novo antes de
+  // guardar (ver normalizeBoundaryGeo em src/lib/entities/geo-format.ts).
+  // Vazio = sem território marcado / limpa o que existia.
+  boundaryPolygon: z.union([
+    z.object({
+      type:     z.literal("FeatureCollection"),
+      features: z.array(z.object({
+        type:       z.literal("Feature"),
+        properties: z.record(z.string(), z.unknown()).nullable().optional(),
+        geometry:   z.object({
+          type:        z.enum(["Point", "LineString", "Polygon", "MultiPolygon"]),
+          coordinates: z.any(),
+        }),
+      })),
+    }),
+    z.array(z.object({ lat: z.number(), lng: z.number() })),
+  ])
+    .transform(raw => normalizeBoundaryGeo(raw))
     .optional(),
 
   // Território / comunidade: municípios adicionais além do stateCode/cityCode principal.

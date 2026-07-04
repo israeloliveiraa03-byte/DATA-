@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { normalizeBoundaryGeo, replaceBoundaryFeature, findBoundaryFeature, BOUNDARY_ROLE } from "@/lib/entities/geo-format";
 import type { Entity } from "@/lib/types";
+import type { Feature, Polygon } from "geojson";
 
 interface Point { lat: number; lng: number; }
 
@@ -13,13 +15,18 @@ interface Props {
 }
 
 // Mini-pesquisa de campo (Fase 3, essencial): captação de pontos/limites em campo via GPS,
-// gravados direto como boundary_polygon da entidade (reaproveita o PATCH /api/entities/[id]
-// que já valida mínimo de 3 pontos). TODO: versão mais completa (diário de campo com fotos/
-// offline/múltiplos colaboradores por sessão) fica para quando a Onda 3 de tipos de campo
-// (field_diary) for implementada no form-builder — fora de escopo agora.
+// gravados como o contorno principal (role: "boundary") dentro da FeatureCollection da
+// entidade — substitui só esse contorno ao salvar, preservando outras feições (pontos de
+// interesse) que o pesquisador já tenha marcado no editor de mesa. TODO: versão mais completa
+// (diário de campo com fotos/offline/múltiplos colaboradores por sessão) fica para quando a
+// Onda 3 de tipos de campo (field_diary) for implementada no form-builder — fora de escopo agora.
 export function CampoClient({ entity }: Props) {
   const router = useRouter();
-  const initialPoints = Array.isArray(entity.boundaryPolygon) ? (entity.boundaryPolygon as Point[]) : [];
+  const existingFC = normalizeBoundaryGeo(entity.boundaryPolygon);
+  const existingBoundary = findBoundaryFeature(existingFC);
+  const initialPoints: Point[] = existingBoundary?.geometry.type === "Polygon"
+    ? (existingBoundary.geometry as Polygon).coordinates[0].slice(0, -1).map(([lng, lat]) => ({ lat, lng }))
+    : [];
   const [points,   setPoints]   = useState<Point[]>(initialPoints);
   const [capturing, setCapturing] = useState(false);
   const [saving,    setSaving]    = useState(false);
@@ -50,11 +57,20 @@ export function CampoClient({ entity }: Props) {
     setSaving(true);
     setError("");
     try {
+      const ring = points.map(p => [p.lng, p.lat]);
+      if (ring.length > 0) ring.push(ring[0]);
+      const boundaryFeature: Feature<Polygon> = {
+        type: "Feature",
+        properties: { role: BOUNDARY_ROLE },
+        geometry: { type: "Polygon", coordinates: [ring] },
+      };
+      const updatedFC = replaceBoundaryFeature(existingFC, boundaryFeature);
+
       const res = await fetch(`/api/entities/${entity.id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          boundaryPolygon: points,
+          boundaryPolygon: updatedFC,
           changeNote: "Pontos capturados em campo (mini-pesquisa de campo)",
         }),
       });

@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/utils";
-import type { LatLngPoint } from "@/components/entities/polygon-map-editor";
+import { normalizeBoundaryGeo } from "@/lib/entities/geo-format";
+import type { FeatureCollection } from "geojson";
 import type {
   Entity, EntityVersion, Research, ResearchEntity,
   EntityMunicipality, EntityAdminDivision, EntityAdminDivisionCity, EntityOrgDocument, EntityPersonDetails,
@@ -73,8 +74,8 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
   const [linking,             setLinking]             = useState(false);
   const [linkError,           setLinkError]           = useState("");
 
-  const [boundaryPolygon, setBoundaryPolygon] = useState<LatLngPoint[]>(
-    Array.isArray(entity.boundaryPolygon) ? (entity.boundaryPolygon as LatLngPoint[]) : []
+  const [boundaryPolygon, setBoundaryPolygon] = useState<FeatureCollection>(
+    normalizeBoundaryGeo(entity.boundaryPolygon)
   );
   const [savingPolygon, setSavingPolygon] = useState(false);
   const [polygonError,  setPolygonError]  = useState("");
@@ -85,8 +86,6 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
     setPolygonError("");
     setPolygonSaved(false);
     try {
-      // updateEntitySchema exige mínimo 3 pontos quando o campo é enviado — não dá
-      // pra "limpar" o polígono por aqui ainda (TODO: endpoint dedicado de remoção).
       const res = await fetch(`/api/entities/${entity.id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -329,27 +328,23 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
             {TERRITORIO_TYPES.includes(entity.type) && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Polígono no mapa</CardTitle>
+                  <CardTitle>Marcação no mapa</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <PolygonMapEditor
                     value={boundaryPolygon}
-                    onChange={points => { setBoundaryPolygon(points); setPolygonSaved(false); }}
+                    onChange={fc => { setBoundaryPolygon(fc); setPolygonSaved(false); }}
                     center={entity.latitude && entity.longitude ? { lat: parseFloat(entity.latitude), lng: parseFloat(entity.longitude) } : undefined}
                   />
-                  {boundaryPolygon.length > 0 && boundaryPolygon.length < 3 && (
-                    <p className="text-xs text-amber-600 mt-2">Desenhe pelo menos 3 pontos para formar um polígono válido.</p>
-                  )}
                   {polygonError && <p className="text-xs text-red-500 mt-2">{polygonError}</p>}
-                  {polygonSaved && <p className="text-xs text-teal-700 mt-2">Polígono salvo.</p>}
+                  {polygonSaved && <p className="text-xs text-teal-700 mt-2">Marcação salva.</p>}
                   <div className="mt-3">
                     <Button
                       size="sm"
                       loading={savingPolygon}
-                      disabled={boundaryPolygon.length > 0 && boundaryPolygon.length < 3}
                       onClick={savePolygon}
                     >
-                      Salvar polígono
+                      Salvar marcação
                     </Button>
                   </div>
                 </CardContent>

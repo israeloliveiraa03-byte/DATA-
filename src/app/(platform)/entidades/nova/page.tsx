@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useStates, useCities } from "@/lib/hooks/use-geo";
 import { MunicipalityPicker, type MunicipalityValue } from "@/components/entities/municipality-picker";
-import type { LatLngPoint } from "@/components/entities/polygon-map-editor";
 import { parsePastedCoordinates } from "@/lib/entities/coordinates";
+import type { FeatureCollection } from "geojson";
+
+const EMPTY_FEATURE_COLLECTION: FeatureCollection = { type: "FeatureCollection", features: [] };
 
 // Leaflet acessa `window` — precisa carregar só no cliente, sem SSR.
 const PolygonMapEditor = dynamic(
@@ -59,7 +61,7 @@ export default function NovaEntidadePage() {
   const [municipalities, setMunicipalities] = useState<MunicipalityValue[]>([]);
   const [pasteCoords,    setPasteCoords]    = useState("");
   const [gpsLoading,     setGpsLoading]     = useState(false);
-  const [boundaryPolygon, setBoundaryPolygon] = useState<LatLngPoint[]>([]);
+  const [boundaryPolygon, setBoundaryPolygon] = useState<FeatureCollection>(EMPTY_FEATURE_COLLECTION);
 
   // Região administrativa
   const [adminDivisions, setAdminDivisions] = useState<AdminDivisionDraft[]>([{ name: "", cities: [] }]);
@@ -200,7 +202,7 @@ export default function NovaEntidadePage() {
           latitude:  latitude  || undefined,
           longitude: longitude || undefined,
           municipalities: isTerritorio && municipalities.length ? municipalities : undefined,
-          boundaryPolygon: isTerritorio && boundaryPolygon.length >= 3 ? boundaryPolygon : undefined,
+          boundaryPolygon: isTerritorio && boundaryPolygon.features.length > 0 ? boundaryPolygon : undefined,
           adminDivisions: isRegiao
             ? adminDivisions.filter(d => d.name.trim() && d.cities.length).map(d => ({ name: d.name, cities: d.cities }))
             : undefined,
@@ -446,7 +448,7 @@ export default function NovaEntidadePage() {
 
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">
-                  Desenho de polígono no mapa <span className="text-gray-400 font-normal">(opcional — mínimo 3 pontos)</span>
+                  Marcação no mapa <span className="text-gray-400 font-normal">(opcional — contorno do território, pontos e trilhas de interesse)</span>
                 </p>
                 <PolygonMapEditor
                   value={boundaryPolygon}
