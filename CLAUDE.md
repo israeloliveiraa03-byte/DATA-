@@ -20,6 +20,7 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 - Drizzle ORM + Neon PostgreSQL (serverless)
 - NextAuth v5
 - Leaflet + react-leaflet + leaflet-draw (desde 2026-07-02, só na captação de localização de território/comunidade — mapa base OpenStreetMap, carregado via `next/dynamic({ ssr:false })`, não é a malha oficial do IBGE nem MapLibre)
+- react-moveable (arrastar/redimensionar livre no dashboard-builder) e react-globe.gl (globo 3D, Three.js por baixo) — mesma regra do Leaflet: **sempre** `next/dynamic({ ssr:false })`, nunca import estático (já causou crash em produção uma vez, ver "Erros recorrentes")
 
 **Stack futuro (pós-MVP, reescrita planejada):** NestJS (backend), PostGIS (geoespacial), MapLibre GL, Object Storage, Redis/filas.
 
@@ -39,6 +40,7 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 
 ## Bugs ativos / bloqueadores conhecidos
 
+- **Dashboard-builder: "imagens somem ou estão cortadas"** — reportado por Israel em 2026-07-04, ainda não diagnosticado (poucos candidatos possíveis: widget de imagem novo, tiles do mapa Leaflet, capa do dashboard). Aguardando print de tela pra confirmar qual é antes de mexer — evitar diagnóstico às cegas em bug visual/WebGL.
 - Botão "Entrar com ORCID" no login (`(auth)/login/page.tsx`) chama `signIn("orcid", ...)`, mas `src/lib/auth/index.ts` só registra o provider do Google — o ORCID nunca foi configurado (precisa de client ID/secret do ORCID e decisão de Israel sobre isso). Clicar no botão hoje quebra. Descoberto em 2026-07-02 testando o Catálogo de Entidades, não é um bug introduzido agora.
 - `DATABASE_URL` no `.env.local` roda em Postgres 18 (Neon), que cria constraints NOT NULL nomeadas (recurso do PG 17+). O `drizzle-kit` do projeto (`^0.27.0`) não reconhece isso e propõe (incorretamente) remover o NOT NULL de quase toda coluna do banco sempre que `npm run db:push` é rodado — **nunca aceitar esse lote de `DROP CONSTRAINT ..._not_null` do prompt do `db:push`**. Até resolver (upgrade de `drizzle-kit`/`drizzle-orm`, não testado ainda), aplicar mudanças de schema aditivas (tabelas/colunas novas) via SQL direto, só com os `CREATE TABLE`/`CREATE TYPE`/`ALTER TABLE ADD CONSTRAINT` relevantes.
 
@@ -88,6 +90,24 @@ Cada categoria tem um método de captura próprio, tudo em `entidades/nova/page.
 - **Pessoa** (`entity_type` novo): figura pública/histórica é cadastrada normalmente por um pesquisador; pessoa comum só se autocadastra via link de convite único (`entity_person_invites`, 30 dias de validade) em `/convite/[token]` — exige login Google antes de confirmar (é a própria pessoa quem cria o registro, nunca um terceiro).
 
 TODOs deixados explicados no código: limpar um polígono já salvo via UI ainda não tem endpoint dedicado (schema aceita array vazio pra limpar, mas o fluxo de "apagar tudo e salvar" no editor não foi testado a fundo); mini-pesquisa de campo é só captura de pontos GPS por ora, versão com fotos/offline/diário fica pra quando o tipo `field_diary` (Onda 3, ver seção de tipos de campo pendentes) for implementado; verificação avançada de identidade no autocadastro de pessoa não existe (só login Google basta, por ora).
+
+## Dashboard-builder (construído em fases, 2026-07-02 a 2026-07-04)
+
+Editor de dashboards por pesquisa (`/researches/[id]/dashboard-builder/[dashboardId]`), publicável numa página pública própria (`/d/[slug]`, tema claro/escuro e capa customizáveis, sem chrome do Dataº além de um crédito discreto).
+
+**Grade livre**: posicionamento por `x/y/w/h` contínuo (não mais grade de 12 colunas), arrastar/redimensionar via `react-moveable` com guias de alinhamento, multi-seleção (Shift+clique, move/redimensiona em grupo), desfazer/refazer (Ctrl+Z), modelos de início prontos (painel de indicadores, mapa+resumo, relatório narrativo).
+
+**Tipos de widget** (`src/lib/dashboard/types.ts` → `SUPPORTED_WIDGET_TYPES`, motor de agregação em `src/lib/dashboard/aggregate.ts`): número, barra/pizza/rosca (com legenda de cor↔categoria), tabela, texto (+ variantes decorativas: divisória, bloco de cor, ícone — 20 ícones Tabler curados), imagem, mapa de pontos (marcador padrão ou ícone colorido por categoria de escolha), mapa de calor por estado **ou por município** (`granularity: "state"|"city"`, malha oficial do IBGE), cruzamento de dados/crosstab (categoria A × categoria B, contagem ou % linha/coluna), globo 3D interativo (reaproveita os dados de mapa/mapa de calor, sem motor de agregação próprio).
+
+**Paleta de cores por dashboard**: 4 opções curadas (Terracota/Oceano/Verde-mata/Alto contraste), campo `dashboards.color_palette`, afeta todos os widgets do dashboard de uma vez (seletor na seção "Aparência publicada" do editor).
+
+**Biblioteca de figurinhas/imagens** (`user_assets`): todo upload no widget de imagem vira reaproveitável na biblioteca pessoal automaticamente; pesquisador pode autorizar compartilhar com toda a plataforma (biblioteca comunitária, `/api/assets/community`) — nasce privado por padrão.
+
+**Malha municipal do IBGE**: `scripts/fetch-brasil-municipios.mjs` gera `public/geo/brasil-municipios.json` (~5.570 polígonos, coordenadas simplificadas pra ~11m de precisão, arquivo final 3,1MB / ~800KB comprimido) e `scripts/fetch-municipios-lookup.mjs` gera `src/lib/geo/municipios-lookup.json` (nome+UF → código IBGE de 7 dígitos, já que `geo_city` só grava o nome da cidade). Rodar de novo só se a malha do IBGE mudar (não faz parte do build).
+
+**Nota de performance conhecida, não resolvida**: `municipios-lookup.json` (156KB) acaba entrando no bundle JS do próprio editor (client computa `computeWidgetData` direto pra preview ao vivo) — página do editor foi de ~12kB pra ~65kB de JS próprio. Não afeta a página pública (`/d/[slug]`, que calcula no servidor). Resolver direito exigiria tornar `aggregate.ts` assíncrono — mudança maior, não feita ainda.
+
+**Enum `widget_type` do Postgres**: `crosstab` e `globe` foram adicionados via `ALTER TYPE ... ADD VALUE` direto (aditivo, mesmo motivo do bug do drizzle-kit descrito acima) — `src/lib/db/schema/dashboards.ts` só precisa refletir o enum real do banco.
 
 ## Funcionalidades planejadas (visão de longo prazo)
 
