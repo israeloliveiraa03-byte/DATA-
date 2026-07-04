@@ -36,6 +36,43 @@ interface WidgetDraft {
   config: Record<string, unknown>;
 }
 
+const DECORATIVE_PRESETS: { variant: "text" | "divider" | "block"; label: string; icon: string; w: number; h: number; config: Record<string, unknown> }[] = [
+  { variant: "text",    label: "Texto",         icon: "ti-typography",           w: 33.33, h: 64, config: { content: "Escreva aqui...", variant: "text" } },
+  { variant: "divider", label: "Divisória",     icon: "ti-separator-horizontal", w: 50,    h: 24, config: { variant: "divider" } },
+  { variant: "block",   label: "Bloco de cor",  icon: "ti-square-rounded",       w: 25,    h: 80, config: { variant: "block", style: { backgroundColor: "#7a9b5c", borderRadius: 8 } } },
+];
+
+// Modelos de início — só tipo/posição/tamanho, sem campo vinculado (isso
+// varia por pesquisa) — o pesquisador liga os dados depois de aplicar.
+const TEMPLATES: { id: string; label: string; description: string; icon: string; widgets: Omit<WidgetDraft, "id">[] }[] = [
+  {
+    id: "kpi", label: "Painel de indicadores", icon: "ti-dashboard", description: "3 números + 1 gráfico de barras",
+    widgets: [
+      { type: "number_card", title: "Total de respostas", x: 0,     y: 0,  w: 33.33, h: 88,  config: { aggregation: "count" } },
+      { type: "number_card", title: "Indicador 2",         x: 33.33, y: 0,  w: 33.33, h: 88,  config: { aggregation: "count" } },
+      { type: "number_card", title: "Indicador 3",         x: 66.66, y: 0,  w: 33.34, h: 88,  config: { aggregation: "count" } },
+      { type: "bar_chart",   title: "Distribuição",        x: 0,     y: 88, w: 100,   h: 240, config: {} },
+    ],
+  },
+  {
+    id: "map", label: "Mapa + resumo", icon: "ti-map", description: "Mapa de calor com números e tabela ao lado",
+    widgets: [
+      { type: "heatmap",     title: "Mapa de calor", x: 0,  y: 0,   w: 60, h: 320, config: { indicators: [{ key: "count", label: "Volume de respostas", mode: "count" }] } },
+      { type: "number_card", title: "Total",         x: 60, y: 0,   w: 40, h: 100, config: { aggregation: "count" } },
+      { type: "table",       title: "Respostas",      x: 60, y: 100, w: 40, h: 220, config: { fieldIds: [] } },
+    ],
+  },
+  {
+    id: "report", label: "Relatório narrativo", icon: "ti-file-text", description: "Título, texto e um gráfico",
+    widgets: [
+      { type: "text",        title: "", x: 0, y: 0,   w: 100, h: 56,  config: { content: "Título do relatório", variant: "text", textStyle: { fontSize: 24, fontWeight: "bold" } } },
+      { type: "text",        title: "", x: 0, y: 56,  w: 100, h: 72,  config: { content: "Escreva aqui um resumo da pesquisa...", variant: "text" } },
+      { type: "donut_chart", title: "Distribuição", x: 0,  y: 128, w: 50, h: 220, config: {} },
+      { type: "table",       title: "Detalhamento", x: 50, y: 128, w: 50, h: 220, config: { fieldIds: [] } },
+    ],
+  },
+];
+
 function clamp(n: number, min: number, max: number) { return Math.min(Math.max(n, min), max); }
 
 interface SavedWidget {
@@ -60,16 +97,24 @@ export function DashboardBuilderClient({
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
   const widgetRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // widgetRefs é um ref (mutação não re-renderiza) — sem isso, o array de
+  // elementGuidelines calculado no render fica preso ao commit anterior,
+  // sempre um ciclo atrasado, e a guia de alinhamento nunca aparece.
+  const [, setRefsVersion] = useState(0);
+  const registerWidgetRef = useCallback((id: string) => (el: HTMLDivElement | null) => {
+    if (el) widgetRefs.current.set(id, el); else widgetRefs.current.delete(id);
+    setRefsVersion(v => v + 1);
+  }, []);
 
   const [title,      setTitle]      = useState(dashboard.title);
   const [isPublic,   setIsPublic]   = useState(dashboard.isPublic);
   const [publicSlug, setPublicSlug] = useState(dashboard.publicSlug);
-  const [widgets,    setWidgets]    = useState<WidgetDraft[]>([]);
-  const [loaded,     setLoaded]     = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [saving,     setSaving]     = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [savedAt,    setSavedAt]    = useState<string | null>(null);
+  const [widgets,     setWidgets]     = useState<WidgetDraft[]>([]);
+  const [loaded,      setLoaded]      = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [saving,      setSaving]      = useState(false);
+  const [publishing,  setPublishing]  = useState(false);
+  const [savedAt,     setSavedAt]     = useState<string | null>(null);
 
   const [dashboardTheme,    setDashboardTheme]    = useState(dashboard.theme ?? "light");
   const [dashboardCoverUrl, setDashboardCoverUrl]  = useState(dashboard.coverUrl);
@@ -77,7 +122,69 @@ export function DashboardBuilderClient({
   const [coverUploading,    setCoverUploading]     = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedWidget = widgets.find(w => w.id === selectedId) ?? null;
+  const selectedIdsArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
+  const selectedWidget = selectedIdsArray.length === 1 ? widgets.find(w => w.id === selectedIdsArray[0]) ?? null : null;
+
+  const selectWidget = useCallback((id: string, additive: boolean) => {
+    setSelectedIds(prev => {
+      if (!additive) return new Set([id]);
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Desfazer/refazer — pilha de snapshots, empilhada só nos pontos de commit
+  // que já existem (adicionar/remover/fim de arrastar/redimensionar/mudar
+  // config) — nunca a cada pixel arrastado ou tecla digitada.
+  const widgetsRef = useRef<WidgetDraft[]>([]);
+  useEffect(() => { widgetsRef.current = widgets; }, [widgets]);
+  const [history, setHistory] = useState<WidgetDraft[][]>([]);
+  const [future,  setFuture]  = useState<WidgetDraft[][]>([]);
+
+  const pushHistory = useCallback(() => {
+    setHistory(h => [...h.slice(-49), widgetsRef.current]);
+    setFuture([]);
+  }, []);
+
+  const undo = useCallback(() => {
+    setHistory(h => {
+      if (h.length === 0) return h;
+      setFuture(f => [...f, widgetsRef.current]);
+      setWidgets(h[h.length - 1]);
+      setSelectedIds(new Set());
+      return h.slice(0, -1);
+    });
+  }, []);
+
+  const redo = useCallback(() => {
+    setFuture(f => {
+      if (f.length === 0) return f;
+      setHistory(h => [...h, widgetsRef.current]);
+      setWidgets(f[f.length - 1]);
+      setSelectedIds(new Set());
+      return f.slice(0, -1);
+    });
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (document.activeElement as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedIds.size > 0) {
+        e.preventDefault();
+        deleteSelected();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds, undo, redo]);
 
   const saveAppearance = useCallback(async (patch: { theme?: string; coverUrl?: string | null }) => {
     await fetch(`/api/dashboards/${dashboard.id}`, {
@@ -139,6 +246,7 @@ export function DashboardBuilderClient({
   }, [dashboard.id]);
 
   const addWidget = useCallback((type: SupportedWidgetType) => {
+    pushHistory();
     const size = DEFAULT_SIZE[type];
     const maxY = widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0);
     const id = crypto.randomUUID();
@@ -150,8 +258,26 @@ export function DashboardBuilderClient({
         : type === "heatmap" ? { indicators: [{ key: crypto.randomUUID(), label: "Volume de respostas", mode: "count" as const }] }
         : {},
     }]);
-    setSelectedId(id);
-  }, [widgets]);
+    setSelectedIds(new Set([id]));
+  }, [widgets, pushHistory]);
+
+  const addDecorative = useCallback((preset: typeof DECORATIVE_PRESETS[number]) => {
+    pushHistory();
+    const maxY = widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0);
+    const id = crypto.randomUUID();
+    setWidgets(prev => [...prev, {
+      id, type: "text" as const, title: "",
+      x: 0, y: maxY, w: preset.w, h: preset.h,
+      config: preset.config,
+    }]);
+    setSelectedIds(new Set([id]));
+  }, [widgets, pushHistory]);
+
+  const applyTemplate = useCallback((template: typeof TEMPLATES[number]) => {
+    pushHistory();
+    setWidgets(template.widgets.map(w => ({ ...w, id: crypto.randomUUID() })));
+    setSelectedIds(new Set());
+  }, [pushHistory]);
 
   const updateWidget = useCallback((id: string, patch: Partial<WidgetDraft>) => {
     setWidgets(prev => prev.map(w => w.id === id ? { ...w, ...patch } : w));
@@ -162,9 +288,16 @@ export function DashboardBuilderClient({
   }, []);
 
   const deleteWidget = useCallback((id: string) => {
+    pushHistory();
     setWidgets(prev => prev.filter(w => w.id !== id));
-    setSelectedId(prev => prev === id ? null : prev);
-  }, []);
+    setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+  }, [pushHistory]);
+
+  const deleteSelected = useCallback(() => {
+    pushHistory();
+    setWidgets(prev => prev.filter(w => !selectedIds.has(w.id)));
+    setSelectedIds(new Set());
+  }, [selectedIds, pushHistory]);
 
   // Arrastar/redimensionar livre (react-moveable) — só o widget selecionado
   // vira alvo; os outros entram como `elementGuidelines` pra desenhar linha
@@ -184,6 +317,13 @@ export function DashboardBuilderClient({
     const wPercent = clamp((width / canvasWidth) * 100, 4, 100);
     const xPercent = clamp((left / canvasWidth) * 100, 0, 100 - wPercent);
     updateWidget(id, { x: xPercent, y: Math.max(0, top), w: wPercent, h: Math.max(40, height) });
+  }
+
+  // Grupo (multi-seleção) — os eventos do Moveable dão o elemento DOM que se
+  // moveu, não o id; acha o id de volta procurando no mapa de refs.
+  function findWidgetIdByEl(el: HTMLElement): string | undefined {
+    for (const [id, node] of widgetRefs.current.entries()) if (node === el) return id;
+    return undefined;
   }
 
   const save = useCallback(async () => {
@@ -249,6 +389,16 @@ export function DashboardBuilderClient({
           {savedAt && <span className="text-xs flex items-center gap-1" style={{ color: "#a06d28" }}><i className="ti ti-check" style={{ color: "#4c6b3c" }} /> Salvo às {savedAt}</span>}
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={undo} disabled={history.length === 0} title="Desfazer (Ctrl+Z)"
+            className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30"
+            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            <i className="ti ti-arrow-back-up text-sm" />
+          </button>
+          <button onClick={redo} disabled={future.length === 0} title="Refazer (Ctrl+Shift+Z)"
+            className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30 mr-1"
+            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            <i className="ti ti-arrow-forward-up text-sm" />
+          </button>
           {isPublic && publicSlug && (
             <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/d/${publicSlug}`)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md"
@@ -340,6 +490,21 @@ export function DashboardBuilderClient({
               Esta pesquisa ainda não tem campos no formulário — os widgets vão ficar vazios até você criar perguntas.
             </p>
           )}
+
+          <p className="px-1 mb-1.5 mt-3 font-bold uppercase tracking-widest" style={TS}>Decorativos</p>
+          <div className="flex gap-1.5">
+            {DECORATIVE_PRESETS.map(preset => (
+              <button key={preset.variant} onClick={() => addDecorative(preset)}
+                title={preset.label}
+                className="flex-1 flex flex-col items-center gap-1 py-2 rounded-md"
+                style={{ border: BRD, background: "#fff" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#fbf3e7"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}>
+                <i className={`ti ${preset.icon} text-sm`} style={{ color: "#c48a42" }} />
+                <span className="text-2xs font-medium" style={{ color: "#5c3f13" }}>{preset.label}</span>
+              </button>
+            ))}
+          </div>
         </aside>
 
         {/* Canvas */}
@@ -347,10 +512,28 @@ export function DashboardBuilderClient({
           {!loaded ? (
             <p className="text-xs" style={{ color: "#a06d28" }}>Carregando...</p>
           ) : widgets.length === 0 ? (
-            <div className="text-center py-16 rounded-xl" style={{ border: "2px dashed #d9bb8c", background: "#fbf3e7" }}>
-              <i className="ti ti-layout-grid text-3xl block mb-2" style={{ color: "#d9bb8c" }} />
-              <p className="text-sm font-semibold mb-1" style={{ color: "#5c3f13" }}>Nenhum widget ainda</p>
-              <p className="text-xs" style={{ color: "#a06d28" }}>Clique em um tipo de widget no painel esquerdo pra adicionar</p>
+            <div className="max-w-2xl mx-auto py-10">
+              <div className="text-center mb-6">
+                <i className="ti ti-layout-grid text-3xl block mb-2" style={{ color: "#d9bb8c" }} />
+                <p className="text-sm font-semibold mb-1" style={{ color: "#5c3f13" }}>Comece com um modelo, ou monte do zero</p>
+                <p className="text-xs" style={{ color: "#a06d28" }}>Um modelo só define tipo e posição — você liga os campos da sua pesquisa depois</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {TEMPLATES.map(t => (
+                  <button key={t.id} onClick={() => applyTemplate(t)}
+                    className="p-4 rounded-xl text-left transition-all"
+                    style={{ border: BRD, background: "#fff" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#d2a05c"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#e8d8be"; }}>
+                    <i className={`ti ${t.icon} text-xl block mb-2`} style={{ color: "#c48a42" }} />
+                    <p className="text-xs font-bold mb-1" style={{ color: "#5c3f13" }}>{t.label}</p>
+                    <p className="text-2xs leading-snug" style={{ color: "#a06d28" }}>{t.description}</p>
+                  </button>
+                ))}
+              </div>
+              <p className="text-center text-xs mt-6" style={{ color: "#a06d28" }}>
+                Ou clique em um tipo de widget no painel esquerdo pra montar do zero
+              </p>
             </div>
           ) : (
             <div ref={canvasRef} className="relative rounded-xl" style={{
@@ -360,35 +543,41 @@ export function DashboardBuilderClient({
               // react-moveable abaixo).
               backgroundImage: `repeating-linear-gradient(to right, transparent, transparent calc(${100 / GRID_COLUMNS}% - 1px), #f3e4cb calc(${100 / GRID_COLUMNS}% - 1px), #f3e4cb ${100 / GRID_COLUMNS}%), repeating-linear-gradient(to bottom, transparent, transparent ${GRID_ROW - 1}px, #f3e4cb ${GRID_ROW - 1}px, #f3e4cb ${GRID_ROW}px)`,
             }}
-              onClick={e => { if (e.target === e.currentTarget) setSelectedId(null); }}>
+              onClick={e => { if (e.target === e.currentTarget) setSelectedIds(new Set()); }}>
               {widgets.map(w => (
                 <GridWidget
                   key={w.id}
                   widget={w}
-                  selected={w.id === selectedId}
+                  selected={selectedIds.has(w.id)}
                   data={computeWidgetData({ type: w.type, config: w.config }, fields, responses)}
-                  registerRef={el => { if (el) widgetRefs.current.set(w.id, el); else widgetRefs.current.delete(w.id); }}
-                  onSelect={() => setSelectedId(w.id)}
+                  registerRef={registerWidgetRef(w.id)}
+                  onSelect={additive => selectWidget(w.id, additive)}
                   onDelete={() => deleteWidget(w.id)}
                 />
               ))}
-              {selectedId && widgetRefs.current.get(selectedId) && (
+              {selectedIdsArray.length === 1 && widgetRefs.current.get(selectedIdsArray[0]) && (
                 <Moveable
-                  target={widgetRefs.current.get(selectedId)!}
+                  target={widgetRefs.current.get(selectedIdsArray[0])!}
                   draggable
                   resizable
                   keepRatio={false}
                   snappable
                   snapCenter
+                  snapGap
+                  isDisplaySnapDigit
+                  snapDirections={{ top: true, left: true, bottom: true, right: true, center: true, middle: true }}
+                  elementSnapDirections={{ top: true, left: true, bottom: true, right: true, center: true, middle: true }}
                   elementGuidelines={Array.from(widgetRefs.current.entries())
-                    .filter(([wid]) => wid !== selectedId)
+                    .filter(([wid]) => wid !== selectedIdsArray[0])
                     .map(([, el]) => el)}
                   onDrag={({ target, left, top }) => {
                     target.style.left = `${left}px`;
                     target.style.top = `${top}px`;
                   }}
                   onDragEnd={({ lastEvent }) => {
-                    if (lastEvent) commitDrag(selectedId, lastEvent.left, lastEvent.top);
+                    if (!lastEvent) return;
+                    pushHistory();
+                    commitDrag(selectedIdsArray[0], lastEvent.left, lastEvent.top);
                   }}
                   onResize={({ target, width, height, drag }) => {
                     target.style.width = `${width}px`;
@@ -397,7 +586,45 @@ export function DashboardBuilderClient({
                     target.style.top = `${drag.top}px`;
                   }}
                   onResizeEnd={({ lastEvent }) => {
-                    if (lastEvent) commitResize(selectedId, lastEvent.width, lastEvent.height, lastEvent.drag.left, lastEvent.drag.top);
+                    if (!lastEvent) return;
+                    pushHistory();
+                    commitResize(selectedIdsArray[0], lastEvent.width, lastEvent.height, lastEvent.drag.left, lastEvent.drag.top);
+                  }}
+                />
+              )}
+              {selectedIdsArray.length > 1 && (
+                <Moveable
+                  target={selectedIdsArray.map(id => widgetRefs.current.get(id)).filter((el): el is HTMLDivElement => !!el)}
+                  draggable
+                  resizable
+                  keepRatio={false}
+                  snappable
+                  onDragGroup={({ events }) => {
+                    events.forEach(ev => { ev.target.style.left = `${ev.left}px`; ev.target.style.top = `${ev.top}px`; });
+                  }}
+                  onDragGroupEnd={({ events }) => {
+                    if (events.some(ev => ev.lastEvent)) pushHistory();
+                    events.forEach(ev => {
+                      if (!ev.lastEvent) return;
+                      const id = findWidgetIdByEl(ev.target as HTMLElement);
+                      if (id) commitDrag(id, ev.lastEvent.left, ev.lastEvent.top);
+                    });
+                  }}
+                  onResizeGroup={({ events }) => {
+                    events.forEach(ev => {
+                      ev.target.style.width = `${ev.width}px`;
+                      ev.target.style.height = `${ev.height}px`;
+                      ev.target.style.left = `${ev.drag.left}px`;
+                      ev.target.style.top = `${ev.drag.top}px`;
+                    });
+                  }}
+                  onResizeGroupEnd={({ events }) => {
+                    if (events.some(ev => ev.lastEvent)) pushHistory();
+                    events.forEach(ev => {
+                      if (!ev.lastEvent) return;
+                      const id = findWidgetIdByEl(ev.target as HTMLElement);
+                      if (id) commitResize(id, ev.lastEvent.width, ev.lastEvent.height, ev.lastEvent.drag.left, ev.lastEvent.drag.top);
+                    });
                   }}
                 />
               )}
@@ -412,7 +639,17 @@ export function DashboardBuilderClient({
             <span className="text-xs font-bold" style={{ color: "#5c3f13" }}>Propriedades</span>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
-            {selectedWidget ? (
+            {selectedIdsArray.length > 1 ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs font-semibold" style={{ color: "#5c3f13" }}>{selectedIdsArray.length} widgets selecionados</p>
+                <p className="text-2xs" style={{ color: "#a06d28" }}>Shift+clique adiciona ou remove da seleção. Arraste/redimensione juntos.</p>
+                <button onClick={deleteSelected}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold"
+                  style={{ border: "1px solid #f0b8ab", background: "#fdf0ee", color: "#c0392b" }}>
+                  <i className="ti ti-trash" /> Remover selecionados
+                </button>
+              </div>
+            ) : selectedWidget ? (
               <WidgetInspector
                 widget={selectedWidget}
                 fields={fields}
@@ -421,7 +658,7 @@ export function DashboardBuilderClient({
                 onDelete={() => deleteWidget(selectedWidget.id)}
               />
             ) : (
-              <p className="text-xs" style={{ color: "#a06d28" }}>Selecione um widget no canvas pra editar.</p>
+              <p className="text-xs" style={{ color: "#a06d28" }}>Selecione um widget no canvas pra editar. Shift+clique seleciona vários.</p>
             )}
           </div>
         </aside>
@@ -440,7 +677,7 @@ function GridWidget({
 }: {
   widget: WidgetDraft; selected: boolean; data: ReturnType<typeof computeWidgetData>;
   registerRef: (el: HTMLDivElement | null) => void;
-  onSelect: () => void; onDelete: () => void;
+  onSelect: (additive: boolean) => void; onDelete: () => void;
 }) {
   const style: React.CSSProperties = {
     position: "absolute",
@@ -455,7 +692,7 @@ function GridWidget({
   };
 
   return (
-    <div ref={registerRef} style={style} className="rounded-lg" onClick={e => { e.stopPropagation(); onSelect(); }}>
+    <div ref={registerRef} style={style} className="rounded-lg" onClick={e => { e.stopPropagation(); onSelect(e.shiftKey); }}>
       {selected && (
         <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(); }}
           className="absolute -top-2.5 -right-2.5 w-5 h-5 flex items-center justify-center rounded-full z-20"
@@ -588,13 +825,98 @@ function WidgetInspector({
         </>
       )}
 
-      {widget.type === "text" && (
-        <div>
-          <label {...label}>Conteúdo</label>
-          <textarea className={input} style={{ ...inputStyle, resize: "vertical" }} rows={5}
-            value={(widget.config.content as string) ?? ""} onChange={e => onUpdateConfig({ content: e.target.value })} />
-        </div>
-      )}
+      {widget.type === "text" && (() => {
+        const variant = (widget.config.variant as string) ?? "text";
+        const textStyle = (widget.config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; color?: string; align?: "left" | "center" | "right" };
+        const updateTextStyle = (patch: Record<string, unknown>) => onUpdateConfig({ textStyle: { ...textStyle, ...patch } });
+        return (
+          <>
+            <div>
+              <label {...label}>Tipo</label>
+              <select className={input} style={inputStyle} value={variant} onChange={e => onUpdateConfig({ variant: e.target.value })}>
+                <option value="text">Texto</option>
+                <option value="divider">Divisória</option>
+                <option value="block">Bloco de cor</option>
+              </select>
+            </div>
+            {variant === "text" && (
+              <>
+                <div>
+                  <label {...label}>Conteúdo</label>
+                  <textarea className={input} style={{ ...inputStyle, resize: "vertical" }} rows={4}
+                    value={(widget.config.content as string) ?? ""} onChange={e => onUpdateConfig({ content: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label {...label}>Tamanho da fonte</label>
+                    <input type="number" min={10} max={72} className={input} style={inputStyle}
+                      value={textStyle.fontSize ?? 14} onChange={e => updateTextStyle({ fontSize: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label {...label}>Peso</label>
+                    <select className={input} style={inputStyle} value={textStyle.fontWeight ?? "normal"}
+                      onChange={e => updateTextStyle({ fontWeight: e.target.value })}>
+                      <option value="normal">Normal</option>
+                      <option value="bold">Negrito</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label {...label}>Cor do texto</label>
+                    <input type="color" className="w-full h-8 rounded-md" style={{ border: BRD }}
+                      value={textStyle.color ?? "#111111"} onChange={e => updateTextStyle({ color: e.target.value })} />
+                  </div>
+                  <div>
+                    <label {...label}>Alinhamento</label>
+                    <select className={input} style={inputStyle} value={textStyle.align ?? "left"}
+                      onChange={e => updateTextStyle({ align: e.target.value })}>
+                      <option value="left">Esquerda</option>
+                      <option value="center">Centro</option>
+                      <option value="right">Direita</option>
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+            {variant === "divider" && (
+              <div>
+                <label {...label}>Cor da linha</label>
+                <input type="color" className="w-full h-8 rounded-md" style={{ border: BRD }}
+                  value={textStyle.color ?? "#e8d8be"} onChange={e => updateTextStyle({ color: e.target.value })} />
+              </div>
+            )}
+          </>
+        );
+      })()}
+
+      {/* Aparência — fundo/borda, vale pra qualquer tipo de widget */}
+      {(() => {
+        const appearance = (widget.config.style ?? {}) as { backgroundColor?: string; borderRadius?: number };
+        const updateAppearance = (patch: Record<string, unknown>) => onUpdateConfig({ style: { ...appearance, ...patch } });
+        const isBlock = widget.type === "text" && widget.config.variant === "block";
+        return (
+          <div className="pt-2" style={{ borderTop: BRD }}>
+            <label {...label}>{isBlock ? "Cor do bloco" : "Cor de fundo"}</label>
+            <div className="flex items-center gap-2 mb-2">
+              <input type="color" className="w-10 h-8 rounded-md flex-shrink-0" style={{ border: BRD }}
+                value={appearance.backgroundColor ?? "#ffffff"} onChange={e => updateAppearance({ backgroundColor: e.target.value })} />
+              {appearance.backgroundColor && (
+                <button onClick={() => updateAppearance({ backgroundColor: undefined })} className="text-2xs font-semibold" style={{ color: "#a06d28" }}>
+                  Remover
+                </button>
+              )}
+            </div>
+            {!isBlock && (
+              <>
+                <label {...label}>Borda arredondada</label>
+                <input type="range" min={0} max={32} className="w-full"
+                  value={appearance.borderRadius ?? 8} onChange={e => updateAppearance({ borderRadius: Number(e.target.value) })} />
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {widget.type === "map" && (
         <div>

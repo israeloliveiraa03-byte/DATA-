@@ -18,8 +18,28 @@ export interface TableConfig {
   onlyCompleted?: boolean;
 }
 
+// Aparência genérica — fundo e borda arredondada. Qualquer tipo de widget
+// aceita isso dentro do próprio `config` (que é jsonb livre em tempo de
+// execução); só documentado aqui uma vez em vez de repetido em cada
+// interface de config.
+export interface WidgetAppearance {
+  backgroundColor?: string;
+  borderRadius?: number;
+}
+
+// "text" também cobre os elementos decorativos (sem fonte de dado, igual
+// texto): variant "divider" ignora o conteúdo e desenha uma linha; "block"
+// ignora o conteúdo e desenha um retângulo de cor sólida.
 export interface TextConfig {
   content: string;
+  variant?: "text" | "divider" | "block";
+  textStyle?: {
+    fontSize?: number;
+    fontWeight?: "normal" | "bold";
+    color?: string;
+    align?: "left" | "center" | "right";
+  };
+  style?: WidgetAppearance;
 }
 
 // Mapa de pontos — um marcador por resposta que tenha respondido um campo

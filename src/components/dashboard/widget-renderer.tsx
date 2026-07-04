@@ -22,9 +22,20 @@ interface WidgetRendererProps {
 }
 
 export function WidgetRenderer({ type, title, data, config }: WidgetRendererProps) {
+  // Aparência genérica (fundo/borda) — qualquer tipo de widget aceita.
+  // Decorativos (divisória/bloco de cor) não têm padding: a cor precisa
+  // preencher a caixa inteira, não uma caixa branca com um retângulo dentro.
+  const appearance = (config.style ?? {}) as { backgroundColor?: string; borderRadius?: number };
+  const variant = config.variant as string | undefined;
+  const isDecorative = type === "text" && (variant === "divider" || variant === "block");
+
   return (
-    <div className="w-full h-full flex flex-col p-3 overflow-hidden">
-      {title && <p className="text-xs font-bold mb-2 flex-shrink-0" style={{ color: "#5c3f13" }}>{title}</p>}
+    <div className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-3 overflow-hidden"}
+      style={{
+        backgroundColor: appearance.backgroundColor,
+        borderRadius: appearance.borderRadius,
+      }}>
+      {title && !isDecorative && <p className="text-xs font-bold mb-2 flex-shrink-0" style={{ color: "#5c3f13" }}>{title}</p>}
       <div className="flex-1 min-h-0">
         <WidgetBody type={type} data={data} config={config} />
       </div>
@@ -57,7 +68,20 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
   }
 
   if (data.kind === "text") {
-    return <p className="text-sm whitespace-pre-wrap" style={{ color: "#111" }}>{data.content || "—"}</p>;
+    const variant = (config.variant as string) ?? "text";
+    if (variant === "divider") return <DividerView config={config} />;
+    if (variant === "block") return null; // a cor já vem do fundo do container (config.style)
+    const textStyle = (config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; color?: string; align?: "left" | "center" | "right" };
+    return (
+      <p className="whitespace-pre-wrap h-full" style={{
+        color: textStyle.color ?? "#111",
+        fontSize: textStyle.fontSize ? `${textStyle.fontSize}px` : "14px",
+        fontWeight: textStyle.fontWeight ?? "normal",
+        textAlign: textStyle.align ?? "left",
+      }}>
+        {data.content || "—"}
+      </p>
+    );
   }
 
   if (data.kind === "map") {
@@ -72,6 +96,15 @@ function WidgetBody({ type, data, config }: Omit<WidgetRendererProps, "title">) 
   }
 
   return null;
+}
+
+function DividerView({ config }: { config: Record<string, unknown> }) {
+  const textStyle = (config.textStyle ?? {}) as { color?: string };
+  return (
+    <div className="w-full h-full flex items-center">
+      <div className="w-full" style={{ height: 2, background: textStyle.color ?? "#e8d8be" }} />
+    </div>
+  );
 }
 
 function EmptyState() {
