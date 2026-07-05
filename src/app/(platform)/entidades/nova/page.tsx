@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useStates, useCities } from "@/lib/hooks/use-geo";
+import { useNeighborBoundaries } from "@/lib/hooks/use-neighbor-boundaries";
 import { MunicipalityPicker, type MunicipalityValue } from "@/components/entities/municipality-picker";
 import { parsePastedCoordinates } from "@/lib/entities/coordinates";
 import type { FeatureCollection } from "geojson";
@@ -89,6 +90,10 @@ export default function NovaEntidadePage() {
   const isOrg        = ORG_TYPES.includes(type);
   const isPessoa     = type === "pessoa";
   const isPessoaComum = isPessoa && personKind === "comum";
+
+  // Territórios já cadastrados — o editor de mapa avisa (sem bloquear) se o
+  // novo contorno se sobrepõe a algum deles.
+  const neighborBoundaries = useNeighborBoundaries(null, isTerritorio);
 
   function useGps() {
     if (!navigator.geolocation) {
@@ -456,6 +461,7 @@ export default function NovaEntidadePage() {
                   value={boundaryPolygon}
                   onChange={setBoundaryPolygon}
                   center={latitude && longitude ? { lat: parseFloat(latitude), lng: parseFloat(longitude) } : undefined}
+                  neighbors={neighborBoundaries}
                 />
                 <p className="text-xs text-ink-500 mt-1">
                   Use o ícone de polígono no canto do mapa para desenhar o limite; dá pra editar ou apagar depois.
