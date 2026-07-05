@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 // Só os tipos com motor de agregação implementado em src/lib/dashboard/aggregate.ts
-// (o widget_type do banco tem mais opções — line_chart, image — que ainda não
-// têm cálculo nem editor; ficam de fora daqui até serem implementados).
+// (todos já existem no enum widget_type do banco — line_chart estava lá desde
+// o início, só faltava cálculo e editor, implementados em 2026-07-04).
 export const supportedWidgetTypeValues = [
-  "number_card", "bar_chart", "pie_chart", "donut_chart", "table", "text", "map", "heatmap", "image", "crosstab", "globe",
+  "number_card", "bar_chart", "line_chart", "pie_chart", "donut_chart", "table", "text", "map", "heatmap", "image", "crosstab", "globe",
 ] as const;
 
 export const createDashboardSchema = z.object({
@@ -21,6 +21,9 @@ export const updateDashboardSchema = z.object({
   // (redimensionada no cliente antes de enviar, ver dashboard-builder-client.tsx).
   coverUrl:    z.string().max(3000000).nullable().optional(),
   colorPalette: z.string().max(50).optional(),
+  // Cor de fundo do canvas de widgets — guardada dentro do jsonb `layout`
+  // (nenhuma coluna nova). O PATCH mescla no layout existente; null remove.
+  canvasColor: z.string().max(50).nullable().optional(),
 });
 
 // Grade livre (não mais célula de 12 colunas): x/w em % da largura do

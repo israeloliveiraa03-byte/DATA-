@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import Globe, { type GlobeMethods } from "react-globe.gl";
 import type { Feature, FeatureCollection } from "geojson";
 import type { ColorPalette, MapResult, HeatmapResult } from "@/lib/dashboard/types";
 import { COLOR_PALETTES } from "@/lib/dashboard/types";
 import { CODAREA_TO_SIGLA } from "@/lib/geo/uf";
+
+function clamp(n: number, min: number, max: number) { return Math.min(Math.max(n, min), max); }
 
 // Altitude maior que o mapa 2D de propósito — precisa sobrar globo/espaço
 // ao redor do Brasil pra ficar claro que é um planeta, não só uma forma
@@ -28,6 +30,42 @@ function useAutoRotate(globeRef: RefObject<GlobeMethods | undefined>, ready: boo
     controls.addEventListener("start", stop);
     return () => controls.removeEventListener("start", stop);
   }, [ready, globeRef]);
+}
+
+// Zoom explícito (+/-/recentrar) — não depender só do gesto de scroll.
+// OrbitControls (three.js, por baixo do react-globe.gl) já vem com
+// enableZoom=true e o próprio listener de wheel chama preventDefault (não é
+// passivo), então em teoria o scroll já devia zoomar sem competir com o
+// scroll da página. Mas Israel reportou que não funciona ao vivo — sem
+// print/reprodução ao vivo pra confirmar a causa exata (poderia ser o
+// widget disputando o wheel com o scroll do dashboard-builder, ou o
+// event listener não estar montado a tempo), o fallback seguro é garantir
+// um jeito de zoom que NUNCA depende do wheel: manipula a câmera direto via
+// pointOfView (mesma função usada pra centralizar no Brasil no mount).
+function useZoomControls(globeRef: RefObject<GlobeMethods | undefined>) {
+  const zoomBy = useCallback((factor: number) => {
+    const g = globeRef.current;
+    if (!g) return;
+    const current = g.pointOfView();
+    g.pointOfView({ altitude: clamp(current.altitude * factor, 0.35, 4.2) }, 300);
+  }, [globeRef]);
+  const reset = useCallback(() => { globeRef.current?.pointOfView(BRAZIL_VIEW, 500); }, [globeRef]);
+  return { zoomIn: () => zoomBy(0.7), zoomOut: () => zoomBy(1.4), reset };
+}
+
+// Botões flutuantes no canto do globo — mesmo papel dos +/- do Leaflet
+// (sempre visíveis, nunca só o gesto). Fundo translúcido escuro porque o
+// globo tem céu estrelado atrás, diferente do mapa 2D claro.
+function ZoomControls({ onZoomIn, onZoomOut, onReset }: { onZoomIn: () => void; onZoomOut: () => void; onReset: () => void }) {
+  const btn = "w-7 h-7 flex items-center justify-center rounded-md text-sm transition-colors";
+  const style = { background: "rgba(20,20,15,0.72)", color: "#f0e4cf", border: "1px solid rgba(232,216,190,0.25)" };
+  return (
+    <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
+      <button onClick={onZoomIn} title="Aproximar" aria-label="Aproximar" className={btn} style={style}><i className="ti ti-zoom-in" /></button>
+      <button onClick={onZoomOut} title="Afastar" aria-label="Afastar" className={btn} style={style}><i className="ti ti-zoom-out" /></button>
+      <button onClick={onReset} title="Recentralizar no Brasil" aria-label="Recentralizar no Brasil" className={btn} style={style}><i className="ti ti-focus-centered" /></button>
+    </div>
+  );
 }
 
 // Container tem tamanho próprio (não segue automaticamente o pai como o
@@ -58,6 +96,7 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
   const { ref, size } = useContainerSize();
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const hasCategories = !!data.categories && data.categories.length > 0;
+  const { zoomIn, zoomOut, reset } = useZoomControls(globeRef);
 
   useEffect(() => {
     globeRef.current?.pointOfView(BRAZIL_VIEW, 0);
@@ -72,7 +111,7 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
 
   return (
     <div className="w-full h-full flex flex-col gap-1.5">
-      <div ref={ref} className="flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: "#0b1220" }}>
+      <div ref={ref} className="relative flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: "#0b1220" }}>
         {size.width > 0 && (
           <Globe
             ref={globeRef}
@@ -93,6 +132,7 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
             pointLabel={(p: object) => (p as MapResult["points"][number]).label}
           />
         )}
+        {size.width > 0 && <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} />}
       </div>
       {hasCategories && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center px-1 flex-shrink-0">
@@ -111,14 +151,16 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
 interface GlobeHeatmapProps {
   data: HeatmapResult;
   palette?: ColorPalette;
+  displayMode?: "count" | "percent";
 }
 
-export function GlobeHeatmapWidget({ data, palette }: GlobeHeatmapProps) {
+export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapProps) {
   const ACCENT = (palette ?? COLOR_PALETTES.terracota).accent;
   const { ref, size } = useContainerSize();
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const [estados, setEstados] = useState<FeatureCollection | null>(null);
   const [indicatorKey, setIndicatorKey] = useState(data.indicators[0]?.key);
+  const { zoomIn, zoomOut, reset } = useZoomControls(globeRef);
 
   useEffect(() => {
     let cancel = false;
@@ -136,8 +178,15 @@ export function GlobeHeatmapWidget({ data, palette }: GlobeHeatmapProps) {
   }, [data.indicators, indicatorKey]);
 
   const activeKey = indicatorKey ?? data.indicators[0]?.key;
-  const byState = activeKey ? (data.byIndicator[activeKey] ?? {}) : {};
-  const max = activeKey ? (data.maxByIndicator[activeKey] ?? 0) : 0;
+  const activeIndicator = data.indicators.find(i => i.key === activeKey);
+  const byStateRaw = activeKey ? (data.byIndicator[activeKey] ?? {}) : {};
+  const asPercent = displayMode === "percent" && activeIndicator?.mode === "count";
+  const totalCount = Object.values(byStateRaw).reduce((acc, s) => acc + s.count, 0);
+  const byState = asPercent
+    ? Object.fromEntries(Object.entries(byStateRaw).map(([k, s]) => [k, { value: totalCount > 0 ? (s.count / totalCount) * 100 : 0, count: s.count }]))
+    : byStateRaw;
+  const max = asPercent ? Math.max(1, ...Object.values(byState).map(s => s.value)) : (activeKey ? (data.maxByIndicator[activeKey] ?? 0) : 0);
+  const isPercentLike = asPercent || max <= 100;
 
   // Sem dado ainda é comum (pesquisa em andamento) — deixa translúcido em vez
   // de um grude cinza escuro cobrindo o país inteiro, senão o globo fica sem
@@ -155,7 +204,7 @@ export function GlobeHeatmapWidget({ data, palette }: GlobeHeatmapProps) {
     const codarea = (feature as Feature).properties?.codarea as string | undefined;
     const sigla = codarea ? CODAREA_TO_SIGLA[codarea] : undefined;
     const stateData = sigla ? byState[sigla] : undefined;
-    return stateData ? `<b>${sigla}</b><br/>${stateData.value.toFixed(1)}${max > 100 ? "" : "%"}` : `<b>${sigla ?? "?"}</b><br/>Sem dados`;
+    return stateData ? `<b>${sigla}</b><br/>${stateData.value.toFixed(1)}${isPercentLike ? "%" : ""}` : `<b>${sigla ?? "?"}</b><br/>Sem dados`;
   }
 
   return (
@@ -167,7 +216,7 @@ export function GlobeHeatmapWidget({ data, palette }: GlobeHeatmapProps) {
           {data.indicators.map(ind => <option key={ind.key} value={ind.key}>{ind.label}</option>)}
         </select>
       )}
-      <div ref={ref} className="flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: "#0b1220" }}>
+      <div ref={ref} className="relative flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: "#0b1220" }}>
         {size.width > 0 && estados && (
           <Globe
             ref={globeRef}
@@ -187,11 +236,12 @@ export function GlobeHeatmapWidget({ data, palette }: GlobeHeatmapProps) {
             polygonLabel={labelFor}
           />
         )}
+        {size.width > 0 && estados && <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} />}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
-        <span className="text-2xs" style={{ color: "#a06d28" }}>0{max > 100 ? "" : "%"}</span>
+        <span className="text-2xs" style={{ color: "#a06d28" }}>0{isPercentLike ? "%" : ""}</span>
         <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${ACCENT},0.15), rgba(${ACCENT},0.9))` }} />
-        <span className="text-2xs font-semibold" style={{ color: "#5c3f13" }}>{max > 100 ? `${Math.round(max)} respostas` : `${max.toFixed(0)}%`}</span>
+        <span className="text-2xs font-semibold" style={{ color: "#5c3f13" }}>{isPercentLike ? `${max.toFixed(0)}%` : `${Math.round(max)} respostas`}</span>
       </div>
     </div>
   );

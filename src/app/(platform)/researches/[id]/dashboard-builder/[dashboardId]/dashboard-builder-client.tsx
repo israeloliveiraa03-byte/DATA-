@@ -6,8 +6,8 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
-import { computeWidgetData } from "@/lib/dashboard/aggregate";
-import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, COLOR_PALETTES, BASEMAP_OPTIONS, type SupportedWidgetType, type HeatmapIndicatorConfig } from "@/lib/dashboard/types";
+import { computeWidgetData, filterResponses } from "@/lib/dashboard/aggregate";
+import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, COLOR_PALETTES, BASEMAP_OPTIONS, type SupportedWidgetType, type HeatmapIndicatorConfig, type DashboardFilter } from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
 
 // react-moveable manipula o DOM direto (tamanho/posição via window/document)
@@ -28,6 +28,7 @@ const GRID_ROW      = 32;
 const DEFAULT_SIZE: Record<SupportedWidgetType, { w: number; h: number }> = {
   number_card:  { w: 25,        h: 64 },
   bar_chart:    { w: 50,        h: 160 },
+  line_chart:   { w: 50,        h: 160 },
   pie_chart:    { w: 41.666666, h: 160 },
   donut_chart:  { w: 41.666666, h: 160 },
   table:        { w: 66.666666, h: 192 },
@@ -126,6 +127,64 @@ function hydrate(saved: SavedWidget[]): WidgetDraft[] {
   }));
 }
 
+// Filtro geral do dashboard — uma linha só, acima de tudo que ela afeta
+// (nunca um filtro escondido dentro de um widget individual). Data de
+// resposta + opcionalmente uma dimensão (campo de escolha) recortam TODAS
+// as respostas de uma vez; cada widget recalcula em cima do mesmo recorte,
+// então os números sempre batem entre si. Estado só de visualização no
+// editor (nunca salvo) — o pesquisador confere o recorte aqui; a versão
+// publicada em /d/[slug] tem o equivalente por data pro leitor final.
+function DashboardFilterBar({
+  filter, onChange, fields, fieldOptions, matchCount, totalCount,
+}: {
+  filter: DashboardFilter;
+  onChange: (f: DashboardFilter) => void;
+  fields: FormField[];
+  fieldOptions: { id: string; label: string }[];
+  matchCount: number;
+  totalCount: number;
+}) {
+  const hasFilter = !!(filter.from || filter.to || (filter.fieldId && filter.optionId));
+  const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-3 px-3 py-2 rounded-lg" style={{ border: BRD, background: "#fffaf1" }}>
+      <span className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: "#a06d28" }}>
+        <i className="ti ti-filter" /> Filtro geral
+      </span>
+      <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
+        De
+        <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
+          value={filter.from ?? ""} onChange={e => onChange({ ...filter, from: e.target.value || undefined })} />
+      </label>
+      <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
+        Até
+        <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
+          value={filter.to ?? ""} onChange={e => onChange({ ...filter, to: e.target.value || undefined })} />
+      </label>
+      <select className="text-2xs rounded px-1.5 py-1" style={inputStyle}
+        value={filter.fieldId ?? ""} onChange={e => onChange({ ...filter, fieldId: e.target.value || undefined, optionId: undefined })}>
+        <option value="">Todas as respostas</option>
+        {fields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+      </select>
+      {filter.fieldId && (
+        <select className="text-2xs rounded px-1.5 py-1" style={inputStyle}
+          value={filter.optionId ?? ""} onChange={e => onChange({ ...filter, optionId: e.target.value || undefined })}>
+          <option value="">Selecione uma opção...</option>
+          {fieldOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
+      )}
+      <span className="text-2xs ml-auto flex-shrink-0" style={{ color: "#a06d28" }}>
+        {hasFilter ? `${matchCount} de ${totalCount} respostas` : `${totalCount} respostas`}
+      </span>
+      {hasFilter && (
+        <button onClick={() => onChange({})} className="text-2xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "#c0392b" }}>
+          <i className="ti ti-x" /> Limpar
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function DashboardBuilderClient({
   research, dashboard, fields, responses,
 }: {
@@ -170,9 +229,33 @@ export function DashboardBuilderClient({
   const [dashboardTheme,    setDashboardTheme]    = useState(dashboard.theme ?? "light");
   const [dashboardCoverUrl, setDashboardCoverUrl]  = useState(dashboard.coverUrl);
   const [dashboardPalette, setDashboardPalette]    = useState(dashboard.colorPalette ?? "terracota");
+  // canvasColor mora dentro do jsonb `layout` (sem coluna nova no banco) —
+  // ver PATCH /api/dashboards/[id], que mescla essa chave sem perder o
+  // resto do layout.
+  const [canvasColor, setCanvasColorState] = useState<string | undefined>(() => {
+    const layout = (dashboard.layout ?? {}) as Record<string, unknown>;
+    return typeof layout.canvasColor === "string" ? layout.canvasColor : undefined;
+  });
   const [appearanceOpen,    setAppearanceOpen]     = useState(false);
   const [coverUploading,    setCoverUploading]     = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  // Filtro geral do dashboard — estado só de visualização (nunca salvo),
+  // aplicado a TODOS os widgets de uma vez antes de calcular os dados
+  // (nunca por widget individual — ver regra de dataviz sobre filtro
+  // centralizado). Mesmo filtro que a página pública oferece (data), mais
+  // filtro por dimensão aqui no editor pra conferir o recorte durante a
+  // montagem do dashboard.
+  const [filter, setFilter] = useState<DashboardFilter>({});
+  const filteredResponses = useMemo(() => filterResponses(responses, filter), [responses, filter]);
+  const filterableFields = useMemo(() => fields.filter(f => (CHOICE_FIELD_TYPES as readonly string[]).includes(f.type)), [fields]);
+  const filterFieldOptions = useMemo(() => {
+    if (!filter.fieldId) return [];
+    const field = fields.find(f => f.id === filter.fieldId);
+    if (!field) return [];
+    if (field.type === "yes_no") return [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }];
+    return ((field.config as { options?: { id: string; label: string }[] } | null)?.options ?? []);
+  }, [filter.fieldId, fields]);
 
   const selectedIdsArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
   const selectedWidget = selectedIdsArray.length === 1 ? widgets.find(w => w.id === selectedIdsArray[0]) ?? null : null;
@@ -238,7 +321,7 @@ export function DashboardBuilderClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds, undo, redo]);
 
-  const saveAppearance = useCallback(async (patch: { theme?: string; coverUrl?: string | null; colorPalette?: string }) => {
+  const saveAppearance = useCallback(async (patch: { theme?: string; coverUrl?: string | null; colorPalette?: string; canvasColor?: string | null }) => {
     await fetch(`/api/dashboards/${dashboard.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -270,6 +353,11 @@ export function DashboardBuilderClient({
   function setPalette(colorPalette: string) {
     setDashboardPalette(colorPalette);
     saveAppearance({ colorPalette });
+  }
+
+  function setCanvasColor(color: string | undefined) {
+    setCanvasColorState(color);
+    saveAppearance({ canvasColor: color ?? null });
   }
 
   // Carrega os widgets salvos ao montar
@@ -526,6 +614,16 @@ export function DashboardBuilderClient({
                   </button>
                 ))}
               </div>
+              <p className="text-2xs font-bold uppercase mb-1.5 mt-3" style={{ color: "#a06d28" }}>Fundo do canvas</p>
+              <div className="flex items-center gap-2">
+                <input type="color" className="w-10 h-8 rounded-md flex-shrink-0" style={{ border: BRD }}
+                  value={canvasColor ?? "#ffffff"} onChange={e => setCanvasColor(e.target.value)} />
+                {canvasColor && (
+                  <button onClick={() => setCanvasColor(undefined)} className="text-2xs font-semibold" style={{ color: "#a06d28" }}>
+                    Restaurar branco
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -570,6 +668,13 @@ export function DashboardBuilderClient({
 
         {/* Canvas */}
         <main className="flex-1 overflow-auto p-5" style={{ background: "#f3e4cb" }}>
+          {loaded && widgets.length > 0 && (
+            <DashboardFilterBar
+              filter={filter} onChange={setFilter}
+              fields={filterableFields} fieldOptions={filterFieldOptions}
+              matchCount={filteredResponses.length} totalCount={responses.length}
+            />
+          )}
           {!loaded ? (
             <p className="text-xs" style={{ color: "#a06d28" }}>Carregando...</p>
           ) : widgets.length === 0 ? (
@@ -598,7 +703,7 @@ export function DashboardBuilderClient({
             </div>
           ) : (
             <div ref={canvasRef} className="relative rounded-xl" style={{
-              height: totalHeightPx, background: "#fff", border: BRD,
+              height: totalHeightPx, background: canvasColor ?? "#fff", border: BRD,
               // Grade sutil de fundo — só referência visual solta agora, não
               // trava mais o posicionamento (isso é livre, com guias via
               // react-moveable abaixo).
@@ -610,7 +715,7 @@ export function DashboardBuilderClient({
                   key={w.id}
                   widget={w}
                   selected={selectedIds.has(w.id)}
-                  data={computeWidgetData({ type: w.type, config: w.config }, fields, responses)}
+                  data={computeWidgetData({ type: w.type, config: w.config }, fields, filteredResponses)}
                   palette={dashboardPalette}
                   registerRef={registerWidgetRef(w.id)}
                   onSelect={additive => selectWidget(w.id, additive)}
@@ -892,6 +997,52 @@ function WidgetInspector({
               <option value="count_desc">Mais respondidas primeiro</option>
             </select>
           </div>
+          <div>
+            <label {...label}>Mostrar como</label>
+            <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+              {[{ v: "count", l: "Número" }, { v: "percent", l: "Percentual" }].map(o => (
+                <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
+                  className="flex-1 py-1.5 text-2xs font-semibold"
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          </div>
+          {widget.type === "bar_chart" && (
+            <div>
+              <label {...label}>Comparar com (opcional)</label>
+              <select className={input} style={inputStyle} value={(widget.config.compareFieldId as string) ?? ""}
+                onChange={e => onUpdateConfig({ compareFieldId: e.target.value || undefined })}>
+                <option value="">Sem comparação</option>
+                {choiceFields.filter(f => f.id !== widget.config.fieldId).map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Vira barras agrupadas — uma barra por opção deste campo, dentro de cada opção do campo principal.</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {widget.type === "line_chart" && (
+        <>
+          <div>
+            <label {...label}>Intervalo</label>
+            <select className={input} style={inputStyle} value={(widget.config.interval as string) ?? "day"}
+              onChange={e => onUpdateConfig({ interval: e.target.value })}>
+              <option value="day">Por dia</option>
+              <option value="week">Por semana</option>
+              <option value="month">Por mês</option>
+            </select>
+          </div>
+          <div>
+            <label {...label}>Comparar série por (opcional)</label>
+            <select className={input} style={inputStyle} value={(widget.config.seriesFieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ seriesFieldId: e.target.value || undefined })}>
+              <option value="">Total de respostas</option>
+              {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Uma linha por opção deste campo, em vez de uma linha só com o total.</p>
+          </div>
         </>
       )}
 
@@ -1135,6 +1286,20 @@ function WidgetInspector({
             </div>
 
             <div>
+              <label {...label}>Indicador de volume mostra</label>
+              <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+                {[{ v: "count", l: "Nº de respostas" }, { v: "percent", l: "% do total" }].map(o => (
+                  <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
+                    className="flex-1 py-1.5 text-2xs font-semibold"
+                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+              <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Só afeta indicadores de &ldquo;Volume de respostas&rdquo; — indicadores de &ldquo;% de opção&rdquo; já são percentuais.</p>
+            </div>
+
+            <div>
             <div className="flex items-center justify-between mb-1">
               <label {...label} className="mb-0">Indicadores (o mapa deixa trocar entre eles)</label>
             </div>
@@ -1252,6 +1417,16 @@ function WidgetInspector({
                 </select>
                 {geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de estado neste formulário ainda.</p>}
                 <p className="text-2xs mt-2" style={{ color: "#a06d28" }}>Usa o volume de respostas por estado — pra indicadores por opção, monte primeiro um widget de mapa de calor 2D e depois troque pra &ldquo;Globo 3D&rdquo;.</p>
+                <label {...label} className="mt-2">Mostrar como</label>
+                <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+                  {[{ v: "count", l: "Nº de respostas" }, { v: "percent", l: "% do total" }].map(o => (
+                    <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
+                      className="flex-1 py-1.5 text-2xs font-semibold"
+                      style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </>

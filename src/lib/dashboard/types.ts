@@ -1,4 +1,4 @@
-export type SupportedWidgetType = "number_card" | "bar_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image" | "crosstab" | "globe";
+export type SupportedWidgetType = "number_card" | "bar_chart" | "line_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image" | "crosstab" | "globe";
 
 // Paleta de cores do dashboard inteiro (gráficos, mapa de calor, cruzamento,
 // globo) — guardada em dashboards.colorPalette, default "terracota" (visual
@@ -41,9 +41,27 @@ export interface NumberCardConfig {
   decimals?: number;
 }
 
+// displayMode é opcional em todos os gráficos onde faz sentido — undefined
+// mantém o comportamento de sempre (contagem absoluta), zero regressão em
+// dashboards já publicados.
+export type DisplayMode = "count" | "percent";
+
 export interface ChoiceChartConfig {
   fieldId: string;
   sortBy?: "count_desc" | "option_order";
+  displayMode?: DisplayMode;
+  // Só no gráfico de barras: um segundo campo de escolha transforma o
+  // gráfico em barras agrupadas (comparação categoria A × categoria B,
+  // mesmo motor do cruzamento de dados).
+  compareFieldId?: string;
+}
+
+// Linha do tempo — evolução das respostas usando submittedAt. Sem campo
+// configurado conta todas as respostas; seriesFieldId (campo de escolha)
+// divide em uma linha por opção (comparação ao longo do tempo).
+export interface LineChartConfig {
+  interval?: "day" | "week" | "month";
+  seriesFieldId?: string;
 }
 
 export interface TableConfig {
@@ -167,6 +185,9 @@ export interface HeatmapConfig {
   granularity?: "state" | "city";
   colorPalette?: string;
   basemap?: BasemapKey;
+  // Só afeta indicadores de modo "count": "percent" mostra a fatia de cada
+  // estado/município sobre o total de respostas (em vez do número bruto).
+  displayMode?: DisplayMode;
 }
 
 // Cruzamento de dados — categoria A (linha) × categoria B (coluna), tipo
@@ -189,9 +210,23 @@ export interface GlobeConfig {
   categoryFieldId?: string;
   categoryStyles?: Record<string, { icon?: string; color?: string }>;
   indicators?: HeatmapIndicatorConfig[];
+  // Mesma semântica do HeatmapConfig.displayMode — só se aplica no modo "heatmap".
+  displayMode?: DisplayMode;
 }
 
-export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig | CrosstabConfig | GlobeConfig;
+export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | LineChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig | CrosstabConfig | GlobeConfig;
+
+// Filtro geral do dashboard — um recorte só, aplicado a TODOS os widgets de
+// uma vez (padrão "uma linha de filtro acima de tudo", nunca filtro por
+// gráfico). from/to são datas ISO (yyyy-mm-dd); fieldId/optionId filtram por
+// uma opção de um campo de escolha. É estado de visualização, não config
+// salva — dashboards existentes não mudam em nada.
+export interface DashboardFilter {
+  from?: string;
+  to?: string;
+  fieldId?: string;
+  optionId?: string;
+}
 
 export interface ChoiceOption {
   id: string;
@@ -224,6 +259,15 @@ export interface ChoiceAggResult {
   kind: "choice";
   buckets: ChoiceBucket[];
   totalResponses: number;
+}
+
+// Série temporal — um ponto por intervalo (dia/semana/mês), com um valor por
+// série. series[0] é "Todas as respostas" quando não há campo de série.
+export interface TimeSeriesResult {
+  kind: "timeseries";
+  interval: "day" | "week" | "month";
+  series: { key: string; label: string }[];
+  points: { date: string; values: Record<string, number> }[];
 }
 
 export interface TableRow {
@@ -270,7 +314,10 @@ export interface HeatmapStateValue {
 
 export interface HeatmapResult {
   kind: "heatmap";
-  indicators: { key: string; label: string }[];
+  // mode incluído por indicador pra o widget saber se "count" pode ser
+  // convertido pra % do total do país (choice_percent já é percentual, a
+  // conversão não se aplica a ele).
+  indicators: { key: string; label: string; mode: "count" | "choice_percent" }[];
   byIndicator: Record<string, Record<string, HeatmapStateValue>>;
   maxByIndicator: Record<string, number>;
   granularity?: "state" | "city";
@@ -286,7 +333,7 @@ export interface CrosstabResult {
   grandTotal: number;
 }
 
-export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TableResult | TextResult | MapResult | HeatmapResult | ImageResult | CrosstabResult;
+export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TimeSeriesResult | TableResult | TextResult | MapResult | HeatmapResult | ImageResult | CrosstabResult;
 
 export const NUMERIC_FIELD_TYPES = ["number", "scale", "nps", "stars", "slider"] as const;
 export const CHOICE_FIELD_TYPES = ["single_choice", "multiple_choice", "yes_no", "weighted", "consent"] as const;
@@ -294,6 +341,7 @@ export const CHOICE_FIELD_TYPES = ["single_choice", "multiple_choice", "yes_no",
 export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string; icon: string; description: string }[] = [
   { value: "number_card", label: "Número",  icon: "ti-square-rounded-number-1", description: "Um valor só — contagem, soma, média..." },
   { value: "bar_chart",   label: "Barras",  icon: "ti-chart-bar",               description: "Comparar opções de um campo de escolha" },
+  { value: "line_chart",  label: "Linha",   icon: "ti-chart-line",              description: "Evolução das respostas ao longo do tempo" },
   { value: "pie_chart",   label: "Pizza",   icon: "ti-chart-pie",               description: "Proporção entre opções de escolha" },
   { value: "donut_chart", label: "Rosca",   icon: "ti-chart-donut",             description: "Como a pizza, com espaço central" },
   { value: "table",       label: "Tabela",  icon: "ti-table",                   description: "Lista de respostas, coluna por campo" },

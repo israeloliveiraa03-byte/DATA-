@@ -105,11 +105,16 @@ const config: Config = {
         "fade-in":    { from: { opacity: "0", transform: "translateY(2px)" }, to: { opacity: "1", transform: "translateY(0)" } },
         "pulse-soft": { "0%, 100%": { opacity: "1", transform: "scale(1)" }, "50%": { opacity: "0.55", transform: "scale(0.82)" } },
         "dot-pulse":  { "0%, 80%, 100%": { opacity: "0.35", transform: "scale(0.75)" }, "40%": { opacity: "1", transform: "scale(1)" } },
+        // Barra de progresso indeterminada — usada quando o navegador não
+        // informa Content-Length (raro, mas o mapa de calor municipal
+        // precisa de ALGUM feedback visual mesmo nesse caso).
+        "loading-indeterminate": { "0%": { transform: "translateX(-100%)" }, "100%": { transform: "translateX(300%)" } },
       },
       animation: {
         "fade-in":    "fade-in 0.15s ease-out both",
         "pulse-soft": "pulse-soft 2.4s ease-in-out infinite",
         "dot-pulse":  "dot-pulse 1s ease-in-out infinite",
+        "loading-indeterminate": "loading-indeterminate 1.1s ease-in-out infinite",
       },
     },
   },

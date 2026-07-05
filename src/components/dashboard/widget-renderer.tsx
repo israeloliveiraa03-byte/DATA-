@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { COLOR_PALETTES, type ColorPalette, type SupportedWidgetType, type WidgetData } from "@/lib/dashboard/types";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
+import { COLOR_PALETTES, type ColorPalette, type DisplayMode, type SupportedWidgetType, type TimeSeriesResult, type WidgetData } from "@/lib/dashboard/types";
 
 // Leaflet e three.js (via react-globe.gl) acessam `window`/`document`/WebGL
 // direto — não rodam em SSR. Aprendido do jeito difícil com o
@@ -63,7 +63,7 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
     if (data.kind === "heatmap") {
       const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
       if (!hasAnyData) return <EmptyState />;
-      return <GlobeHeatmapWidget data={data} palette={palette} />;
+      return <GlobeHeatmapWidget data={data} palette={palette} displayMode={config.displayMode === "percent" ? "percent" : "count"} />;
     }
     return <EmptyState />;
   }
@@ -82,8 +82,14 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
 
   if (data.kind === "choice") {
     if (data.buckets.length === 0) return <EmptyState />;
-    if (type === "bar_chart") return <BarChartView data={data.buckets} colors={palette.chartColors} />;
-    return <PieChartView data={data.buckets} donut={type === "donut_chart"} colors={palette.chartColors} />;
+    const displayMode: DisplayMode = config.displayMode === "percent" ? "percent" : "count";
+    if (type === "bar_chart") return <BarChartView data={data.buckets} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} />;
+    return <PieChartView data={data.buckets} donut={type === "donut_chart"} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} />;
+  }
+
+  if (data.kind === "timeseries") {
+    if (data.points.length === 0) return <EmptyState />;
+    return <LineChartView data={data} colors={palette.chartColors} />;
   }
 
   if (data.kind === "table") {
@@ -124,11 +130,17 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
   if (data.kind === "heatmap") {
     const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
     if (!hasAnyData) return <EmptyState />;
-    return <HeatmapWidget data={data} palette={palette} basemap={config.basemap as string | undefined} />;
+    return <HeatmapWidget data={data} palette={palette} basemap={config.basemap as string | undefined} displayMode={config.displayMode === "percent" ? "percent" : "count"} />;
   }
 
   if (data.kind === "crosstab") {
     if (data.rows.length === 0 || data.cols.length === 0 || data.grandTotal === 0) return <EmptyState />;
+    // Gráfico de barras com campo de comparação configurado recebe um
+    // resultado de cruzamento e desenha barras agrupadas (categoria A no
+    // eixo, uma barra por opção da categoria B, cor fixa por opção).
+    if (type === "bar_chart") {
+      return <GroupedBarView data={data} colors={palette.chartColors} displayMode={config.displayMode === "percent" ? "percent" : "count"} />;
+    }
     return <CrosstabView data={data} valueMode={(config.valueMode as string) ?? "count"} palette={palette} />;
   }
 
@@ -168,53 +180,156 @@ function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: st
   );
 }
 
-function ChartLegend({ data, colors }: { data: { label: string }[]; colors: string[] }) {
+// Legenda temática dos gráficos — chips arredondados com a marca de cor da
+// série, mesmo estilo já usado na legenda do mapa de pontos (o texto fica
+// sempre na cor de texto, nunca na cor da série — a identidade é do chip).
+// Regra: legenda sempre presente pra 2+ séries/categorias; pra 1 série só,
+// o título do widget já nomeia o dado — não renderiza chip nenhum.
+function ChartLegend({ data, colors, values }: { data: { label: string }[]; colors: string[]; values?: string[] }) {
+  if (data.length < 2) return null;
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center px-1 pt-1 flex-shrink-0">
+    <div className="flex flex-wrap gap-1 justify-center px-1 pt-1 flex-shrink-0">
       {data.map((d, i) => (
-        <span key={i} className="flex items-center gap-1 text-2xs" style={{ color: "#5c3f13" }}>
+        <span key={i} className="flex items-center gap-1 text-2xs rounded-full px-2 py-0.5"
+          style={{ color: "#5c3f13", border: "1px solid #e8d8be", background: "#fdfaf4" }}>
           <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[i % colors.length] }} />
           {d.label}
+          {values?.[i] !== undefined && <span style={{ color: "#a06d28" }}>{values[i]}</span>}
         </span>
       ))}
     </div>
   );
 }
 
-function BarChartView({ data, colors }: { data: { optionId: string; label: string; count: number }[]; colors: string[] }) {
+// Tooltip padrão dos gráficos recharts — mesma moldura terracota do resto.
+const TOOLTIP_STYLE = {
+  contentStyle: { border: "1px solid #e8d8be", borderRadius: 8, background: "#fff", fontSize: 11, padding: "6px 10px", boxShadow: "0 2px 6px rgba(22,23,26,0.08)" },
+  labelStyle: { color: "#5c3f13", fontWeight: 600 },
+  itemStyle: { color: "#111", padding: 0 },
+} as const;
+
+interface ChoiceViewProps {
+  data: { optionId: string; label: string; count: number }[];
+  colors: string[];
+  displayMode: DisplayMode;
+  totalResponses: number;
+}
+
+// "percent" = % das respostas que marcaram a opção (base: respostas que
+// responderam o campo; em múltipla escolha a soma pode passar de 100% de
+// propósito — cada resposta pode marcar mais de uma opção).
+function toPercent(count: number, total: number): number {
+  return total > 0 ? (count / total) * 100 : 0;
+}
+
+function BarChartView({ data, colors, displayMode, totalResponses }: ChoiceViewProps) {
+  const percent = displayMode === "percent";
+  const chartData = percent ? data.map(d => ({ ...d, count: toPercent(d.count, totalResponses) })) : data;
+  const fmt = (v: number) => percent ? `${formatNumber(v, 1)}%` : formatNumber(v);
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+          <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+            <CartesianGrid vertical={false} stroke="#f3e4cb" />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} />
-            <Tooltip />
+            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+              {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <ChartLegend data={data} colors={colors} />
+      <ChartLegend data={data} colors={colors} values={data.map(d => percent ? `${formatNumber(toPercent(d.count, totalResponses), 0)}%` : formatNumber(d.count))} />
     </div>
   );
 }
 
-function PieChartView({ data, donut, colors }: { data: { optionId: string; label: string; count: number }[]; donut: boolean; colors: string[] }) {
+function PieChartView({ data, donut, colors, displayMode, totalResponses }: ChoiceViewProps & { donut: boolean }) {
+  const percent = displayMode === "percent";
+  const fmt = (v: number) => percent ? `${formatNumber(toPercent(v, totalResponses), 1)}%` : formatNumber(v);
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%">
-              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+            <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}>
+              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} stroke="#fff" strokeWidth={1.5} />)}
             </Pie>
-            <Tooltip />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <ChartLegend data={data} colors={colors} />
+      <ChartLegend data={data} colors={colors} values={data.map(d => fmt(d.count))} />
+    </div>
+  );
+}
+
+// Formata a data do eixo/tooltip conforme o intervalo — dd/mm pra dia e
+// semana, mm/aa pra mês (rótulo curto, o tooltip carrega o completo).
+function formatBucketDate(dateKey: string, interval: "day" | "week" | "month"): string {
+  const [y, m, d] = dateKey.split("-");
+  return interval === "month" ? `${m}/${y.slice(2)}` : `${d}/${m}`;
+}
+
+function LineChartView({ data, colors }: { data: TimeSeriesResult; colors: string[] }) {
+  const chartData = data.points.map(p => ({ date: formatBucketDate(p.date, data.interval), ...p.values }));
+  const multi = data.series.length >= 2;
+  return (
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 6, right: 12, left: 0, bottom: 4 }}>
+            <CartesianGrid vertical={false} stroke="#f3e4cb" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#5c3f13" }} minTickGap={18} />
+            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} width={34} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [formatNumber(Number(v)), String(name)]} />
+            {data.series.map((s, i) => (
+              <Line key={s.key} type="monotone" dataKey={s.key} name={s.label}
+                stroke={colors[i % colors.length]} strokeWidth={2}
+                dot={chartData.length <= 40 ? { r: 2.5, strokeWidth: 0, fill: colors[i % colors.length] } : false}
+                activeDot={{ r: 4 }} isAnimationActive={false} />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      {multi && <ChartLegend data={data.series} colors={colors} />}
+    </div>
+  );
+}
+
+// Barras agrupadas — comparação categoria A × categoria B. A cor segue a
+// opção da categoria B (fixa, ordem das opções, nunca por valor); a legenda
+// nomeia as barras de cada grupo. "percent" = % dentro de cada grupo da
+// categoria A (as barras de um grupo somam 100%).
+function GroupedBarView({ data, colors, displayMode }: { data: Extract<WidgetData, { kind: "crosstab" }>; colors: string[]; displayMode: DisplayMode }) {
+  const percent = displayMode === "percent";
+  const chartData = data.rows.map((r, ri) => {
+    const entry: Record<string, string | number> = { label: r.label };
+    data.cols.forEach((c, ci) => {
+      const raw = data.cells[ri][ci];
+      entry[c.id] = percent ? (data.rowTotals[ri] > 0 ? (raw / data.rowTotals[ri]) * 100 : 0) : raw;
+    });
+    return entry;
+  });
+  const fmt = (v: number) => percent ? `${formatNumber(v, 1)}%` : formatNumber(v);
+  return (
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barGap={2}>
+            <CartesianGrid vertical={false} stroke="#f3e4cb" />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
+            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
+            {data.cols.map((c, i) => (
+              <Bar key={c.id} dataKey={c.id} name={c.label} fill={colors[i % colors.length]} radius={[4, 4, 0, 0]} maxBarSize={36} />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <ChartLegend data={data.cols} colors={colors} />
     </div>
   );
 }

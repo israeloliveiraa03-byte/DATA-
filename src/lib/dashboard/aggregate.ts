@@ -7,10 +7,12 @@ import {
   type ChoiceOption,
   type CountResult,
   type CrosstabResult,
+  type DashboardFilter,
   type HeatmapResult,
   type MapResult,
   type NumericResult,
   type TableResult,
+  type TimeSeriesResult,
   type WidgetData,
 } from "./types";
 
@@ -111,6 +113,115 @@ export function aggregateCrosstab(
   const grandTotal = rowTotals.reduce((a, b) => a + b, 0);
 
   return { kind: "crosstab", rows, cols, cells, rowTotals, colTotals, grandTotal };
+}
+
+// Filtro geral do dashboard — o MESMO recorte pra todos os widgets (data de
+// resposta e/ou uma opção de um campo de escolha). Usado tanto no editor
+// (client, preview ao vivo) quanto na rota pública (server) — os números de
+// todos os gráficos sempre batem entre si.
+export function filterResponses(responses: Response[], filter?: DashboardFilter): Response[] {
+  if (!filter || (!filter.from && !filter.to && !(filter.fieldId && filter.optionId))) return responses;
+
+  const fromTime = filter.from ? new Date(`${filter.from}T00:00:00`).getTime() : null;
+  const toTime   = filter.to   ? new Date(`${filter.to}T23:59:59.999`).getTime() : null;
+
+  return responses.filter(r => {
+    if (fromTime !== null || toTime !== null) {
+      const stamp = r.submittedAt ?? r.createdAt;
+      const t = stamp ? new Date(stamp).getTime() : NaN;
+      if (Number.isNaN(t)) return false;
+      if (fromTime !== null && t < fromTime) return false;
+      if (toTime !== null && t > toTime) return false;
+    }
+    if (filter.fieldId && filter.optionId) {
+      const raw = (r.data as Record<string, unknown> | null)?.[filter.fieldId];
+      if (!hasValue(raw)) return false;
+      const ids = Array.isArray(raw) ? raw : [raw];
+      if (!ids.includes(filter.optionId)) return false;
+    }
+    return true;
+  });
+}
+
+// Chave de agrupamento temporal em UTC (determinística entre servidor e
+// navegador): dia = yyyy-mm-dd, semana = segunda-feira da semana ISO,
+// mês = yyyy-mm-01.
+function bucketDate(iso: Date, interval: "day" | "week" | "month"): string {
+  const d = new Date(Date.UTC(iso.getUTCFullYear(), iso.getUTCMonth(), iso.getUTCDate()));
+  if (interval === "month") d.setUTCDate(1);
+  if (interval === "week") {
+    const weekday = (d.getUTCDay() + 6) % 7; // 0 = segunda
+    d.setUTCDate(d.getUTCDate() - weekday);
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+function nextBucket(dateKey: string, interval: "day" | "week" | "month"): string {
+  const d = new Date(`${dateKey}T00:00:00Z`);
+  if (interval === "day") d.setUTCDate(d.getUTCDate() + 1);
+  if (interval === "week") d.setUTCDate(d.getUTCDate() + 7);
+  if (interval === "month") d.setUTCMonth(d.getUTCMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// Evolução das respostas ao longo do tempo (submittedAt; respostas sem data
+// ficam de fora). Sem seriesField é uma linha só (total); com seriesField
+// (campo de escolha) vira uma linha por opção — comparação temporal.
+// Intervalos vazios entre o primeiro e o último ponto entram como zero de
+// propósito: pular períodos sem coleta faria a linha mentir a inclinação.
+export function aggregateTimeSeries(
+  responses: Response[],
+  interval: "day" | "week" | "month",
+  seriesField?: Pick<FormField, "id" | "type" | "config">,
+): TimeSeriesResult {
+  const TOTAL_KEY = "__total";
+  const series = seriesField
+    ? fieldOptions(seriesField).map(o => ({ key: o.id, label: o.label }))
+    : [{ key: TOTAL_KEY, label: "Respostas" }];
+  const seriesKeys = new Set(series.map(s => s.key));
+
+  const byBucket = new Map<string, Record<string, number>>();
+  for (const r of responses) {
+    if (!r.submittedAt) continue;
+    const date = new Date(r.submittedAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = bucketDate(date, interval);
+    let bucket = byBucket.get(key);
+    if (!bucket) { bucket = {}; byBucket.set(key, bucket); }
+
+    if (!seriesField) {
+      bucket[TOTAL_KEY] = (bucket[TOTAL_KEY] ?? 0) + 1;
+      continue;
+    }
+    const raw = (r.data as Record<string, unknown> | null)?.[seriesField.id];
+    if (!hasValue(raw)) continue;
+    const ids = Array.isArray(raw) ? raw : [raw];
+    for (const id of ids) {
+      if (typeof id !== "string" || !seriesKeys.has(id)) continue;
+      bucket[id] = (bucket[id] ?? 0) + 1;
+    }
+  }
+
+  const keys = Array.from(byBucket.keys()).sort();
+  if (keys.length === 0) return { kind: "timeseries", interval, series, points: [] };
+
+  // Preenche os buracos entre o primeiro e o último intervalo com zeros
+  // (limitado por segurança — um formulário de anos em intervalo diário
+  // não vira dezenas de milhares de pontos).
+  const points: TimeSeriesResult["points"] = [];
+  const last = keys[keys.length - 1];
+  let cursor = keys[0];
+  let guard = 0;
+  while (cursor <= last && guard < 2000) {
+    const bucket = byBucket.get(cursor) ?? {};
+    const values: Record<string, number> = {};
+    for (const s of series) values[s.key] = bucket[s.key] ?? 0;
+    points.push({ date: cursor, values });
+    cursor = nextBucket(cursor, interval);
+    guard++;
+  }
+
+  return { kind: "timeseries", interval, series, points };
 }
 
 function resolveDisplayValue(field: FormField | undefined, raw: unknown): unknown {
@@ -254,7 +365,7 @@ export function aggregateHeatmapByState(
 
   return {
     kind: "heatmap",
-    indicators: indicators.map(i => ({ key: i.key, label: i.label })),
+    indicators: indicators.map(i => ({ key: i.key, label: i.label, mode: i.mode })),
     byIndicator,
     maxByIndicator,
   };
@@ -298,9 +409,26 @@ export function computeWidgetData(widget: Pick<Widget, "type" | "config">, field
       const fieldId = typeof config.fieldId === "string" ? config.fieldId : "";
       const field = fields.find(f => f.id === fieldId);
       if (!field) return { kind: "choice", buckets: [], totalResponses: 0 };
+
+      // Barras agrupadas (comparação): um segundo campo de escolha divide
+      // cada opção do campo principal por opção do campo de comparação —
+      // reaproveita o motor do cruzamento (linhas = campo principal,
+      // colunas = campo de comparação), o renderer desenha como barras.
+      if (widget.type === "bar_chart" && typeof config.compareFieldId === "string" && config.compareFieldId) {
+        const compareField = fields.find(f => f.id === config.compareFieldId);
+        if (compareField) return aggregateCrosstab(responses, field, compareField);
+      }
+
       const result = aggregateChoiceCounts(responses, field);
       if (config.sortBy === "count_desc") result.buckets = [...result.buckets].sort((a, b) => b.count - a.count);
       return result;
+    }
+
+    case "line_chart": {
+      const interval = config.interval === "week" ? "week" : config.interval === "month" ? "month" : "day";
+      const seriesFieldId = typeof config.seriesFieldId === "string" ? config.seriesFieldId : undefined;
+      const seriesField = seriesFieldId ? fields.find(f => f.id === seriesFieldId) : undefined;
+      return aggregateTimeSeries(responses, interval, seriesField);
     }
 
     case "number_card": {

@@ -55,7 +55,21 @@ export async function PATCH(
   const parsed = updateDashboardSchema.safeParse(body);
   if (!parsed.success) return apiError(parsed.error.issues[0].message, 422);
 
-  const changes: typeof parsed.data & { publicSlug?: string } = { ...parsed.data };
+  const { canvasColor, ...rest } = parsed.data;
+  const changes: typeof rest & { publicSlug?: string; layout?: unknown } = { ...rest };
+
+  // canvasColor mora dentro do jsonb `layout` (sem coluna nova) — mescla com
+  // o que já existe pra não perder outras chaves; null remove a cor.
+  if (canvasColor !== undefined) {
+    const currentLayout = (dashboard.layout ?? {}) as Record<string, unknown>;
+    if (canvasColor === null) {
+      const { canvasColor: _removed, ...restLayout } = currentLayout;
+      void _removed;
+      changes.layout = restLayout;
+    } else {
+      changes.layout = { ...currentLayout, canvasColor };
+    }
+  }
 
   // Ao publicar pela primeira vez, gera o slug público (permanece o mesmo depois).
   if (parsed.data.isPublic && !dashboard.publicSlug) {
