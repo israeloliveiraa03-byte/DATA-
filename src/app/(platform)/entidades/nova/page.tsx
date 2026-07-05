@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ const EMPTY_FEATURE_COLLECTION: FeatureCollection = { type: "FeatureCollection",
 // Leaflet acessa `window` — precisa carregar só no cliente, sem SSR.
 const PolygonMapEditor = dynamic(
   () => import("@/components/entities/polygon-map-editor").then(m => m.PolygonMapEditor),
-  { ssr: false, loading: () => <div className="h-[360px] rounded-lg bg-gray-50 border border-gray-200 animate-pulse" /> }
+  { ssr: false, loading: () => <div className="h-[360px] rounded-lg bg-ink-900 border border-ink-700 animate-pulse" aria-label="Carregando mapa..." /> }
 );
 
 const TYPES = [
@@ -220,6 +221,7 @@ export default function NovaEntidadePage() {
         return;
       }
 
+      toast.success("Entidade criada com identificador persistente.");
       router.push(`/entidades/${json.data.id}`);
     } catch {
       setError("Erro de conexão. Tente novamente.");
@@ -229,27 +231,27 @@ export default function NovaEntidadePage() {
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-white">
+    <div className="flex-1 overflow-auto bg-ink-950">
       <div className="p-6 max-w-2xl mx-auto">
         <div className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-1">Catálogo Global</p>
-          <h1 className="text-2xl font-bold text-slate-900">Nova entidade</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-1">Catálogo Global</p>
+          <h1 className="text-2xl font-bold font-condensed text-ink-100">Nova entidade</h1>
+          <p className="text-sm text-ink-300 mt-0.5">
             Cadastre uma entidade com identificador persistente, pronta para ser vinculada a qualquer pesquisa.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="flex flex-col gap-1">
-            <label htmlFor="type" className="text-sm font-medium text-gray-700">
-              Tipo <span className="text-red-500">*</span>
+            <label htmlFor="type" className="text-sm font-medium text-ink-100">
+              Tipo <span className="text-coral-500">*</span>
             </label>
             <select
               id="type"
               value={type}
               onChange={e => setType(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
@@ -266,7 +268,7 @@ export default function NovaEntidadePage() {
           />
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="description" className="text-sm font-medium text-gray-700">Descrição</label>
+            <label htmlFor="description" className="text-sm font-medium text-ink-100">Descrição</label>
             <textarea
               id="description"
               rows={3}
@@ -274,16 +276,16 @@ export default function NovaEntidadePage() {
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Contexto, histórico ou observações relevantes..."
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+              className="w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
             />
           </div>
 
           {/* Pessoa: distinção pública/histórica x comum, com fluxo de convite */}
           {isPessoa && (
-            <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-              <p className="text-sm font-medium text-gray-700">Tipo de pessoa</p>
+            <div className="rounded-lg border border-ink-700 bg-ink-900 p-4 space-y-3">
+              <p className="text-sm font-medium text-ink-100">Tipo de pessoa</p>
               <div className="flex flex-col gap-2">
-                <label className="flex items-start gap-2 text-sm text-gray-700">
+                <label className="flex items-start gap-2 text-sm text-ink-100">
                   <input
                     type="radio"
                     name="personKind"
@@ -295,7 +297,7 @@ export default function NovaEntidadePage() {
                     <strong>Figura pública/histórica</strong> — pode ser cadastrada normalmente por um pesquisador.
                   </span>
                 </label>
-                <label className="flex items-start gap-2 text-sm text-gray-700">
+                <label className="flex items-start gap-2 text-sm text-ink-100">
                   <input
                     type="radio"
                     name="personKind"
@@ -310,7 +312,7 @@ export default function NovaEntidadePage() {
               </div>
 
               {isPessoaComum && (
-                <div className="pt-2 border-t border-gray-100 space-y-3">
+                <div className="pt-2 border-t border-ink-700 space-y-3">
                   <Input
                     label="Contato para envio do convite (opcional)"
                     value={inviteContact}
@@ -320,17 +322,17 @@ export default function NovaEntidadePage() {
                   <Button type="button" variant="secondary" loading={inviteLoading} onClick={generateInvite}>
                     Gerar link de convite
                   </Button>
-                  {inviteError && <p className="text-sm text-red-500">{inviteError}</p>}
+                  {inviteError && <p className="text-sm text-coral-500">{inviteError}</p>}
                   {inviteLink && (
-                    <div className="rounded-lg bg-brand-50 border border-brand-200 p-3 text-sm">
-                      <p className="text-brand-700 font-medium mb-1">Convite gerado — válido por 30 dias</p>
+                    <div className="rounded-lg bg-ink-800 border border-brand-500/40 p-3 text-sm">
+                      <p className="text-brand-400 font-medium mb-1">Convite gerado — válido por 30 dias</p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 truncate text-xs bg-white rounded px-2 py-1 border border-brand-200">{inviteLink}</code>
+                        <code className="flex-1 truncate text-xs bg-ink-950 text-ink-100 rounded px-2 py-1 border border-ink-700">{inviteLink}</code>
                         <Button
                           type="button"
                           size="sm"
                           variant="secondary"
-                          onClick={() => navigator.clipboard.writeText(inviteLink)}
+                          onClick={() => { navigator.clipboard.writeText(inviteLink); toast.success("Link do convite copiado."); }}
                         >
                           Copiar
                         </Button>
@@ -344,16 +346,16 @@ export default function NovaEntidadePage() {
 
           {/* Organização / entidade jurídica: documento público */}
           {isOrg && (
-            <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-              <p className="text-sm font-medium text-gray-700">Documento público <span className="text-red-500">*</span></p>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-ink-700 bg-ink-900 p-4 space-y-3">
+              <p className="text-sm font-medium text-ink-100">Documento público <span className="text-coral-500">*</span></p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="documentType" className="text-xs text-gray-500">Tipo</label>
+                  <label htmlFor="documentType" className="text-xs text-ink-300">Tipo</label>
                   <select
                     id="documentType"
                     value={documentType}
                     onChange={e => setDocumentType(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     {DOCUMENT_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                   </select>
@@ -371,8 +373,8 @@ export default function NovaEntidadePage() {
                   <Button type="button" size="sm" variant="secondary" loading={cnpjLoading} onClick={lookupCnpj}>
                     Buscar endereço via BrasilAPI
                   </Button>
-                  {cnpjError && <p className="text-xs text-red-500">{cnpjError}</p>}
-                  <p className="text-xs text-gray-400">Preenche automaticamente estado e município a partir do CNPJ.</p>
+                  {cnpjError && <p className="text-xs text-coral-500">{cnpjError}</p>}
+                  <p className="text-xs text-ink-500">Preenche automaticamente estado e município a partir do CNPJ.</p>
                 </div>
               )}
             </div>
@@ -380,14 +382,14 @@ export default function NovaEntidadePage() {
 
           {/* Estado/Município principal — não se aplica a pessoa comum (endereço vem do autocadastro) */}
           {!isPessoaComum && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="stateCode" className="text-sm font-medium text-gray-700">Estado</label>
+                <label htmlFor="stateCode" className="text-sm font-medium text-ink-100">Estado</label>
                 <select
                   id="stateCode"
                   value={stateCode}
                   onChange={e => { setStateCode(e.target.value); setCityCode(""); setCityName(""); }}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="">Selecione...</option>
                   {states.map(s => <option key={s.sigla} value={s.sigla}>{s.nome}</option>)}
@@ -395,7 +397,7 @@ export default function NovaEntidadePage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="cityCode" className="text-sm font-medium text-gray-700">Município</label>
+                <label htmlFor="cityCode" className="text-sm font-medium text-ink-100">Município</label>
                 <select
                   id="cityCode"
                   value={cityCode}
@@ -405,7 +407,7 @@ export default function NovaEntidadePage() {
                     setCityCode(e.target.value);
                     setCityName(city?.nome ?? "");
                   }}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-gray-50"
+                  className="w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">Selecione...</option>
                   {cities.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -416,10 +418,10 @@ export default function NovaEntidadePage() {
 
           {/* Território / comunidade: coordenadas, multi-município, polígono e mini-pesquisa de campo */}
           {isTerritorio && (
-            <div className="rounded-xl border border-gray-200 p-4 space-y-4">
+            <div className="rounded-lg border border-ink-700 bg-ink-900 p-4 space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Coordenadas (ponto de referência)</p>
-                <div className="grid grid-cols-2 gap-3">
+                <p className="text-sm font-medium text-ink-100 mb-2">Coordenadas (ponto de referência)</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input label="Latitude"  value={latitude}  onChange={e => setLatitude(e.target.value)}  placeholder="-15.7801" />
                   <Input label="Longitude" value={longitude} onChange={e => setLongitude(e.target.value)} placeholder="-47.9292" />
                 </div>
@@ -433,34 +435,34 @@ export default function NovaEntidadePage() {
                     value={pasteCoords}
                     onChange={e => setPasteCoords(e.target.value)}
                     placeholder="Colar coordenadas ou link do Google Maps"
-                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="flex-1 min-w-0 rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                   <Button type="button" size="sm" variant="secondary" onClick={applyPastedCoords}>Aplicar</Button>
                 </div>
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Municípios adicionais <span className="text-gray-400 font-normal">(território cruza divisas)</span>
+                <p className="text-sm font-medium text-ink-100 mb-2">
+                  Municípios adicionais <span className="text-ink-500 font-normal">(território cruza divisas)</span>
                 </p>
                 <MunicipalityPicker value={municipalities} onChange={setMunicipalities} />
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Marcação no mapa <span className="text-gray-400 font-normal">(opcional — contorno do território, pontos e trilhas de interesse)</span>
+                <p className="text-sm font-medium text-ink-100 mb-2">
+                  Marcação no mapa <span className="text-ink-500 font-normal">(opcional — contorno do território, pontos e trilhas de interesse)</span>
                 </p>
                 <PolygonMapEditor
                   value={boundaryPolygon}
                   onChange={setBoundaryPolygon}
                   center={latitude && longitude ? { lat: parseFloat(latitude), lng: parseFloat(longitude) } : undefined}
                 />
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-ink-500 mt-1">
                   Use o ícone de polígono no canto do mapa para desenhar o limite; dá pra editar ou apagar depois.
                 </p>
               </div>
 
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+              <div className="rounded-lg bg-amber-50 border border-amber-500/40 p-3 text-xs text-amber-500">
                 <p><strong>Mini-pesquisa de campo</strong> (captar pontos via GPS) já está disponível — fica em &quot;Captar pontos/limites em campo&quot;, na tela da entidade, depois de criá-la.</p>
               </div>
             </div>
@@ -468,25 +470,25 @@ export default function NovaEntidadePage() {
 
           {/* Região administrativa: divisões nomeadas, cada uma com seus municípios */}
           {isRegiao && (
-            <div className="rounded-xl border border-gray-200 p-4 space-y-4">
-              <p className="text-sm font-medium text-gray-700">
-                Divisões <span className="text-red-500">*</span>
-                <span className="text-gray-400 font-normal ml-1">(ex.: &quot;1ª Regional de Assistência Social&quot;, &quot;GRE Maceió&quot;)</span>
+            <div className="rounded-lg border border-ink-700 bg-ink-900 p-4 space-y-4">
+              <p className="text-sm font-medium text-ink-100">
+                Divisões <span className="text-coral-500">*</span>
+                <span className="text-ink-500 font-normal ml-1">(ex.: &quot;1ª Regional de Assistência Social&quot;, &quot;GRE Maceió&quot;)</span>
               </p>
               {adminDivisions.map((division, index) => (
-                <div key={index} className="rounded-lg border border-gray-100 bg-gray-50 p-3 space-y-2">
+                <div key={index} className="rounded-lg border border-ink-700 bg-ink-950 p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <input
                       value={division.name}
                       onChange={e => updateAdminDivisionName(index, e.target.value)}
                       placeholder="Nome da divisão"
-                      className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="flex-1 min-w-0 rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                     {adminDivisions.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeAdminDivision(index)}
-                        className="text-gray-400 hover:text-red-500"
+                        className="text-ink-500 hover:text-coral-500 transition-colors duration-150"
                         aria-label="Remover divisão"
                       >
                         <i className="ti ti-trash" />
@@ -499,15 +501,15 @@ export default function NovaEntidadePage() {
               <Button type="button" size="sm" variant="secondary" onClick={addAdminDivision}>
                 <i className="ti ti-plus" /> Adicionar divisão
               </Button>
-              <p className="text-xs text-gray-400">
-                TODO: no futuro, cada divisão poderá ser publicada numa biblioteca de regiões reutilizável, com atribuição ao criador.
+              <p className="text-xs text-ink-500">
+                No futuro, cada divisão poderá ser publicada numa biblioteca de regiões reutilizável, com atribuição ao criador.
               </p>
             </div>
           )}
 
           {error && (
-            <p className="text-sm text-red-500 flex items-center gap-1">
-              <i className="ti ti-alert-circle" /> {error}
+            <p className="text-sm text-coral-500 flex items-center gap-1">
+              <i className="ti ti-alert-circle" aria-hidden="true" /> {error}
             </p>
           )}
 

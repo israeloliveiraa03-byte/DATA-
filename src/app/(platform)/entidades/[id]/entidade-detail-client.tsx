@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -21,7 +22,7 @@ const PERSON_KIND_LABEL: Record<string, string> = { publica_historica: "Figura p
 
 const PolygonMapEditor = dynamic(
   () => import("@/components/entities/polygon-map-editor").then(m => m.PolygonMapEditor),
-  { ssr: false, loading: () => <div className="h-[320px] rounded-lg bg-gray-50 border border-gray-200 animate-pulse" /> }
+  { ssr: false, loading: () => <div className="h-[320px] rounded-lg bg-ink-900 border border-ink-700 animate-pulse" aria-label="Carregando mapa..." /> }
 );
 
 const TYPE_MAP: Record<string, { label: string; icon: string }> = {
@@ -98,6 +99,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
       if (!res.ok) { setPolygonError(json.error ?? "Erro ao salvar polígono"); return; }
       setEntity(json.data);
       setPolygonSaved(true);
+      toast.success("Marcação salva.");
       router.refresh();
     } catch {
       setPolygonError("Erro de conexão. Tente novamente.");
@@ -127,6 +129,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
       if (!res.ok) { setNameError(json.error ?? "Erro ao salvar"); return; }
       setEntity(json.data);
       setChangeNote("");
+      toast.success("Nome atualizado — nova versão registrada no histórico.");
       router.refresh();
       setVersions(prev => [
         { id: `local-${Date.now()}`, entityId: entity.id, version: (prev[0]?.version ?? 0) + 1, snapshot: json.data, changeNote: changeNote || "Atualização da entidade", changedBy: "", createdAt: new Date() },
@@ -156,6 +159,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
       setLinks(prev => [...prev, { ...json.data, research }]);
       setSelectedResearchId("");
       setRelationNote("");
+      toast.success("Entidade vinculada à pesquisa.");
     } catch {
       setLinkError("Erro de conexão. Tente novamente.");
     } finally {
@@ -164,33 +168,33 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-white">
+    <div className="flex-1 overflow-auto bg-ink-950">
       <div className="p-6 max-w-4xl mx-auto">
 
-        <div className="flex items-center gap-2 text-xs mb-5 text-slate-500">
-          <Link href="/entidades" className="hover:underline text-brand-600">Entidades</Link>
+        <nav aria-label="Você está em" className="flex items-center gap-2 text-xs mb-5 text-ink-300">
+          <Link href="/entidades" className="hover:underline text-brand-400">Entidades</Link>
           <i className="ti ti-chevron-right text-xs" />
-          <span className="text-slate-700">{entity.name}</span>
-        </div>
+          <span className="text-ink-100">{entity.name}</span>
+        </nav>
 
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <Badge variant="blue"><i className={`ti ${t.icon}`} /> {t.label}</Badge>
             <Badge variant={s.variant}>{s.label}</Badge>
-            <span className="text-xs font-mono text-slate-400">{entity.code}</span>
+            <span className="text-xs font-mono text-ink-300">{entity.code}</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">{entity.name}</h1>
-          {entity.description && <p className="text-sm text-slate-500 mt-1">{entity.description}</p>}
+          <h1 className="text-2xl font-bold font-condensed text-ink-100">{entity.name}</h1>
+          {entity.description && <p className="text-sm text-ink-300 mt-1">{entity.description}</p>}
           {entity.cityName && (
-            <p className="text-xs flex items-center gap-1 mt-2 text-slate-500">
-              <i className="ti ti-map-pin text-xs text-brand-500" />
+            <p className="text-xs flex items-center gap-1 mt-2 text-ink-300">
+              <i className="ti ti-map-pin text-xs text-brand-400" aria-hidden="true" />
               {entity.cityName}{entity.stateCode ? ` — ${entity.stateCode}` : ""}
             </p>
           )}
           {(entity.type === "territorio" || entity.type === "comunidade") && (
             <Link
               href={`/entidades/${entity.id}/campo`}
-              className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 mt-3"
+              className="inline-flex items-center gap-1 text-xs font-medium text-brand-400 hover:underline mt-3"
             >
               <i className="ti ti-map-pin-plus" /> Captar pontos/limites em campo
             </Link>
@@ -224,12 +228,12 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                 </CardHeader>
                 <CardContent>
                   {adminDivisions.length === 0 ? (
-                    <p className="text-xs text-slate-500">Nenhuma divisão cadastrada.</p>
+                    <p className="text-xs text-ink-300">Nenhuma divisão cadastrada.</p>
                   ) : (
                     <ul className="flex flex-col gap-3">
                       {adminDivisions.map(d => (
                         <li key={d.id}>
-                          <p className="text-sm font-semibold text-slate-800 mb-1">{d.name}</p>
+                          <p className="text-sm font-semibold text-ink-100 mb-1">{d.name}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {d.cities.map(c => (
                               <span key={c.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 text-xs px-2.5 py-1">
@@ -251,12 +255,12 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                   <CardTitle>Documento público</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-slate-800">
+                  <p className="text-sm text-ink-100">
                     <span className="font-semibold">{DOCUMENT_TYPE_LABEL[orgDocument.documentType] ?? orgDocument.documentType}</span>
                     {" "}— {orgDocument.documentNumber}
                   </p>
                   {orgDocument.officialAddress != null && (
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-ink-300 mt-1">
                       Endereço oficial (BrasilAPI) já vinculado ao cadastro.
                     </p>
                   )}
@@ -270,10 +274,10 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                   <CardTitle>Dados de pessoa</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-slate-800">
+                  <p className="text-sm text-ink-100">
                     {PERSON_KIND_LABEL[personDetails.personKind] ?? personDetails.personKind}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-ink-300 mt-1">
                     {personDetails.selfRegistered ? "Autocadastrada via convite" : "Cadastrada por um pesquisador"}
                   </p>
                 </CardContent>
@@ -286,14 +290,14 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
               </CardHeader>
               <CardContent>
                 {links.length === 0 ? (
-                  <p className="text-xs text-slate-500">Nenhuma pesquisa vinculada a esta entidade ainda.</p>
+                  <p className="text-xs text-ink-300 mb-2">Nenhuma pesquisa vinculada ainda — o conhecimento desta entidade fica visível nas pesquisas que você vincular abaixo.</p>
                 ) : (
                   <ul className="flex flex-col gap-2 mb-4">
                     {links.map(l => (
                       <li key={l.id}>
-                        <Link href={`/researches/${l.research.id}`} className="flex items-center justify-between px-3 py-2 rounded-md border border-slate-100 hover:border-brand-200 hover:bg-brand-50/40 transition-colors">
-                          <span className="text-sm font-medium text-slate-800">{l.research.title}</span>
-                          <i className="ti ti-arrow-right text-xs text-brand-500" />
+                        <Link href={`/researches/${l.research.id}`} className="flex items-center justify-between px-3 py-2 rounded-md border border-ink-700 hover:border-brand-500/40 hover:bg-ink-800 transition-colors duration-150">
+                          <span className="text-sm font-medium text-ink-100">{l.research.title}</span>
+                          <i className="ti ti-arrow-right text-xs text-brand-400" aria-hidden="true" />
                         </Link>
                       </li>
                     ))}
@@ -301,13 +305,13 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                 )}
 
                 {availableResearches.length > 0 && (
-                  <form onSubmit={linkToResearch} className="flex flex-col gap-2 pt-3 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-700">Vincular a uma pesquisa sua</p>
+                  <form onSubmit={linkToResearch} className="flex flex-col gap-2 pt-3 border-t border-ink-700">
+                    <p className="text-xs font-semibold text-ink-100">Vincular a uma pesquisa sua</p>
                     <div className="flex gap-2">
                       <select
                         value={selectedResearchId}
                         onChange={e => setSelectedResearchId(e.target.value)}
-                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        className="flex-1 min-w-0 rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
                       >
                         <option value="">Selecione uma pesquisa...</option>
                         {availableResearches.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
@@ -319,7 +323,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                       onChange={e => setRelationNote(e.target.value)}
                       placeholder="Nota sobre o vínculo (opcional)"
                     />
-                    {linkError && <p className="text-xs text-red-500">{linkError}</p>}
+                    {linkError && <p className="text-xs text-coral-500">{linkError}</p>}
                   </form>
                 )}
               </CardContent>
@@ -336,8 +340,8 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                     onChange={fc => { setBoundaryPolygon(fc); setPolygonSaved(false); }}
                     center={entity.latitude && entity.longitude ? { lat: parseFloat(entity.latitude), lng: parseFloat(entity.longitude) } : undefined}
                   />
-                  {polygonError && <p className="text-xs text-red-500 mt-2">{polygonError}</p>}
-                  {polygonSaved && <p className="text-xs text-teal-700 mt-2">Marcação salva.</p>}
+                  {polygonError && <p className="text-xs text-coral-500 mt-2">{polygonError}</p>}
+                  {polygonSaved && <p className="text-xs text-teal-500 mt-2">Marcação salva.</p>}
                   <div className="mt-3">
                     <Button
                       size="sm"
@@ -363,7 +367,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                     onChange={e => setChangeNote(e.target.value)}
                     placeholder="Nota sobre a alteração (opcional)"
                   />
-                  {nameError && <p className="text-xs text-red-500">{nameError}</p>}
+                  {nameError && <p className="text-xs text-coral-500">{nameError}</p>}
                   <div>
                     <Button type="submit" size="sm" loading={savingName} disabled={editingName.trim() === entity.name || editingName.trim().length < 3}>
                       Salvar alteração
@@ -385,9 +389,9 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                     <li key={v.id} className="text-xs">
                       <div className="flex items-center gap-2">
                         <Badge variant="default">v{v.version}</Badge>
-                        <span className="text-slate-400">{formatDateTime(v.createdAt)}</span>
+                        <span className="text-ink-500">{formatDateTime(v.createdAt)}</span>
                       </div>
-                      {v.changeNote && <p className="text-slate-600 mt-1">{v.changeNote}</p>}
+                      {v.changeNote && <p className="text-ink-300 mt-1">{v.changeNote}</p>}
                     </li>
                   ))}
                 </ul>

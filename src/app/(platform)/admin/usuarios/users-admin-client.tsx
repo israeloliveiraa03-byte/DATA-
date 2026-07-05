@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-const BRD = "1px solid #e8d8be";
-
 interface AdminUser {
   id: string; name: string; email: string;
   plan: string; role: string; institution: string | null;
   createdAt: Date;
 }
+
+const SELECT_CLASS = "text-xs rounded px-1.5 py-1 border border-ink-700 bg-ink-950 text-ink-100 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-wait";
 
 export function UsersAdminClient({ users }: { users: AdminUser[] }) {
   const [list, setList] = useState(users);
@@ -40,41 +40,46 @@ export function UsersAdminClient({ users }: { users: AdminUser[] }) {
 
   return (
     <div>
-      <input value={query} onChange={e => setQuery(e.target.value)}
-        placeholder="Buscar por nome ou e-mail..."
-        className="w-full max-w-sm px-3 py-2 text-sm rounded-md mb-4 focus:outline-none"
-        style={{ border: BRD, background: "#fff", color: "#111" }} />
+      <label htmlFor="busca-usuarios" className="sr-only">Buscar usuário por nome ou e-mail</label>
+      <div className="relative w-full max-w-sm mb-4">
+        <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-500" aria-hidden="true" />
+        <input id="busca-usuarios" value={query} onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar por nome ou e-mail..."
+          className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-ink-700 bg-ink-900 text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors duration-150" />
+      </div>
 
-      <div className="rounded-xl overflow-hidden" style={{ border: BRD, background: "#fff" }}>
-        <table className="w-full text-xs">
+      <div className="rounded-lg border border-ink-700 bg-ink-900 overflow-x-auto">
+        <table className="w-full text-xs min-w-[560px]">
           <thead>
-            <tr style={{ borderBottom: BRD }}>
-              <th className="px-3 py-2 text-left font-bold" style={{ color: "#c48a42" }}>Nome</th>
-              <th className="px-3 py-2 text-left font-bold" style={{ color: "#c48a42" }}>E-mail</th>
-              <th className="px-3 py-2 text-left font-bold" style={{ color: "#c48a42" }}>Instituição</th>
-              <th className="px-3 py-2 text-left font-bold" style={{ color: "#c48a42" }}>Plano</th>
-              <th className="px-3 py-2 text-left font-bold" style={{ color: "#c48a42" }}>Papel</th>
+            <tr className="border-b border-ink-700">
+              <th className="px-3 py-2 text-left font-bold font-condensed uppercase tracking-wide text-ink-300">Nome</th>
+              <th className="px-3 py-2 text-left font-bold font-condensed uppercase tracking-wide text-ink-300">E-mail</th>
+              <th className="px-3 py-2 text-left font-bold font-condensed uppercase tracking-wide text-ink-300">Instituição</th>
+              <th className="px-3 py-2 text-left font-bold font-condensed uppercase tracking-wide text-ink-300">Plano</th>
+              <th className="px-3 py-2 text-left font-bold font-condensed uppercase tracking-wide text-ink-300">Papel</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map(u => (
-              <tr key={u.id} style={{ borderBottom: BRD }}>
-                <td className="px-3 py-2 font-medium" style={{ color: "#5c3f13" }}>{u.name}</td>
-                <td className="px-3 py-2" style={{ color: "#5c3f13" }}>{u.email}</td>
-                <td className="px-3 py-2" style={{ color: "#a06d28" }}>{u.institution ?? "—"}</td>
+              <tr key={u.id} className="border-b border-ink-700 last:border-b-0">
+                <td className="px-3 py-2 font-medium text-ink-100">{u.name}</td>
+                <td className="px-3 py-2 text-ink-300">{u.email}</td>
+                <td className="px-3 py-2 text-ink-300">{u.institution ?? "—"}</td>
                 <td className="px-3 py-2">
-                  <select value={u.plan} disabled={savingId === u.id}
+                  <label htmlFor={`plan-${u.id}`} className="sr-only">Plano de {u.name}</label>
+                  <select id={`plan-${u.id}`} value={u.plan} disabled={savingId === u.id}
                     onChange={e => updateUser(u.id, { plan: e.target.value })}
-                    className="text-xs rounded px-1.5 py-1 focus:outline-none" style={{ border: BRD }}>
+                    className={SELECT_CLASS}>
                     <option value="free">Gratuito</option>
                     <option value="pro">Pro</option>
                     <option value="institution">Instituição</option>
                   </select>
                 </td>
                 <td className="px-3 py-2">
-                  <select value={u.role} disabled={savingId === u.id}
+                  <label htmlFor={`role-${u.id}`} className="sr-only">Papel de {u.name}</label>
+                  <select id={`role-${u.id}`} value={u.role} disabled={savingId === u.id}
                     onChange={e => updateUser(u.id, { role: e.target.value })}
-                    className="text-xs rounded px-1.5 py-1 focus:outline-none" style={{ border: BRD }}>
+                    className={SELECT_CLASS}>
                     <option value="user">Usuário</option>
                     <option value="support">Suporte</option>
                     <option value="admin">Admin</option>
@@ -83,7 +88,11 @@ export function UsersAdminClient({ users }: { users: AdminUser[] }) {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="px-3 py-6 text-center" style={{ color: "#a06d28" }}>Nenhum usuário encontrado.</td></tr>
+              <tr>
+                <td colSpan={5} className="px-3 py-8 text-center text-ink-300">
+                  Nenhum usuário encontrado para “{query}”. Tente outro nome ou e-mail.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

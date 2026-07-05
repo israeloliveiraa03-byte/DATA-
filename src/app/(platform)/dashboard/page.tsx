@@ -8,6 +8,8 @@ import { ResearchStatusBadge } from "@/components/ui/badge";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
+const CTA_CLASS = "inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold bg-brand-500 text-on-accent border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150";
+
 export default async function DashboardPage() {
   const session = await auth();
   const myResearches = await db.query.researches.findMany({
@@ -29,28 +31,25 @@ export default async function DashboardPage() {
   const firstName = session?.user?.name?.split(" ")[0] ?? "pesquisador";
 
   return (
-    <div className="flex-1 overflow-auto bg-white">
+    <div className="flex-1 overflow-auto bg-ink-950">
       <div className="p-6 max-w-5xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-7">
+        <div className="flex items-start justify-between gap-3 flex-wrap mb-7">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest bg-brand-50 border border-brand-200 text-brand-700">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest font-condensed bg-ink-900 border border-ink-700 text-ink-300">
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-brand-500" />
               Painel de controle
             </div>
-            <h1 className="font-serif font-semibold text-2xl text-slate-900" style={{ letterSpacing: "-0.4px" }}>
+            <h1 className="font-condensed font-bold text-2xl text-ink-100" style={{ letterSpacing: "-0.3px" }}>
               Olá, {firstName} 👋
             </h1>
-            <p className="text-sm font-medium mt-0.5 text-slate-500">
+            <p className="text-sm font-medium mt-0.5 text-ink-300">
               Gerencie suas pesquisas e visualize resultados.
             </p>
           </div>
 
-          <Link
-            href="/researches/new"
-            className="btn-elevate inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700 transition-colors"
-          >
+          <Link href="/researches/new" className={CTA_CLASS}>
             <i className="ti ti-plus" aria-hidden="true" />
             Nova pesquisa
           </Link>
@@ -59,14 +58,14 @@ export default async function DashboardPage() {
         {/* Métricas */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-7">
           {stats.map(stat => (
-            <div key={stat.label} className="rounded-xl p-4 border border-slate-200 bg-white shadow-xs">
+            <div key={stat.label} className="rounded-lg p-4 border border-ink-700 bg-ink-900">
               <div className="flex items-center justify-between mb-2">
-                <i className={`ti ${stat.icon} text-base text-brand-600`} aria-hidden="true" />
+                <i className={`ti ${stat.icon} text-base text-brand-400`} aria-hidden="true" />
               </div>
-              <p className="font-serif font-semibold text-2xl text-slate-900">
+              <p className="font-condensed font-bold text-2xl text-ink-100">
                 {stat.val}
               </p>
-              <p className="text-xs font-semibold mt-0.5 text-slate-500">
+              <p className="text-xs font-semibold mt-0.5 text-ink-300">
                 {stat.label}
               </p>
             </div>
@@ -77,24 +76,21 @@ export default async function DashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-brand-500" />
-            <h2 className="font-bold uppercase tracking-widest text-slate-500" style={{ fontSize: "10px" }}>
+            <h2 className="font-bold uppercase tracking-widest font-condensed text-ink-300" style={{ fontSize: "10px" }}>
               Pesquisas recentes
             </h2>
           </div>
-          <Link href="/researches" className="text-xs font-semibold text-brand-600 hover:text-brand-700">
+          <Link href="/researches" className="text-xs font-semibold text-brand-400 hover:underline">
             Ver todas →
           </Link>
         </div>
 
         {myResearches.length === 0 ? (
-          <div className="text-center py-16 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
-            <i className="ti ti-clipboard-list text-3xl block mb-3 text-slate-300" aria-hidden="true" />
-            <p className="text-sm font-semibold mb-1 text-slate-600">Nenhuma pesquisa ainda</p>
-            <p className="text-xs mb-5 text-slate-400">Crie sua primeira pesquisa para começar a coletar dados</p>
-            <Link
-              href="/researches/new"
-              className="btn-elevate inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700"
-            >
+          <div className="text-center py-16 rounded-lg border-2 border-dashed border-ink-700 bg-ink-900">
+            <i className="ti ti-clipboard-list text-3xl block mb-3 text-ink-500" aria-hidden="true" />
+            <p className="text-sm font-semibold mb-1 text-ink-100">Nenhuma pesquisa ainda</p>
+            <p className="text-xs mb-5 text-ink-300">Crie sua primeira pesquisa para começar a coletar dados</p>
+            <Link href="/researches/new" className={CTA_CLASS}>
               <i className="ti ti-plus" aria-hidden="true" /> Criar primeira pesquisa
             </Link>
           </div>
@@ -104,14 +100,14 @@ export default async function DashboardPage() {
               <Link
                 key={r.id}
                 href={`/researches/${r.id}`}
-                className="block rounded-xl p-4 border border-slate-200 bg-white shadow-xs transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-brand-200"
+                className="block rounded-lg p-4 border border-ink-700 bg-ink-900 transition-colors duration-150 hover:border-brand-500/40"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold truncate text-slate-900">{r.title}</p>
+                    <p className="text-sm font-bold truncate text-ink-100">{r.title}</p>
                     {r.cityName && (
-                      <p className="text-xs font-medium mt-0.5 flex items-center gap-1 text-slate-500">
-                        <i className="ti ti-map-pin text-xs text-brand-500" aria-hidden="true" />
+                      <p className="text-xs font-medium mt-0.5 flex items-center gap-1 text-ink-300">
+                        <i className="ti ti-map-pin text-xs text-brand-400" aria-hidden="true" />
                         {r.cityName}
                       </p>
                     )}
@@ -120,15 +116,15 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Barra de progresso decorativa */}
-                <div className="mt-3 h-1 rounded-full overflow-hidden bg-slate-100">
+                <div className="mt-3 h-1 rounded-full overflow-hidden bg-ink-700">
                   <div className="h-full rounded-full bg-brand-500" style={{ width: progressMap[r.status] ?? "20%" }} />
                 </div>
 
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs font-medium text-slate-500">
+                  <p className="text-xs font-medium text-ink-300">
                     {statusCopy[r.status] ?? "Rascunho"}
                   </p>
-                  <i className="ti ti-arrow-right text-xs text-brand-500" aria-hidden="true" />
+                  <i className="ti ti-arrow-right text-xs text-brand-400" aria-hidden="true" />
                 </div>
               </Link>
             ))}
@@ -136,11 +132,11 @@ export default async function DashboardPage() {
         )}
 
         {/* Dica rápida */}
-        <div className="mt-6 p-4 rounded-xl flex items-start gap-3 bg-brand-50 border border-brand-200">
-          <i className="ti ti-bulb text-lg flex-shrink-0 mt-0.5 text-brand-600" aria-hidden="true" />
+        <div className="mt-6 p-4 rounded-lg flex items-start gap-3 bg-ink-900 border border-brand-500/30">
+          <i className="ti ti-bulb text-lg flex-shrink-0 mt-0.5 text-brand-400" aria-hidden="true" />
           <div>
-            <p className="text-xs font-bold mb-0.5 text-brand-800">Dica</p>
-            <p className="text-xs font-medium leading-relaxed text-brand-700">
+            <p className="text-xs font-bold mb-0.5 text-ink-100">Dica</p>
+            <p className="text-xs font-medium leading-relaxed text-ink-300">
               Após criar uma pesquisa, adicione campos no construtor de formulários e compartilhe o link com seus respondentes.
             </p>
           </div>

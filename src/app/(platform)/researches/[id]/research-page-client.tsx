@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 
 import Link from "next/link";
 import QRCode from "qrcode";
+import { toast } from "sonner";
 import type { Research, Entity, ResearchEntity } from "@/lib/types";
 import type { ReliabilityStatus } from "@/lib/dashboard/reliability";
 import { SIGLA_TO_CODAREA } from "@/lib/geo/uf";
@@ -17,12 +18,12 @@ const ENTITY_TYPE_MAP: Record<string, { label: string; icon: string }> = {
   documento:  { label: "Documento",   icon: "ti-file-text" },
 };
 
-const STATUS_MAP: Record<string, { label: string; bg: string; color: string; dot: string }> = {
-  draft:     { label: "Rascunho",  bg: "#fbf3e7", color: "#7a5218", dot: "#c48a42" },
-  active:    { label: "Ativa",     bg: "#eaf0e4", color: "#3a5430", dot: "#4c6b3c" },
-  paused:    { label: "Pausada",   bg: "#faeeda", color: "#854f0b", dot: "#ba7517" },
-  closed:    { label: "Encerrada", bg: "#fdf0ef", color: "#8b2a1a", dot: "#c0392b" },
-  published: { label: "Publicada", bg: "#e8f0fe", color: "#1041b2", dot: "#1a56db" },
+const STATUS_MAP: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  draft:     { label: "Rascunho",  bg: "bg-ink-800",    text: "text-ink-300",   dot: "bg-ink-300" },
+  active:    { label: "Ativa",     bg: "bg-brand-50",   text: "text-brand-700", dot: "bg-brand-500" },
+  paused:    { label: "Pausada",   bg: "bg-amber-50",   text: "text-amber-500", dot: "bg-amber-500" },
+  closed:    { label: "Encerrada", bg: "bg-coral-50",   text: "text-coral-500", dot: "bg-coral-500" },
+  published: { label: "Publicada", bg: "bg-chart-1/15", text: "text-chart-1",   dot: "bg-chart-1" },
 };
 
 const THEME_MAP: Record<string, string> = {
@@ -31,6 +32,9 @@ const THEME_MAP: Record<string, string> = {
   territory: "Território", other: "Outro",
 };
 
+const FIELD_CLASS = "rounded-md border border-ink-700 bg-ink-950 text-ink-100 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500";
+const PILL_BTN = "flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold border border-ink-700 bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100 transition-colors duration-150";
+
 interface ResearchPageClientProps {
   research: Research;
   linkedEntities: (ResearchEntity & { entity: Entity })[];
@@ -38,7 +42,6 @@ interface ResearchPageClientProps {
 }
 
 export function ResearchPageClient({ research, linkedEntities, availableEntities }: ResearchPageClientProps) {
-  // // const router = useRouter();
   const [status,      setStatus]      = useState(research.status);
   const [copied,      setCopied]      = useState(false);
   const [showQR,      setShowQR]      = useState(false);
@@ -99,6 +102,9 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
         }),
       });
       await loadReliability();
+      toast.success("Configuração de confiabilidade salva.");
+    } catch {
+      toast.error("Erro de conexão ao salvar.");
     } finally {
       setReliabilitySaving(false);
     }
@@ -129,6 +135,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
       setRemainingEntities(prev => prev.filter(e => e.id !== selectedEntityId));
       setSelectedEntityId("");
       setRelationNote("");
+      toast.success("Entidade vinculada.");
     } catch {
       setLinkError("Erro de conexão. Tente novamente.");
     } finally {
@@ -142,7 +149,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   // toda vez que a página carrega.
   useEffect(() => {
     if (!showQR || qrDataUrl) return;
-    QRCode.toDataURL(publicUrl, { width: 256, margin: 1, color: { dark: "#5c3f13", light: "#ffffff" } })
+    QRCode.toDataURL(publicUrl, { width: 256, margin: 1, color: { dark: "#14140f", light: "#ffffff" } })
       .then(setQrDataUrl)
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,30 +164,35 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   }
 
   const s = STATUS_MAP[status] ?? STATUS_MAP.draft;
-  const BRD = "1px solid #e8d8be";
-  const TS  = { color: "#c48a42", fontSize: "9px" } as const;
 
   async function toggleStatus(newStatus: string) {
     setSaving(true);
     try {
-      await fetch(`/api/researches/${research.id}`, {
+      const res = await fetch(`/api/researches/${research.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (!res.ok) { toast.error("Erro ao atualizar status."); return; }
       setStatus(newStatus as Research["status"]);
+      toast.success("Status atualizado.");
+    } catch {
+      toast.error("Erro de conexão.");
     } finally { setSaving(false); }
   }
 
   async function saveCover(value: string | null) {
     setCoverSaving(true);
     try {
-      await fetch(`/api/researches/${research.id}`, {
+      const res = await fetch(`/api/researches/${research.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ coverImage: value }),
       });
+      if (!res.ok) { toast.error("Erro ao salvar capa."); return; }
       setCoverImage(value);
+    } catch {
+      toast.error("Erro de conexão.");
     } finally { setCoverSaving(false); }
   }
 
@@ -194,6 +206,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   function copyLink() {
     navigator.clipboard.writeText(publicUrl);
     setCopied(true);
+    toast.success("Link copiado.");
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -204,29 +217,28 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   }
 
   return (
-    <div className="flex-1 overflow-auto" style={{ background: "#fff" }}>
+    <div className="flex-1 overflow-auto bg-ink-950">
       {/* Capa da pesquisa */}
-      <div className="relative h-36 max-w-4xl mx-auto mt-6 rounded-xl overflow-hidden" style={{ border: BRD, background: "#fbf3e7" }}>
+      <div className="relative h-36 max-w-4xl mx-auto mt-6 rounded-lg overflow-hidden border border-ink-700 bg-ink-900">
         {coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element -- upload em base64 client-side, não é otimizável por next/image
           <img src={coverImage} alt="Capa da pesquisa" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <i className="ti ti-photo text-3xl" style={{ color: "#d9bb8c" }} />
+            <i className="ti ti-photo text-3xl text-ink-500" aria-hidden="true" />
           </div>
         )}
-        <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
+        <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} aria-label="Escolher imagem de capa" />
         <div className="absolute top-3 right-3 flex items-center gap-2">
           {coverImage && (
             <button onClick={() => saveCover(null)} disabled={coverSaving}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "#c0392b", backdropFilter: "blur(8px)" }}>
-              <i className="ti ti-x text-xs" /> Remover
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-ink-950/90 border border-ink-700 text-coral-500 backdrop-blur-sm disabled:opacity-50">
+              <i className="ti ti-x text-xs" aria-hidden="true" /> Remover
             </button>
           )}
           <button onClick={() => coverRef.current?.click()} disabled={coverSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "#5c3f13", backdropFilter: "blur(8px)" }}>
-            <i className="ti ti-camera text-xs" /> {coverImage ? "Trocar capa" : "Adicionar capa"}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-ink-950/90 border border-ink-700 text-ink-100 backdrop-blur-sm disabled:opacity-50">
+            <i className={coverSaving ? "ti ti-loader-2 animate-spin" : "ti ti-camera text-xs"} aria-hidden="true" /> {coverImage ? "Trocar capa" : "Adicionar capa"}
           </button>
         </div>
       </div>
@@ -234,58 +246,50 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
       <div className="p-6 max-w-4xl mx-auto">
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-xs mb-5" style={{ color: "#a06d28" }}>
-          <Link href="/dashboard" className="hover:underline" style={{ color: "#c48a42" }}>Dashboard</Link>
-          <i className="ti ti-chevron-right text-xs" />
-          <Link href="/researches" className="hover:underline" style={{ color: "#c48a42" }}>Pesquisas</Link>
-          <i className="ti ti-chevron-right text-xs" />
-          <span style={{ color: "#5c3f13" }}>{research.title}</span>
-        </div>
+        <nav aria-label="Você está em" className="flex items-center gap-2 text-xs mb-5 text-ink-300 flex-wrap">
+          <Link href="/dashboard" className="hover:underline text-brand-400">Dashboard</Link>
+          <i className="ti ti-chevron-right text-xs" aria-hidden="true" />
+          <Link href="/researches" className="hover:underline text-brand-400">Pesquisas</Link>
+          <i className="ti ti-chevron-right text-xs" aria-hidden="true" />
+          <span className="text-ink-100 truncate max-w-[50%]">{research.title}</span>
+        </nav>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex-1 min-w-0 mr-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                style={{ background: s.bg, color: s.color }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${s.bg} ${s.text}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                 {s.label}
               </span>
-              <span className="text-xs px-2 py-1 rounded-full font-medium"
-                style={{ background: "#fbf3e7", border: BRD, color: "#5c3f13" }}>
+              <span className="text-xs px-2 py-1 rounded-full font-medium bg-ink-900 border border-ink-700 text-ink-100">
                 {THEME_MAP[research.theme] ?? "Outro"}
               </span>
               {research.cityName && (
-                <span className="text-xs flex items-center gap-1" style={{ color: "#a06d28" }}>
-                  <i className="ti ti-map-pin text-xs" style={{ color: "#c48a42" }} />
+                <span className="text-xs flex items-center gap-1 text-ink-300">
+                  <i className="ti ti-map-pin text-xs text-brand-400" aria-hidden="true" />
                   {research.cityName}
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-bold" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif", letterSpacing: "-0.4px" }}>
+            <h1 className="text-2xl font-bold font-condensed text-ink-100" style={{ letterSpacing: "-0.3px" }}>
               {research.title}
             </h1>
             {research.description && (
-              <p className="text-sm mt-1 font-medium" style={{ color: "#5c3f13" }}>{research.description}</p>
+              <p className="text-sm mt-1 font-medium text-ink-300">{research.description}</p>
             )}
           </div>
 
           {/* Ações principais */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href={`/researches/${research.id}/form-builder`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors"
-              style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
-              <i className="ti ti-forms" /> Formulário
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <Link href={`/researches/${research.id}/form-builder`} className={PILL_BTN}>
+              <i className="ti ti-forms" aria-hidden="true" /> Formulário
             </Link>
-            <Link href={`/researches/${research.id}/responses`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors"
-              style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
-              <i className="ti ti-table" /> Respostas
+            <Link href={`/researches/${research.id}/responses`} className={PILL_BTN}>
+              <i className="ti ti-table" aria-hidden="true" /> Respostas
             </Link>
-            <Link href={`/researches/${research.id}/dashboard-builder`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors"
-              style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
-              <i className="ti ti-chart-bar" /> Dashboard
+            <Link href={`/researches/${research.id}/dashboard-builder`} className={PILL_BTN}>
+              <i className="ti ti-chart-bar" aria-hidden="true" /> Dashboard
             </Link>
           </div>
         </div>
@@ -296,44 +300,40 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
           <div className="md:col-span-2 flex flex-col gap-4">
 
             {/* Publicação */}
-            <div className="rounded-xl p-5" style={{ border: BRD, background: "#fff" }}>
+            <div className="rounded-lg p-5 border border-ink-700 bg-ink-900">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: "#fbf3e7" }}>
-                  <i className="ti ti-world text-sm" style={{ color: "#c48a42" }} />
+                <div className="w-7 h-7 rounded-md flex items-center justify-center bg-ink-800">
+                  <i className="ti ti-world text-sm text-brand-400" aria-hidden="true" />
                 </div>
-                <h2 className="text-sm font-bold" style={{ color: "#0f172a" }}>Publicação</h2>
+                <h2 className="text-sm font-bold text-ink-100">Publicação</h2>
               </div>
 
               {/* Toggle coleta */}
-              <div className="flex items-center justify-between p-3 rounded-lg mb-4"
-                style={{ background: "#fbf3e7", border: BRD }}>
+              <div className="flex items-center justify-between gap-3 flex-wrap p-3 rounded-lg mb-4 bg-ink-800 border border-ink-700">
                 <div>
-                  <p className="text-xs font-bold" style={{ color: "#0f172a" }}>
+                  <p className="text-xs font-bold text-ink-100">
                     {status === "active" ? "Coleta ativa" : status === "published" ? "Publicada" : "Coleta pausada"}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: "#a06d28" }}>
+                  <p className="text-xs mt-0.5 text-ink-300">
                     {status === "active" ? "Respondentes podem acessar o formulário" : "O formulário não está aceitando respostas"}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {status !== "active" && status !== "published" ? (
                     <button onClick={() => toggleStatus("active")} disabled={saving}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
-                      style={{ background: "#4c6b3c", color: "#fff" }}>
-                      <i className="ti ti-player-play" /> Ativar coleta
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-teal-500 text-on-accent disabled:opacity-50 transition-colors duration-150">
+                      <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-player-play"} aria-hidden="true" /> Ativar coleta
                     </button>
                   ) : (
                     <button onClick={() => toggleStatus("paused")} disabled={saving}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
-                      style={{ background: "#faeeda", color: "#854f0b", border: "1px solid #d2a05c" }}>
-                      <i className="ti ti-player-pause" /> Pausar coleta
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-amber-50 text-amber-500 border border-amber-500/30 disabled:opacity-50 transition-colors duration-150">
+                      <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-player-pause"} aria-hidden="true" /> Pausar coleta
                     </button>
                   )}
                   {status !== "published" && (
                     <button onClick={() => toggleStatus("published")} disabled={saving}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
-                      style={{ background: "#c48a42", color: "#fff" }}>
-                      <i className="ti ti-world-upload" /> Publicar
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-brand-500 text-on-accent disabled:opacity-50 transition-colors duration-150">
+                      <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-world-upload"} aria-hidden="true" /> Publicar
                     </button>
                   )}
                 </div>
@@ -341,20 +341,17 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
 
               {/* Modo de acesso */}
               <div className="mb-4">
-                <p className="text-xs font-bold uppercase tracking-widest mb-2" style={TS}>Modo de acesso</p>
+                <p className="text-xs font-bold uppercase tracking-widest font-condensed mb-2 text-brand-400">Modo de acesso</p>
                 <div className="flex gap-2">
                   {[
                     { key: "public",     icon: "ti-world",    label: "Link público" },
                     { key: "restricted", icon: "ti-lock",     label: "Acesso restrito" },
                   ].map(mode => (
                     <button key={mode.key} onClick={() => setAccessMode(mode.key as "public" | "restricted")}
-                      className="flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-all"
-                      style={{
-                        border: accessMode === mode.key ? "1.5px solid #c48a42" : BRD,
-                        background: accessMode === mode.key ? "#fbf3e7" : "#fbf3e7",
-                        color: accessMode === mode.key ? "#7a5218" : "#5c3f13",
-                      }}>
-                      <i className={`ti ${mode.icon}`} /> {mode.label}
+                      className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors duration-150 border ${
+                        accessMode === mode.key ? "border-brand-500 bg-ink-800 text-brand-400" : "border-ink-700 bg-ink-800 text-ink-300"
+                      }`}>
+                      <i className={`ti ${mode.icon}`} aria-hidden="true" /> {mode.label}
                     </button>
                   ))}
                 </div>
@@ -363,48 +360,39 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
               {/* Link público */}
               {accessMode === "public" && (
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest mb-2" style={TS}>Link do formulário</p>
-                  <div className="flex gap-2">
-                    <div className="flex-1 px-3 py-2 rounded-md text-xs font-medium overflow-hidden"
-                      style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
+                  <p className="text-xs font-bold uppercase tracking-widest font-condensed mb-2 text-brand-400">Link do formulário</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <div className="flex-1 min-w-0 px-3 py-2 rounded-md text-xs font-medium overflow-hidden border border-ink-700 bg-ink-800 text-ink-100">
                       <span className="truncate block">{publicUrl}</span>
                     </div>
                     <button onClick={copyLink}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-colors"
-                      style={{ background: copied ? "#4c6b3c" : "#c48a42", color: "#fff" }}>
-                      <i className={`ti ${copied ? "ti-check" : "ti-copy"}`} />
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-colors duration-150 text-on-accent ${copied ? "bg-teal-500" : "bg-brand-500"}`}>
+                      <i className={`ti ${copied ? "ti-check" : "ti-copy"}`} aria-hidden="true" />
                       {copied ? "Copiado!" : "Copiar"}
                     </button>
                   </div>
 
-                  <div className="flex gap-2 mt-2">
-                    <button onClick={() => setShowQR(!showQR)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold"
-                      style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
-                      <i className="ti ti-qrcode" /> {showQR ? "Ocultar" : "Ver"} QR Code
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    <button onClick={() => setShowQR(!showQR)} className={PILL_BTN}>
+                      <i className="ti ti-qrcode" aria-hidden="true" /> {showQR ? "Ocultar" : "Ver"} QR Code
                     </button>
-                    <a href={publicUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold"
-                      style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
-                      <i className="ti ti-external-link" /> Abrir link
+                    <a href={publicUrl} target="_blank" rel="noopener noreferrer" className={PILL_BTN}>
+                      <i className="ti ti-external-link" aria-hidden="true" /> Abrir link
                     </a>
                   </div>
 
                   {showQR && (
-                    <div className="mt-3 p-4 rounded-lg flex flex-col items-center gap-2"
-                      style={{ border: BRD, background: "#fbf3e7" }}>
-                      <div className="w-32 h-32 rounded-lg flex items-center justify-center overflow-hidden"
-                        style={{ background: "#fff", border: BRD }}>
+                    <div className="mt-3 p-4 rounded-lg flex flex-col items-center gap-2 border border-ink-700 bg-ink-800">
+                      <div className="w-32 h-32 rounded-lg flex items-center justify-center overflow-hidden bg-white border border-ink-700">
                         {qrDataUrl
                           ? // eslint-disable-next-line @next/next/no-img-element -- imagem gerada em base64 no cliente
                             <img src={qrDataUrl} alt="QR Code do formulário" className="w-full h-full" />
-                          : <i className="ti ti-loader-2 animate-spin text-2xl" style={{ color: "#c48a42" }} />}
+                          : <i className="ti ti-loader-2 animate-spin text-2xl text-brand-400" aria-hidden="true" />}
                       </div>
-                      <p className="text-xs font-semibold" style={{ color: "#5c3f13" }}>QR Code do formulário</p>
+                      <p className="text-xs font-semibold text-ink-100">QR Code do formulário</p>
                       <button onClick={downloadQr} disabled={!qrDataUrl}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
-                        style={{ background: "#c48a42", color: "#fff" }}>
-                        <i className="ti ti-download" /> Baixar QR Code
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-brand-500 text-on-accent disabled:opacity-50 transition-colors duration-150">
+                        <i className="ti ti-download" aria-hidden="true" /> Baixar QR Code
                       </button>
                     </div>
                   )}
@@ -414,33 +402,31 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
               {/* Acesso restrito */}
               {accessMode === "restricted" && (
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest mb-2" style={TS}>Pesquisadores autorizados</p>
+                  <p className="text-xs font-bold uppercase tracking-widest font-condensed mb-2 text-brand-400">Pesquisadores autorizados</p>
                   <div className="flex gap-2 mb-2">
-                    <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                    <label htmlFor="convite-email" className="sr-only">E-mail do pesquisador a convidar</label>
+                    <input id="convite-email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && addInvite()}
                       placeholder="email@instituicao.br"
-                      className="flex-1 px-3 py-2 rounded-md text-xs border focus:outline-none"
-                      style={{ border: BRD, background: "#fff", color: "#3d2a0d" }} />
+                      className={`flex-1 min-w-0 ${FIELD_CLASS}`} />
                     <button onClick={addInvite}
-                      className="px-3 py-2 rounded-md text-xs font-bold"
-                      style={{ background: "#c48a42", color: "#fff" }}>
-                      <i className="ti ti-plus" /> Convidar
+                      className="px-3 py-2 rounded-md text-xs font-bold bg-brand-500 text-on-accent transition-colors duration-150">
+                      <i className="ti ti-plus" aria-hidden="true" /> Convidar
                     </button>
                   </div>
                   {invites.length === 0 ? (
-                    <p className="text-xs py-3 text-center" style={{ color: "#a06d28" }}>Nenhum pesquisador convidado ainda</p>
+                    <p className="text-xs py-3 text-center text-ink-300">Nenhum pesquisador convidado ainda</p>
                   ) : (
                     <div className="flex flex-col gap-1">
                       {invites.map(email => (
-                        <div key={email} className="flex items-center justify-between px-3 py-2 rounded-md text-xs"
-                          style={{ border: BRD, background: "#fbf3e7" }}>
+                        <div key={email} className="flex items-center justify-between px-3 py-2 rounded-md text-xs border border-ink-700 bg-ink-800">
                           <div className="flex items-center gap-2">
-                            <i className="ti ti-user-circle" style={{ color: "#c48a42" }} />
-                            <span style={{ color: "#5c3f13" }}>{email}</span>
+                            <i className="ti ti-user-circle text-brand-400" aria-hidden="true" />
+                            <span className="text-ink-100">{email}</span>
                           </div>
                           <button onClick={() => setInvites(prev => prev.filter(e => e !== email))}
-                            className="text-gray-300 hover:text-red-400">
-                            <i className="ti ti-x text-xs" />
+                            className="text-ink-500 hover:text-coral-500 transition-colors duration-150" aria-label={`Remover convite de ${email}`}>
+                            <i className="ti ti-x text-xs" aria-hidden="true" />
                           </button>
                         </div>
                       ))}
@@ -451,55 +437,52 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
             </div>
 
             {/* Confiabilidade estatística */}
-            <div className="rounded-xl p-5" style={{ border: BRD, background: "#fff" }}>
-              <div className="flex items-center justify-between mb-1">
+            <div className="rounded-lg p-5 border border-ink-700 bg-ink-900">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: "#eaf0e4" }}>
-                    <i className="ti ti-chart-arcs text-sm" style={{ color: "#4c6b3c" }} />
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center bg-ink-800">
+                    <i className="ti ti-chart-arcs text-sm text-teal-500" aria-hidden="true" />
                   </div>
-                  <h2 className="text-sm font-bold" style={{ color: "#0f172a" }}>Confiabilidade estatística</h2>
+                  <h2 className="text-sm font-bold text-ink-100">Confiabilidade estatística</h2>
                 </div>
-                <button onClick={() => setShowReliabilityHelp(v => !v)} className="text-2xs font-semibold underline" style={{ color: "#a06d28" }}>
+                <button onClick={() => setShowReliabilityHelp(v => !v)} className="text-2xs font-semibold underline text-ink-300 hover:text-ink-100">
                   {showReliabilityHelp ? "Ocultar explicação" : "Como isso é calculado?"}
                 </button>
               </div>
 
               {showReliabilityHelp && (
-                <div className="text-2xs rounded-lg p-3 mb-3 mt-2" style={{ background: "#fbf3e7", color: "#5c3f13", lineHeight: 1.6 }}>
+                <div className="text-2xs rounded-lg p-3 mb-3 mt-2 bg-ink-800 text-ink-300 leading-relaxed">
                   <p className="mb-1.5">Calculamos quantas respostas você precisa pra ter confiança estatística nos
                   resultados, usando a fórmula de Cochran (a mesma usada em pesquisas de opinião e amostragem de censo).</p>
-                  <p className="mb-1.5"><strong>Nível de confiança</strong>: se você repetisse essa pesquisa 100 vezes,
+                  <p className="mb-1.5"><strong className="text-ink-100">Nível de confiança</strong>: se você repetisse essa pesquisa 100 vezes,
                   em quantas o resultado ficaria dentro da margem de erro.</p>
-                  <p className="mb-1.5"><strong>Margem de erro</strong>: o quanto o resultado pode variar pra mais ou pra menos.</p>
+                  <p className="mb-1.5"><strong className="text-ink-100">Margem de erro</strong>: o quanto o resultado pode variar pra mais ou pra menos.</p>
                   <p>Se sua pesquisa cobre várias regiões/estados com contextos muito diferentes, estratificar por
                   estado (abaixo) evita que uma região fique sub-representada mesmo que o total geral já pareça suficiente.</p>
                 </div>
               )}
 
               {/* Config */}
-              <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
                 <div>
-                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>Universo</label>
-                  <input type="number" min={0} value={universeInput} onChange={e => setUniverseInput(e.target.value)}
+                  <label htmlFor="rel-universo" className="text-2xs font-bold uppercase block mb-1 text-ink-300">Universo</label>
+                  <input id="rel-universo" type="number" min={0} value={universeInput} onChange={e => setUniverseInput(e.target.value)}
                     placeholder="Ex: 50000"
-                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none"
-                    style={{ border: BRD, background: "#fff", color: "#111" }} />
+                    className={`w-full ${FIELD_CLASS}`} />
                 </div>
                 <div>
-                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>Confiança</label>
-                  <select value={confidenceLevel} onChange={e => setConfidenceLevelInput(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none"
-                    style={{ border: BRD, background: "#fff", color: "#111" }}>
+                  <label htmlFor="rel-confianca" className="text-2xs font-bold uppercase block mb-1 text-ink-300">Confiança</label>
+                  <select id="rel-confianca" value={confidenceLevel} onChange={e => setConfidenceLevelInput(Number(e.target.value))}
+                    className={`w-full ${FIELD_CLASS}`}>
                     <option value={90}>90%</option>
                     <option value={95}>95%</option>
                     <option value={99}>99%</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>Margem de erro</label>
-                  <select value={marginErrorInput} onChange={e => setMarginErrorInput(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none"
-                    style={{ border: BRD, background: "#fff", color: "#111" }}>
+                  <label htmlFor="rel-margem" className="text-2xs font-bold uppercase block mb-1 text-ink-300">Margem de erro</label>
+                  <select id="rel-margem" value={marginErrorInput} onChange={e => setMarginErrorInput(Number(e.target.value))}
+                    className={`w-full ${FIELD_CLASS}`}>
                     <option value={1}>±1%</option>
                     <option value={3}>±3%</option>
                     <option value={5}>±5%</option>
@@ -511,12 +494,11 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
               {/* Estratificação por estado/região */}
               {geoFields.length > 0 && (
                 <div className="mb-3">
-                  <label className="text-2xs font-bold uppercase block mb-1" style={{ color: "#a06d28" }}>
+                  <label htmlFor="rel-estrato" className="text-2xs font-bold uppercase block mb-1 text-ink-300">
                     Estratificar por (opcional — pra pesquisas nacionais/multi-região)
                   </label>
-                  <select value={stratumFieldId} onChange={e => setStratumFieldId(e.target.value)}
-                    className="w-full px-2 py-1.5 rounded-md text-xs border focus:outline-none mb-2"
-                    style={{ border: BRD, background: "#fff", color: "#111" }}>
+                  <select id="rel-estrato" value={stratumFieldId} onChange={e => setStratumFieldId(e.target.value)}
+                    className={`w-full mb-2 ${FIELD_CLASS}`}>
                     <option value="">Não estratificar (só meta geral)</option>
                     {geoFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                   </select>
@@ -525,23 +507,23 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                     <div className="flex flex-col gap-1.5">
                       {Object.entries(stratumUniverses).map(([key, val]) => (
                         <div key={key} className="flex items-center gap-2">
-                          <span className="text-xs font-mono w-10" style={{ color: "#5c3f13" }}>{key}</span>
-                          <input type="number" min={0} value={val}
+                          <span className="text-xs font-mono w-10 text-ink-100">{key}</span>
+                          <label htmlFor={`rel-estrato-${key}`} className="sr-only">Universo de {key}</label>
+                          <input id={`rel-estrato-${key}`} type="number" min={0} value={val}
                             onChange={e => setStratumUniverses(prev => ({ ...prev, [key]: e.target.value }))}
                             placeholder="Universo desse estado"
-                            className="flex-1 px-2 py-1 rounded-md text-xs border focus:outline-none"
-                            style={{ border: BRD, background: "#fff", color: "#111" }} />
+                            className={`flex-1 min-w-0 ${FIELD_CLASS}`} />
                           <button onClick={() => setStratumUniverses(prev => { const n = { ...prev }; delete n[key]; return n; })}
-                            className="text-gray-300 hover:text-red-400">
-                            <i className="ti ti-x text-xs" />
+                            className="text-ink-500 hover:text-coral-500 transition-colors duration-150" aria-label={`Remover estrato ${key}`}>
+                            <i className="ti ti-x text-xs" aria-hidden="true" />
                           </button>
                         </div>
                       ))}
                       <div className="flex items-center gap-2">
-                        <select value={addStratumKey} onChange={e => {
+                        <label htmlFor="rel-add-estrato" className="sr-only">Adicionar estado ao estrato</label>
+                        <select id="rel-add-estrato" value={addStratumKey} onChange={e => {
                           if (e.target.value) { setStratumUniverses(prev => ({ ...prev, [e.target.value]: "" })); setAddStratumKey(""); }
-                        }} className="flex-1 px-2 py-1.5 rounded-md text-xs border focus:outline-none"
-                          style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
+                        }} className={`flex-1 min-w-0 ${FIELD_CLASS}`}>
                           <option value="">+ Adicionar estado...</option>
                           {Object.keys(SIGLA_TO_CODAREA).filter(uf => !(uf in stratumUniverses)).map(uf => (
                             <option key={uf} value={uf}>{uf}</option>
@@ -554,51 +536,47 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
               )}
 
               <button onClick={saveReliabilityConfig} disabled={reliabilitySaving}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50 mb-3"
-                style={{ background: "#c48a42", color: "#fff" }}>
-                <i className={`ti ${reliabilitySaving ? "ti-loader-2 animate-spin" : "ti-device-floppy"}`} /> Salvar configuração
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50 mb-3 bg-brand-500 text-on-accent transition-colors duration-150">
+                <i className={`ti ${reliabilitySaving ? "ti-loader-2 animate-spin" : "ti-device-floppy"}`} aria-hidden="true" /> Salvar configuração
               </button>
 
               {/* Progresso */}
               {reliability?.configured && (
-                <div className="pt-3" style={{ borderTop: BRD }}>
-                  <div className="p-3 rounded-lg mb-2" style={{ background: reliability.overall.met ? "#eaf0e4" : "#fbf3e7", border: BRD }}>
+                <div className="pt-3 border-t border-ink-700">
+                  <div className={`p-3 rounded-lg mb-2 border border-ink-700 ${reliability.overall.met ? "bg-teal-50/10" : "bg-ink-800"}`}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-bold" style={{ color: reliability.overall.met ? "#3a5430" : "#7a5218" }}>
+                      <span className={`text-xs font-bold ${reliability.overall.met ? "text-teal-500" : "text-amber-500"}`}>
                         {reliability.overall.met ? "✓ Meta geral atingida" : "Meta geral em progresso"}
                       </span>
-                      <span className="text-xs font-mono" style={{ color: "#5c3f13" }}>
+                      <span className="text-xs font-mono text-ink-100">
                         {reliability.overall.current} / {reliability.overall.required}
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#f3e4cb" }}>
-                      <div style={{
-                        width: `${Math.min(100, (reliability.overall.current / reliability.overall.required) * 100)}%`,
-                        background: reliability.overall.met ? "#4c6b3c" : "#c48a42", height: "100%",
-                      }} />
+                    <div className="h-1.5 rounded-full overflow-hidden bg-ink-700">
+                      <div className={`h-full ${reliability.overall.met ? "bg-teal-500" : "bg-brand-500"}`}
+                        style={{ width: `${Math.min(100, (reliability.overall.current / reliability.overall.required) * 100)}%` }} />
                     </div>
                   </div>
 
                   {reliability.mode === "stratified" && reliability.strata.length > 0 && (
                     <div className="flex flex-col gap-1 mb-2">
                       {reliability.strata.map(s => (
-                        <div key={s.key} className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-md"
-                          style={{ border: BRD, background: s.met ? "#eaf0e4" : "#fff" }}>
-                          <span style={{ color: "#5c3f13" }}>{s.met && "✓ "}{s.label}</span>
-                          <span className="font-mono" style={{ color: "#5c3f13" }}>{s.current} / {s.required}</span>
+                        <div key={s.key} className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-md border border-ink-700 ${s.met ? "bg-teal-50/10" : "bg-ink-900"}`}>
+                          <span className="text-ink-100">{s.met && "✓ "}{s.label}</span>
+                          <span className="font-mono text-ink-100">{s.current} / {s.required}</span>
                         </div>
                       ))}
                     </div>
                   )}
 
                   {reliability.perResearcher && reliability.perResearcher.length > 0 && (
-                    <div className="mt-2 pt-2" style={{ borderTop: BRD }}>
-                      <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Por pesquisador</p>
+                    <div className="mt-2 pt-2 border-t border-ink-700">
+                      <p className="text-2xs font-bold uppercase mb-1.5 text-ink-300">Por pesquisador</p>
                       <div className="flex flex-col gap-1">
                         {reliability.perResearcher.map(r => (
                           <div key={r.userId} className="flex items-center justify-between text-xs">
-                            <span style={{ color: "#5c3f13" }}>{r.met && "✓ "}{r.name}</span>
-                            <span className="font-mono" style={{ color: "#5c3f13" }}>{r.current} / {r.quota}</span>
+                            <span className="text-ink-100">{r.met && "✓ "}{r.name}</span>
+                            <span className="font-mono text-ink-100">{r.current} / {r.quota}</span>
                           </div>
                         ))}
                       </div>
@@ -609,26 +587,23 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
             </div>
 
             {/* Testar formulário */}
-            <div className="rounded-xl p-5" style={{ border: BRD, background: "#fff" }}>
+            <div className="rounded-lg p-5 border border-ink-700 bg-ink-900">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: "#eaf0e4" }}>
-                  <i className="ti ti-test-pipe text-sm" style={{ color: "#4c6b3c" }} />
+                <div className="w-7 h-7 rounded-md flex items-center justify-center bg-ink-800">
+                  <i className="ti ti-test-pipe text-sm text-teal-500" aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold" style={{ color: "#0f172a" }}>Testar formulário</h2>
-                  <p className="text-xs" style={{ color: "#a06d28" }}>As respostas de teste não são salvas</p>
+                  <h2 className="text-sm font-bold text-ink-100">Testar formulário</h2>
+                  <p className="text-xs text-ink-300">As respostas de teste não são salvas</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Link href={`/p/${research.slug}?preview=true`}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold"
-                  style={{ background: "#4c6b3c", color: "#fff" }}>
-                  <i className="ti ti-eye" /> Abrir prévia do formulário
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold bg-teal-500 text-on-accent transition-colors duration-150">
+                  <i className="ti ti-eye" aria-hidden="true" /> Abrir prévia do formulário
                 </Link>
-                <Link href={`/researches/${research.id}/form-builder`}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold"
-                  style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
-                  <i className="ti ti-edit" /> Editar formulário
+                <Link href={`/researches/${research.id}/form-builder`} className={PILL_BTN}>
+                  <i className="ti ti-edit" aria-hidden="true" /> Editar formulário
                 </Link>
               </div>
             </div>
@@ -639,46 +614,44 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
           <div className="flex flex-col gap-4">
 
             {/* Métricas */}
-            <div className="rounded-xl p-4" style={{ border: BRD, background: "#fbf3e7" }}>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={TS}>Métricas</p>
+            <div className="rounded-lg p-4 border border-ink-700 bg-ink-900">
+              <p className="text-xs font-bold uppercase tracking-widest font-condensed mb-3 text-brand-400">Métricas</p>
               {[
                 { icon: "ti-clipboard-list", label: "Respostas",   val: "0" },
                 { icon: "ti-clock",          label: "Tempo médio", val: "—" },
                 { icon: "ti-chart-pie",      label: "Conclusão",   val: "—" },
-              ].map(m => (
-                <div key={m.label} className="flex items-center justify-between py-2"
-                  style={{ borderBottom: BRD }}>
+              ].map((m, i, arr) => (
+                <div key={m.label} className={`flex items-center justify-between py-2 ${i < arr.length - 1 ? "border-b border-ink-700" : ""}`}>
                   <div className="flex items-center gap-2">
-                    <i className={`ti ${m.icon} text-sm`} style={{ color: "#c48a42" }} />
-                    <span className="text-xs font-medium" style={{ color: "#5c3f13" }}>{m.label}</span>
+                    <i className={`ti ${m.icon} text-sm text-brand-400`} aria-hidden="true" />
+                    <span className="text-xs font-medium text-ink-300">{m.label}</span>
                   </div>
-                  <span className="text-sm font-bold" style={{ color: "#0f172a" }}>{m.val}</span>
+                  <span className="text-sm font-bold text-ink-100">{m.val}</span>
                 </div>
               ))}
             </div>
 
             {/* Entidades vinculadas */}
-            <div className="rounded-xl p-4" style={{ border: BRD, background: "#fff" }}>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={TS}>Entidades vinculadas</p>
+            <div className="rounded-lg p-4 border border-ink-700 bg-ink-900">
+              <p className="text-xs font-bold uppercase tracking-widest font-condensed mb-3 text-brand-400">Entidades vinculadas</p>
 
               {links.length === 0 ? (
-                <p className="text-xs mb-3" style={{ color: "#a06d28" }}>Nenhuma entidade vinculada ainda.</p>
+                <p className="text-xs mb-3 text-ink-300">Nenhuma entidade vinculada ainda.</p>
               ) : (
                 <div className="flex flex-col gap-2 mb-3">
                   {links.map(l => {
                     const t = ENTITY_TYPE_MAP[l.entity.type] ?? { label: l.entity.type, icon: "ti-tag" };
                     return (
                       <Link key={l.id} href={`/entidades/${l.entity.id}`}
-                        className="flex items-center justify-between px-3 py-2 rounded-md transition-colors"
-                        style={{ border: BRD, background: "#fbf3e7" }}>
+                        className="flex items-center justify-between px-3 py-2 rounded-md transition-colors duration-150 border border-ink-700 bg-ink-800 hover:border-brand-500/40">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            <i className={`ti ${t.icon} text-xs`} style={{ color: "#c48a42" }} />
-                            <span className="text-xs font-bold truncate" style={{ color: "#0f172a" }}>{l.entity.name}</span>
+                            <i className={`ti ${t.icon} text-xs text-brand-400`} aria-hidden="true" />
+                            <span className="text-xs font-bold truncate text-ink-100">{l.entity.name}</span>
                           </div>
-                          <p className="text-2xs font-mono mt-0.5" style={{ color: "#a06d28" }}>{l.entity.code}</p>
+                          <p className="text-2xs font-mono mt-0.5 text-ink-300">{l.entity.code}</p>
                         </div>
-                        <i className="ti ti-arrow-right text-xs flex-shrink-0" style={{ color: "#c48a42" }} />
+                        <i className="ti ti-arrow-right text-xs flex-shrink-0 text-brand-400" aria-hidden="true" />
                       </Link>
                     );
                   })}
@@ -686,42 +659,41 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
               )}
 
               {remainingEntities.length > 0 && (
-                <form onSubmit={linkEntity} className="flex flex-col gap-2 pt-3" style={{ borderTop: BRD }}>
+                <form onSubmit={linkEntity} className="flex flex-col gap-2 pt-3 border-t border-ink-700">
+                  <label htmlFor="vincular-entidade" className="sr-only">Vincular entidade existente</label>
                   <select
+                    id="vincular-entidade"
                     value={selectedEntityId}
                     onChange={e => setSelectedEntityId(e.target.value)}
-                    className="w-full rounded-md text-xs px-2 py-1.5 focus:outline-none"
-                    style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}
+                    className={`w-full ${FIELD_CLASS}`}
                   >
                     <option value="">Vincular entidade existente...</option>
                     {remainingEntities.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                   </select>
+                  <label htmlFor="vincular-nota" className="sr-only">Nota sobre o vínculo</label>
                   <input
+                    id="vincular-nota"
                     value={relationNote}
                     onChange={e => setRelationNote(e.target.value)}
                     placeholder="Nota sobre o vínculo (opcional)"
-                    className="w-full rounded-md text-xs px-2 py-1.5 focus:outline-none"
-                    style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}
+                    className={`w-full ${FIELD_CLASS}`}
                   />
-                  {linkError && <p className="text-2xs" style={{ color: "#c0392b" }}>{linkError}</p>}
+                  {linkError && <p className="text-2xs text-coral-500">{linkError}</p>}
                   <button type="submit" disabled={!selectedEntityId || linking}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
-                    style={{ background: "#c48a42", color: "#fff" }}>
-                    <i className={`ti ${linking ? "ti-loader-2 animate-spin" : "ti-link"}`} /> Vincular
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50 bg-brand-500 text-on-accent transition-colors duration-150">
+                    <i className={`ti ${linking ? "ti-loader-2 animate-spin" : "ti-link"}`} aria-hidden="true" /> Vincular
                   </button>
                 </form>
               )}
 
-              <Link href="/entidades"
-                className="mt-3 flex items-center gap-1.5 text-xs font-semibold"
-                style={{ color: "#c48a42" }}>
-                <i className="ti ti-database" /> Ver catálogo de entidades
+              <Link href="/entidades" className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand-400 hover:underline">
+                <i className="ti ti-database" aria-hidden="true" /> Ver catálogo de entidades
               </Link>
             </div>
 
             {/* Configurações rápidas */}
-            <div className="rounded-xl p-4" style={{ border: BRD, background: "#fff" }}>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={TS}>Configurações</p>
+            <div className="rounded-lg p-4 border border-ink-700 bg-ink-900">
+              <p className="text-xs font-bold uppercase tracking-widest font-condensed mb-3 text-brand-400">Configurações</p>
               <div className="flex flex-col gap-2">
                 {[
                   { icon: "ti-user-off",     label: "Anônimo",      active: research.allowAnonymous },
@@ -731,19 +703,18 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                 ].map(cfg => (
                   <div key={cfg.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <i className={`ti ${cfg.icon} text-sm`} style={{ color: "#c48a42" }} />
-                      <span className="text-xs font-medium" style={{ color: "#5c3f13" }}>{cfg.label}</span>
+                      <i className={`ti ${cfg.icon} text-sm text-brand-400`} aria-hidden="true" />
+                      <span className="text-xs font-medium text-ink-300">{cfg.label}</span>
                     </div>
-                    <div className="w-7 h-3.5 rounded-full relative" style={{ background: cfg.active ? "#c48a42" : "#e8d8be" }}>
-                      <span className={`absolute w-2.5 h-2.5 bg-white rounded-full top-0.5 transition-all ${cfg.active ? "left-3.5" : "left-0.5"}`} />
+                    <div className={`w-7 h-3.5 rounded-full relative ${cfg.active ? "bg-brand-500" : "bg-ink-700"}`} aria-hidden="true">
+                      <span className={`absolute w-2.5 h-2.5 bg-ink-950 rounded-full top-0.5 transition-all duration-150 ${cfg.active ? "left-3.5" : "left-0.5"}`} />
                     </div>
                   </div>
                 ))}
               </div>
               <Link href={`/researches/${research.id}/settings`}
-                className="mt-3 flex items-center gap-1.5 text-xs font-semibold"
-                style={{ color: "#c48a42" }}>
-                <i className="ti ti-settings" /> Editar configurações
+                className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand-400 hover:underline">
+                <i className="ti ti-settings" aria-hidden="true" /> Editar configurações
               </Link>
             </div>
 

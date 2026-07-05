@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-
-const BRD = "1px solid #e8d8be";
+import { Badge } from "@/components/ui/badge";
 
 interface Application {
   id: string;
@@ -20,10 +19,10 @@ interface Application {
   applicant: { name: string; email: string } | null;
 }
 
-const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
-  pending:  { label: "Pendente",  color: "#7a5218", bg: "#fbf3e7" },
-  approved: { label: "Aprovada",  color: "#3a5430", bg: "#eaf0e4" },
-  rejected: { label: "Rejeitada", color: "#8b2a1a", bg: "#fdf0ef" },
+const STATUS_LABEL: Record<string, { label: string; variant: "amber" | "teal" | "red" }> = {
+  pending:  { label: "Pendente",  variant: "amber" },
+  approved: { label: "Aprovada",  variant: "teal"  },
+  rejected: { label: "Rejeitada", variant: "red"   },
 };
 
 export function TerritorioAdminClient({ applications }: { applications: Application[] }) {
@@ -48,37 +47,43 @@ export function TerritorioAdminClient({ applications }: { applications: Applicat
   }
 
   if (list.length === 0) {
-    return <p className="text-sm" style={{ color: "#a06d28" }}>Nenhuma candidatura ao Dataº Território ainda.</p>;
+    return (
+      <div className="text-center py-16 rounded-lg border-2 border-dashed border-ink-700 bg-ink-900">
+        <i className="ti ti-map text-3xl block mb-3 text-ink-500" aria-hidden="true" />
+        <p className="text-sm font-semibold text-ink-100 mb-1">Nenhuma candidatura ao Dataº Território ainda</p>
+        <p className="text-xs text-ink-300">As candidaturas enviadas pela página pública /territorio aparecem aqui para revisão.</p>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-3">
       {list.map(app => {
         const s = STATUS_LABEL[app.status] ?? STATUS_LABEL.pending;
+        const saving = savingId === app.id;
         return (
-          <div key={app.id} className="rounded-xl p-4" style={{ border: BRD, background: "#fff" }}>
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="text-sm font-bold" style={{ color: "#0f172a" }}>{app.razaoSocial}</p>
-                <p className="text-xs" style={{ color: "#a06d28" }}>{app.tipoComunidade} · {app.municipio}/{app.estado} · CNPJ {app.cnpj}</p>
+          <div key={app.id} className="rounded-lg p-4 border border-ink-700 bg-ink-900">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-ink-100">{app.razaoSocial}</p>
+                <p className="text-xs text-ink-300">{app.tipoComunidade} · {app.municipio}/{app.estado} · CNPJ {app.cnpj}</p>
               </div>
-              <span className="text-2xs font-bold uppercase px-2 py-1 rounded-full" style={{ color: s.color, background: s.bg }}>{s.label}</span>
+              <Badge variant={s.variant} className="flex-shrink-0 uppercase text-2xs font-bold">{s.label}</Badge>
             </div>
-            <p className="text-xs mb-2" style={{ color: "#5c3f13" }}>
+            <p className="text-xs text-ink-300 mb-2">
               Responsável: {app.nomeResponsavel} · {app.emailResponsavel} · Conta: {app.applicant?.name} ({app.applicant?.email})
             </p>
-            <p className="text-xs mb-3 line-clamp-3" style={{ color: "#5c3f13" }}>{app.historico}</p>
+            <p className="text-xs text-ink-300 mb-3 line-clamp-3">{app.historico}</p>
             {app.status === "pending" && (
-              <div className="flex gap-2">
-                <button onClick={() => review(app.id, "approved")} disabled={savingId === app.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
-                  style={{ background: "#4c6b3c", color: "#fff" }}>
-                  <i className="ti ti-check" /> Aprovar
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => review(app.id, "approved")} disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold bg-brand-500 text-on-accent border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-check"} aria-hidden="true" />
+                  {saving ? "Atualizando..." : "Aprovar"}
                 </button>
-                <button onClick={() => review(app.id, "rejected")} disabled={savingId === app.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50"
-                  style={{ border: "1px solid #f0d0cc", color: "#c0392b" }}>
-                  <i className="ti ti-x" /> Rejeitar
+                <button onClick={() => review(app.id, "rejected")} disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold border border-coral-500/40 bg-ink-900 text-coral-500 hover:bg-coral-50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <i className="ti ti-x" aria-hidden="true" /> Rejeitar
                 </button>
               </div>
             )}

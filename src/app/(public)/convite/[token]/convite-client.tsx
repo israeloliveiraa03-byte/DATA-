@@ -67,13 +67,13 @@ export function ConviteClient({ token, suggestedName, invalid, isLoggedIn }: Con
           </p>
 
           {invalid && (
-            <p className="text-sm text-red-500 flex items-center gap-1">
+            <p className="text-sm text-coral-500 flex items-center gap-1">
               <i className="ti ti-alert-circle" /> Este convite não está mais válido. Peça um novo link a quem convidou você.
             </p>
           )}
 
           {!invalid && done && (
-            <p className="text-sm text-teal-700 flex items-center gap-1">
+            <p className="text-sm text-teal-600 flex items-center gap-1">
               <i className="ti ti-circle-check" /> Cadastro concluído. Sua entidade já está no Catálogo Global do Dataº.
             </p>
           )}
@@ -138,7 +138,7 @@ export function ConviteClient({ token, suggestedName, invalid, isLoggedIn }: Con
               </div>
 
               {error && (
-                <p className="text-sm text-red-500 flex items-center gap-1">
+                <p className="text-sm text-coral-500 flex items-center gap-1">
                   <i className="ti ti-alert-circle" /> {error}
                 </p>
               )}

@@ -29,6 +29,12 @@
   --color-ink-900: 30 29 23;
   --color-ink-950: 20 20 15;
   --color-brand-400: 147 179 119;
+
+  /* Ponte de compatibilidade: páginas antigas ainda pedem var(--font-serif)
+     (era a Fraunces da identidade anterior). A fonte serifada saiu do projeto
+     junto com o reskin Observatório — sem esta linha, todos esses títulos
+     caíam no fallback Georgia. Aponta pro condensed, a voz de título atual. */
+  --font-serif: var(--font-condensed), "IBM Plex Sans Condensed", system-ui, sans-serif;
 }
 
 /* Modo "Claro" — mesma estrutura de papel/tinta, invertida. As cores de

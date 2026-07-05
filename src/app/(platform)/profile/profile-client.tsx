@@ -148,8 +148,16 @@ export function ProfileClient({ user }: { user: User }) {
   ];
 
   return (
-    <div className="flex-1 overflow-auto" style={{ background: "#f3e4cb" }}>
-      <div style={{ maxWidth: "940px", margin: "0 auto", background: "#fff", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+    <div className="flex-1 overflow-auto bg-ink-950 py-0 sm:py-6">
+      {/*
+        Nota de revisão visual: este card mantém de propósito a estética própria
+        (fundo claro, cor de destaque escolhida pelo usuário via PALETTE acima) —
+        é uma exceção documentada no CLAUDE.md desde o reskin de 2026-07-01,
+        igual ao seletor de cor. Só o encaixe com o chrome escuro da plataforma
+        ao redor foi ajustado (fundo externo e responsividade), sem tocar na
+        lógica ou no visual interno do card.
+      */}
+      <div className="w-full sm:max-w-[940px] sm:mx-auto bg-white shadow-lg sm:rounded-xl overflow-hidden">
 
         {/* ── CAPA ── */}
         <div style={{ position: "relative", height: "200px", overflow: "hidden", background: "#fbf3e7", borderBottom: BRD }}>
@@ -224,7 +232,7 @@ export function ProfileClient({ user }: { user: User }) {
         </div>
 
         {/* ── AVATAR + AÇÕES ── */}
-        <div className="flex items-end justify-between px-8" style={{ marginTop: "-44px", marginBottom: "0", position: "relative", zIndex: 10 }}>
+        <div className="flex items-end justify-between gap-3 flex-wrap px-4 sm:px-8" style={{ marginTop: "-44px", marginBottom: "0", position: "relative", zIndex: 10 }}>
           <div style={{ position: "relative", display: "inline-block" }}>
             <div
               onClick={() => photoRef.current?.click()}
@@ -263,7 +271,7 @@ export function ProfileClient({ user }: { user: User }) {
         </div>
 
         {/* ── IDENTIDADE HEADER ── */}
-        <div className="px-8 pt-3 pb-4" style={{ borderBottom: BRD }}>
+        <div className="px-4 sm:px-8 pt-3 pb-4" style={{ borderBottom: BRD }}>
           <div className="flex items-center gap-2 mb-1.5">
             <h1 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "22px", fontWeight: 700, color: "#111827", letterSpacing: "-0.3px" }}>
               {name || "Seu nome"}
@@ -318,7 +326,7 @@ export function ProfileClient({ user }: { user: User }) {
         </div>
 
         {/* ── TABS ── */}
-        <div className="flex px-8" style={{ borderBottom: BRD }}>
+        <div className="flex px-4 sm:px-8 overflow-x-auto" style={{ borderBottom: BRD }}>
           {([
             { key: "perfil",      icon: "ti-user",     label: "Perfil" },
             { key: "notas",       icon: "ti-notebook", label: "Notas técnicas", count: notes.length },
@@ -340,11 +348,11 @@ export function ProfileClient({ user }: { user: User }) {
         </div>
 
         {/* ── CONTEÚDO ── */}
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
 
           {/* TAB: PERFIL */}
           {activeTab === "perfil" && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
               {/* Identidade */}
               <div className="rounded-xl p-5" style={{ border: BRD, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -432,7 +440,7 @@ export function ProfileClient({ user }: { user: User }) {
               </div>
 
               {/* Stats */}
-              <div className="col-span-2 grid grid-cols-4 gap-3">
+              <div className="col-span-1 sm:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { icon: "ti-clipboard-list", bg: "#fbf3e7", color: accent,    val: "1",             label: "Pesquisas" },
                   { icon: "ti-notebook",       bg: "#ecfdf5", color: "#4c6b3c", val: String(notes.length), label: "Notas técnicas" },
