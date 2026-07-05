@@ -2,7 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
-import { COLOR_PALETTES, type ColorPalette, type DisplayMode, type SupportedWidgetType, type TimeSeriesResult, type WidgetData } from "@/lib/dashboard/types";
+import { COLOR_PALETTES, resolveChartKind, type ColorPalette, type DisplayMode, type SupportedWidgetType, type TimeSeriesResult, type WidgetData } from "@/lib/dashboard/types";
+import { ChartLegend, EmptyState, formatNumber, TOOLTIP_STYLE, toPercent } from "@/components/dashboard/widgets/chart-common";
+import {
+  AreaChartView, HistogramView, RadarChartView, ScatterView, StackedBarView, TreemapView,
+} from "@/components/dashboard/widgets/extra-charts";
+import {
+  DistributionView, DivergingBarView, DotPlotView, DumbbellView, RangeBarView, WaffleView,
+} from "@/components/dashboard/widgets/shape-charts";
 
 // Leaflet e three.js (via react-globe.gl) acessam `window`/`document`/WebGL
 // direto — não rodam em SSR. Aprendido do jeito difícil com o
@@ -12,10 +19,6 @@ const HeatmapWidget      = dynamic(() => import("@/components/dashboard/widgets/
 const MapWidget          = dynamic(() => import("@/components/dashboard/widgets/map-widget").then(m => m.MapWidget), { ssr: false });
 const GlobePointsWidget  = dynamic(() => import("@/components/dashboard/widgets/globe-widget").then(m => m.GlobePointsWidget), { ssr: false });
 const GlobeHeatmapWidget = dynamic(() => import("@/components/dashboard/widgets/globe-widget").then(m => m.GlobeHeatmapWidget), { ssr: false });
-
-function formatNumber(n: number, decimals?: number): string {
-  return n.toLocaleString("pt-BR", { minimumFractionDigits: decimals ?? 0, maximumFractionDigits: decimals ?? 2 });
-}
 
 interface WidgetRendererProps {
   type:    SupportedWidgetType;
@@ -68,6 +71,86 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
     return <EmptyState />;
   }
 
+  // Gráficos estendidos — o tipo persistido é um dos 12 do enum do banco,
+  // mas config.chartKind decide a forma (ver src/lib/dashboard/types.ts).
+  // Cada `case` checa o `data.kind` real (o motor de agregação já resolveu
+  // o cálculo certo) antes de desenhar — se o chartKind não bater com o
+  // dado computado (config incompleta/em edição), cai em EmptyState em vez
+  // de quebrar.
+  const chartKind = resolveChartKind(config);
+  if (chartKind) {
+    switch (chartKind) {
+      case "diverging_bar":
+        if (data.kind !== "diverging") return <EmptyState />;
+        if (data.buckets.length === 0 || data.totalResponses === 0) return <EmptyState />;
+        return <DivergingBarView data={data} />;
+
+      case "stacked_bar": {
+        if (data.kind !== "crosstab") return <EmptyState />;
+        if (data.rows.length === 0 || data.cols.length === 0 || data.grandTotal === 0) return <EmptyState />;
+        const displayMode: DisplayMode = config.displayMode === "percent" ? "percent" : "count";
+        return <StackedBarView data={data} colors={palette.chartColors} displayMode={displayMode} />;
+      }
+
+      case "area":
+        if (data.kind !== "timeseries") return <EmptyState />;
+        if (data.points.length === 0) return <EmptyState />;
+        return <AreaChartView data={data} colors={palette.chartColors} />;
+
+      case "histogram":
+        if (data.kind !== "histogram") return <EmptyState />;
+        if (data.bins.length === 0) return <EmptyState />;
+        return <HistogramView data={data} colors={palette.chartColors} />;
+
+      case "scatter":
+      case "bubble":
+        if (data.kind !== "scatter") return <EmptyState />;
+        if (data.points.length === 0) return <EmptyState />;
+        return <ScatterView data={data} colors={palette.chartColors} bubble={chartKind === "bubble"} />;
+
+      case "treemap":
+        if (data.kind !== "choice") return <EmptyState />;
+        if (data.buckets.length === 0 || data.totalResponses === 0) return <EmptyState />;
+        return <TreemapView data={data} colors={palette.chartColors} />;
+
+      case "range_bar":
+        if (data.kind !== "rangebar") return <EmptyState />;
+        if (data.rows.length === 0) return <EmptyState />;
+        return <RangeBarView data={data} colors={palette.chartColors} />;
+
+      case "boxplot":
+      case "violin":
+        if (data.kind !== "distribution") return <EmptyState />;
+        if (data.groups.length === 0) return <EmptyState />;
+        return <DistributionView data={data} colors={palette.chartColors} variant={chartKind} />;
+
+      case "dot_plot":
+      case "lollipop": {
+        if (data.kind !== "choice") return <EmptyState />;
+        if (data.buckets.length === 0 || data.totalResponses === 0) return <EmptyState />;
+        const displayMode: DisplayMode = config.displayMode === "percent" ? "percent" : "count";
+        return <DotPlotView data={data} colors={palette.chartColors} displayMode={displayMode} lollipop={chartKind === "lollipop"} />;
+      }
+
+      case "waffle":
+        if (data.kind !== "choice") return <EmptyState />;
+        if (data.buckets.length === 0 || data.totalResponses === 0) return <EmptyState />;
+        return <WaffleView data={data} colors={palette.chartColors} optionId={config.optionId as string | undefined} />;
+
+      case "dumbbell": {
+        if (data.kind !== "dumbbell") return <EmptyState />;
+        if (data.categories.length === 0) return <EmptyState />;
+        const displayMode: DisplayMode = config.displayMode === "percent" ? "percent" : "count";
+        return <DumbbellView data={data} colors={palette.chartColors} displayMode={displayMode} />;
+      }
+
+      case "radar":
+        if (data.kind !== "radar") return <EmptyState />;
+        if (data.axes.length === 0 || data.series.length === 0) return <EmptyState />;
+        return <RadarChartView data={data} colors={palette.chartColors} />;
+    }
+  }
+
   if (data.kind === "count") {
     const aggregation = typeof config.aggregation === "string" ? config.aggregation : "count";
     const value = aggregation === "count_completed" ? data.completed : data.total;
@@ -83,7 +166,10 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
   if (data.kind === "choice") {
     if (data.buckets.length === 0) return <EmptyState />;
     const displayMode: DisplayMode = config.displayMode === "percent" ? "percent" : "count";
-    if (type === "bar_chart") return <BarChartView data={data.buckets} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} />;
+    if (type === "bar_chart") {
+      const orientation = config.orientation === "horizontal" ? "horizontal" : "vertical";
+      return <BarChartView data={data.buckets} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} orientation={orientation} />;
+    }
     return <PieChartView data={data.buckets} donut={type === "donut_chart"} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} />;
   }
 
@@ -166,10 +252,6 @@ function DividerView({ config }: { config: Record<string, unknown> }) {
   );
 }
 
-function EmptyState() {
-  return <p className="text-xs italic" style={{ color: "#a06d28" }}>Sem dados suficientes ainda</p>;
-}
-
 function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: string; decimals?: number }) {
   return (
     <div className="h-full flex flex-col items-center justify-center">
@@ -180,34 +262,6 @@ function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: st
   );
 }
 
-// Legenda temática dos gráficos — chips arredondados com a marca de cor da
-// série, mesmo estilo já usado na legenda do mapa de pontos (o texto fica
-// sempre na cor de texto, nunca na cor da série — a identidade é do chip).
-// Regra: legenda sempre presente pra 2+ séries/categorias; pra 1 série só,
-// o título do widget já nomeia o dado — não renderiza chip nenhum.
-function ChartLegend({ data, colors, values }: { data: { label: string }[]; colors: string[]; values?: string[] }) {
-  if (data.length < 2) return null;
-  return (
-    <div className="flex flex-wrap gap-1 justify-center px-1 pt-1 flex-shrink-0">
-      {data.map((d, i) => (
-        <span key={i} className="flex items-center gap-1 text-2xs rounded-full px-2 py-0.5"
-          style={{ color: "#5c3f13", border: "1px solid #e8d8be", background: "#fdfaf4" }}>
-          <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[i % colors.length] }} />
-          {d.label}
-          {values?.[i] !== undefined && <span style={{ color: "#a06d28" }}>{values[i]}</span>}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// Tooltip padrão dos gráficos recharts — mesma moldura terracota do resto.
-const TOOLTIP_STYLE = {
-  contentStyle: { border: "1px solid #e8d8be", borderRadius: 8, background: "#fff", fontSize: 11, padding: "6px 10px", boxShadow: "0 2px 6px rgba(22,23,26,0.08)" },
-  labelStyle: { color: "#5c3f13", fontWeight: 600 },
-  itemStyle: { color: "#111", padding: 0 },
-} as const;
-
 interface ChoiceViewProps {
   data: { optionId: string; label: string; count: number }[];
   colors: string[];
@@ -215,30 +269,36 @@ interface ChoiceViewProps {
   totalResponses: number;
 }
 
-// "percent" = % das respostas que marcaram a opção (base: respostas que
-// responderam o campo; em múltipla escolha a soma pode passar de 100% de
-// propósito — cada resposta pode marcar mais de uma opção).
-function toPercent(count: number, total: number): number {
-  return total > 0 ? (count / total) * 100 : 0;
-}
-
-function BarChartView({ data, colors, displayMode, totalResponses }: ChoiceViewProps) {
+function BarChartView({ data, colors, displayMode, totalResponses, orientation }: ChoiceViewProps & { orientation?: "vertical" | "horizontal" }) {
   const percent = displayMode === "percent";
   const chartData = percent ? data.map(d => ({ ...d, count: toPercent(d.count, totalResponses) })) : data;
   const fmt = (v: number) => percent ? `${formatNumber(v, 1)}%` : formatNumber(v);
+  const horizontal = orientation === "horizontal";
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-            <CartesianGrid vertical={false} stroke="#f3e4cb" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
-            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-              {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
-            </Bar>
-          </BarChart>
+          {horizontal ? (
+            <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+              <CartesianGrid horizontal={false} stroke="#f3e4cb" />
+              <XAxis type="number" tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
+              <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} width={90} />
+              <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
+              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+              </Bar>
+            </BarChart>
+          ) : (
+            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke="#f3e4cb" />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
+              <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
+              <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+              </Bar>
+            </BarChart>
+          )}
         </ResponsiveContainer>
       </div>
       <ChartLegend data={data} colors={colors} values={data.map(d => percent ? `${formatNumber(toPercent(d.count, totalResponses), 0)}%` : formatNumber(d.count))} />

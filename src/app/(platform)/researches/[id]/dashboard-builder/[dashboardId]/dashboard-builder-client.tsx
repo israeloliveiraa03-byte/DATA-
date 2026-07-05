@@ -7,7 +7,11 @@ import { toast } from "sonner";
 import { DataLogo } from "@/components/layout/data-logo";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData, filterResponses } from "@/lib/dashboard/aggregate";
-import { SUPPORTED_WIDGET_TYPES, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES, DECORATIVE_ICON_OPTIONS, COLOR_PALETTES, BASEMAP_OPTIONS, type SupportedWidgetType, type HeatmapIndicatorConfig, type DashboardFilter } from "@/lib/dashboard/types";
+import {
+  SUPPORTED_WIDGET_TYPES, EXTRA_CHART_TYPES, CHART_KIND_DB_TYPE, CHOICE_FIELD_TYPES, NUMERIC_FIELD_TYPES,
+  DECORATIVE_ICON_OPTIONS, COLOR_PALETTES, BASEMAP_OPTIONS, resolveChartKind, filterKindForFieldType,
+  type SupportedWidgetType, type HeatmapIndicatorConfig, type DashboardFilter, type FilterCondition, type FilterFieldKind,
+} from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
 
 // react-moveable manipula o DOM direto (tamanho/posição via window/document)
@@ -127,59 +131,184 @@ function hydrate(saved: SavedWidget[]): WidgetDraft[] {
   }));
 }
 
+// Uma linha de condição — o tipo de entrada (opções/faixa/valor
+// geográfico/intervalo de data) muda conforme o "kind" derivado do tipo do
+// campo escolhido (nunca inferido do valor). Trocar o campo reseta a
+// condição pro formato certo do novo kind.
+function FilterConditionRow({
+  condition, field, responses, onChange, onRemove,
+}: {
+  condition: FilterCondition;
+  field: FormField | undefined;
+  responses: ResponseRow[];
+  onChange: (c: FilterCondition) => void;
+  onRemove: () => void;
+}) {
+  const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+  const smallInput = "text-2xs rounded px-1.5 py-1";
+
+  const options = field
+    ? (field.type === "yes_no" ? [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }]
+      : ((field.config as { options?: { id: string; label: string }[] } | null)?.options ?? []))
+    : [];
+
+  // Valores distintos observados nas respostas — só calculado pra condição
+  // "geo" (campo geográfico grava texto livre/UF, não uma lista fixa de
+  // opções como campo de escolha).
+  const distinctGeoValues = useMemo(() => {
+    if (condition.kind !== "geo" || !field) return [];
+    const set = new Set<string>();
+    for (const r of responses) {
+      const raw = (r.data as Record<string, unknown> | null)?.[field.id];
+      if (typeof raw === "string" && raw.trim()) set.add(raw.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [condition, field, responses]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {condition.kind === "choice" && (
+        <div className="flex flex-wrap gap-1">
+          {options.length === 0 && <span className="text-2xs italic" style={{ color: "#a06d28" }}>Sem opções configuradas</span>}
+          {options.map(o => {
+            const checked = condition.optionIds.includes(o.id);
+            return (
+              <button key={o.id} type="button"
+                onClick={() => onChange({ ...condition, optionIds: checked ? condition.optionIds.filter(id => id !== o.id) : [...condition.optionIds, o.id] })}
+                className="text-2xs rounded-full px-2 py-0.5 font-medium"
+                style={{ border: BRD, background: checked ? "#c48a42" : "#fff", color: checked ? "#fff" : "#5c3f13" }}>
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {condition.kind === "numeric" && (
+        <>
+          <input type="number" placeholder="mín" className={`${smallInput} w-16`} style={inputStyle}
+            value={condition.min ?? ""} onChange={e => onChange({ ...condition, min: e.target.value === "" ? undefined : Number(e.target.value) })} />
+          <span className="text-2xs" style={{ color: "#a06d28" }}>a</span>
+          <input type="number" placeholder="máx" className={`${smallInput} w-16`} style={inputStyle}
+            value={condition.max ?? ""} onChange={e => onChange({ ...condition, max: e.target.value === "" ? undefined : Number(e.target.value) })} />
+        </>
+      )}
+      {condition.kind === "geo" && (
+        <select className={smallInput} style={inputStyle}
+          value={condition.value} onChange={e => onChange({ ...condition, value: e.target.value })}>
+          <option value="">Selecione...</option>
+          {distinctGeoValues.map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
+      )}
+      {condition.kind === "date" && (
+        <>
+          <input type="date" className={smallInput} style={inputStyle}
+            value={condition.from ?? ""} onChange={e => onChange({ ...condition, from: e.target.value || undefined })} />
+          <span className="text-2xs" style={{ color: "#a06d28" }}>a</span>
+          <input type="date" className={smallInput} style={inputStyle}
+            value={condition.to ?? ""} onChange={e => onChange({ ...condition, to: e.target.value || undefined })} />
+        </>
+      )}
+      <button onClick={onRemove} className="flex-shrink-0" style={{ color: "#c0392b" }} aria-label="Remover condição">
+        <i className="ti ti-x text-xs" />
+      </button>
+    </div>
+  );
+}
+
+function emptyConditionFor(field: FormField): FilterCondition {
+  const kind: FilterFieldKind = filterKindForFieldType(field.type) ?? "choice";
+  if (kind === "choice") return { kind, fieldId: field.id, optionIds: [] };
+  if (kind === "numeric") return { kind, fieldId: field.id };
+  if (kind === "geo") return { kind, fieldId: field.id, value: "" };
+  return { kind, fieldId: field.id };
+}
+
 // Filtro geral do dashboard — uma linha só, acima de tudo que ela afeta
 // (nunca um filtro escondido dentro de um widget individual). Data de
-// resposta + opcionalmente uma dimensão (campo de escolha) recortam TODAS
-// as respostas de uma vez; cada widget recalcula em cima do mesmo recorte,
-// então os números sempre batem entre si. Estado só de visualização no
-// editor (nunca salvo) — o pesquisador confere o recorte aqui; a versão
-// publicada em /d/[slug] tem o equivalente por data pro leitor final.
+// ENVIO (submittedAt) + qualquer número de condições sobre campos do
+// formulário (E lógico entre elas) recortam TODAS as respostas de uma vez;
+// cada widget recalcula em cima do mesmo recorte, então os números sempre
+// batem entre si. Estado só de visualização no editor (nunca salvo) — o
+// pesquisador confere o recorte aqui; a versão publicada em /d/[slug] tem
+// o equivalente pro leitor final.
 function DashboardFilterBar({
-  filter, onChange, fields, fieldOptions, matchCount, totalCount,
+  filter, onChange, fields, responses, matchCount, totalCount,
 }: {
   filter: DashboardFilter;
   onChange: (f: DashboardFilter) => void;
-  fields: FormField[];
-  fieldOptions: { id: string; label: string }[];
+  fields: FormField[]; // já filtrados pra só os tipos filtráveis
+  responses: ResponseRow[];
   matchCount: number;
   totalCount: number;
 }) {
-  const hasFilter = !!(filter.from || filter.to || (filter.fieldId && filter.optionId));
+  const conditions = filter.conditions ?? [];
+  const hasFilter = !!(filter.from || filter.to || conditions.length > 0);
   const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+
+  function addCondition() {
+    const firstField = fields[0];
+    if (!firstField) return;
+    onChange({ ...filter, conditions: [...conditions, emptyConditionFor(firstField)] });
+  }
+  function updateConditionField(index: number, fieldId: string) {
+    const field = fields.find(f => f.id === fieldId);
+    if (!field) return;
+    const list = [...conditions];
+    list[index] = emptyConditionFor(field);
+    onChange({ ...filter, conditions: list });
+  }
+  function updateCondition(index: number, cond: FilterCondition) {
+    const list = [...conditions];
+    list[index] = cond;
+    onChange({ ...filter, conditions: list });
+  }
+  function removeCondition(index: number) {
+    onChange({ ...filter, conditions: conditions.filter((_, i) => i !== index) });
+  }
+
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-3 px-3 py-2 rounded-lg" style={{ border: BRD, background: "#fffaf1" }}>
-      <span className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: "#a06d28" }}>
-        <i className="ti ti-filter" /> Filtro geral
-      </span>
-      <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
-        De
-        <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
-          value={filter.from ?? ""} onChange={e => onChange({ ...filter, from: e.target.value || undefined })} />
-      </label>
-      <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
-        Até
-        <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
-          value={filter.to ?? ""} onChange={e => onChange({ ...filter, to: e.target.value || undefined })} />
-      </label>
-      <select className="text-2xs rounded px-1.5 py-1" style={inputStyle}
-        value={filter.fieldId ?? ""} onChange={e => onChange({ ...filter, fieldId: e.target.value || undefined, optionId: undefined })}>
-        <option value="">Todas as respostas</option>
-        {fields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-      </select>
-      {filter.fieldId && (
-        <select className="text-2xs rounded px-1.5 py-1" style={inputStyle}
-          value={filter.optionId ?? ""} onChange={e => onChange({ ...filter, optionId: e.target.value || undefined })}>
-          <option value="">Selecione uma opção...</option>
-          {fieldOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-        </select>
-      )}
-      <span className="text-2xs ml-auto flex-shrink-0" style={{ color: "#a06d28" }}>
-        {hasFilter ? `${matchCount} de ${totalCount} respostas` : `${totalCount} respostas`}
-      </span>
-      {hasFilter && (
-        <button onClick={() => onChange({})} className="text-2xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "#c0392b" }}>
-          <i className="ti ti-x" /> Limpar
+    <div className="flex flex-col gap-2 mb-3 px-3 py-2 rounded-lg" style={{ border: BRD, background: "#fffaf1" }}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: "#a06d28" }}>
+          <i className="ti ti-filter" /> Filtro geral
+        </span>
+        <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
+          De
+          <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
+            value={filter.from ?? ""} onChange={e => onChange({ ...filter, from: e.target.value || undefined })} />
+        </label>
+        <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
+          Até
+          <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
+            value={filter.to ?? ""} onChange={e => onChange({ ...filter, to: e.target.value || undefined })} />
+        </label>
+        <span className="text-2xs ml-auto flex-shrink-0" style={{ color: "#a06d28" }}>
+          {hasFilter ? `${matchCount} de ${totalCount} respostas` : `${totalCount} respostas`}
+        </span>
+        {hasFilter && (
+          <button onClick={() => onChange({})} className="text-2xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "#c0392b" }}>
+            <i className="ti ti-x" /> Limpar tudo
+          </button>
+        )}
+      </div>
+
+      {conditions.map((cond, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-1.5 pl-1" style={{ borderLeft: "2px solid #e8d8be" }}>
+          <select className="text-2xs rounded px-1.5 py-1 flex-shrink-0" style={inputStyle}
+            value={cond.fieldId} onChange={e => updateConditionField(i, e.target.value)}>
+            {fields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+          </select>
+          <FilterConditionRow condition={cond} field={fields.find(f => f.id === cond.fieldId)} responses={responses}
+            onChange={c => updateCondition(i, c)} onRemove={() => removeCondition(i)} />
+        </div>
+      ))}
+
+      {fields.length > 0 ? (
+        <button onClick={addCondition} className="self-start flex items-center gap-1 text-2xs font-semibold" style={{ color: "#5c3f13" }}>
+          <i className="ti ti-plus" /> Adicionar condição
         </button>
+      ) : (
+        <p className="text-2xs" style={{ color: "#a06d28" }}>Nenhum campo filtrável (escolha, numérico, geográfico ou data) neste formulário ainda.</p>
       )}
     </div>
   );
@@ -237,6 +366,10 @@ export function DashboardBuilderClient({
     return typeof layout.canvasColor === "string" ? layout.canvasColor : undefined;
   });
   const [appearanceOpen,    setAppearanceOpen]     = useState(false);
+  // Catálogo de gráficos estendidos — fechado por padrão (15 itens, a
+  // paleta básica já tem 12; expandir só quando o pesquisador quiser algo
+  // mais específico que barra/pizza/linha).
+  const [extraChartsOpen,   setExtraChartsOpen]    = useState(false);
   const [coverUploading,    setCoverUploading]     = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -248,14 +381,9 @@ export function DashboardBuilderClient({
   // montagem do dashboard.
   const [filter, setFilter] = useState<DashboardFilter>({});
   const filteredResponses = useMemo(() => filterResponses(responses, filter), [responses, filter]);
-  const filterableFields = useMemo(() => fields.filter(f => (CHOICE_FIELD_TYPES as readonly string[]).includes(f.type)), [fields]);
-  const filterFieldOptions = useMemo(() => {
-    if (!filter.fieldId) return [];
-    const field = fields.find(f => f.id === filter.fieldId);
-    if (!field) return [];
-    if (field.type === "yes_no") return [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }];
-    return ((field.config as { options?: { id: string; label: string }[] } | null)?.options ?? []);
-  }, [filter.fieldId, fields]);
+  // Qualquer campo com um "kind" de filtro reconhecido (escolha, numérico,
+  // geográfico, data) entra na lista — não só campos de escolha como antes.
+  const filterableFields = useMemo(() => fields.filter(f => !!filterKindForFieldType(f.type)), [fields]);
 
   const selectedIdsArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
   const selectedWidget = selectedIdsArray.length === 1 ? widgets.find(w => w.id === selectedIdsArray[0]) ?? null : null;
@@ -390,6 +518,22 @@ export function DashboardBuilderClient({
         : type === "heatmap" ? { indicators: [{ key: crypto.randomUUID(), label: "Volume de respostas", mode: "count" as const }] }
         : type === "globe" ? { mode: "points" as const }
         : {},
+    }]);
+    setSelectedIds(new Set([id]));
+  }, [widgets, pushHistory]);
+
+  // Gráficos estendidos (catálogo 2026-07-05) — persistem como um dos 12
+  // tipos do enum do banco (CHART_KIND_DB_TYPE) + config.chartKind, nunca
+  // como um valor de enum novo (ver comentário em types.ts).
+  const addExtraChart = useCallback((item: typeof EXTRA_CHART_TYPES[number]) => {
+    pushHistory();
+    const dbType = CHART_KIND_DB_TYPE[item.kind];
+    const maxY = widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0);
+    const id = crypto.randomUUID();
+    setWidgets(prev => [...prev, {
+      id, type: dbType, title: item.label,
+      x: 0, y: maxY, w: item.w, h: item.h,
+      config: { chartKind: item.kind },
     }]);
     setSelectedIds(new Set([id]));
   }, [widgets, pushHistory]);
@@ -650,6 +794,33 @@ export function DashboardBuilderClient({
             </p>
           )}
 
+          {/* Catálogo estendido — divergente, empilhada, área, histograma,
+              dispersão/bolhas, treemap, intervalos, boxplot/violino,
+              pontos/pirulito, waffle, antes/depois, radar. Persistem como um
+              dos 12 tipos do enum do banco + config.chartKind (ver
+              CHART_KIND_DB_TYPE em types.ts) — zero mudança de schema. */}
+          <button onClick={() => setExtraChartsOpen(v => !v)}
+            className="w-full flex items-center justify-between px-1 mb-1.5 mt-3">
+            <span className="font-bold uppercase tracking-widest" style={TS}>Gráficos avançados</span>
+            <i className={`ti ${extraChartsOpen ? "ti-chevron-up" : "ti-chevron-down"} text-xs`} style={{ color: "#c48a42" }} />
+          </button>
+          {extraChartsOpen && EXTRA_CHART_TYPES.map(item => (
+            <button key={item.kind} onClick={() => addExtraChart(item)}
+              title={item.description}
+              className="w-full flex items-start gap-2 px-2 py-1.5 rounded-md mb-1 text-left transition-all"
+              style={{ border: BRD, background: "#fff" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#d2a05c"; e.currentTarget.style.background = "#fbf3e7"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#e8d8be"; e.currentTarget.style.background = "#fff"; }}>
+              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 mt-0.5" style={{ background: "#fbf3e7", color: "#c48a42" }}>
+                <i className={`ti ${item.icon}`} />
+              </div>
+              <span className="flex-1 min-w-0">
+                <span className="text-xs font-medium block" style={{ color: "#5c3f13" }}>{item.label}</span>
+                <span className="text-2xs leading-snug block" style={{ color: "#a06d28" }}>{item.description}</span>
+              </span>
+            </button>
+          ))}
+
           <p className="px-1 mb-1.5 mt-3 font-bold uppercase tracking-widest" style={TS}>Decorativos</p>
           <div className="flex gap-1.5">
             {DECORATIVE_PRESETS.map(preset => (
@@ -671,7 +842,7 @@ export function DashboardBuilderClient({
           {loaded && widgets.length > 0 && (
             <DashboardFilterBar
               filter={filter} onChange={setFilter}
-              fields={filterableFields} fieldOptions={filterFieldOptions}
+              fields={filterableFields} responses={responses}
               matchCount={filteredResponses.length} totalCount={responses.length}
             />
           )}
@@ -928,6 +1099,19 @@ function WidgetInspector({
   const geoCityFields = useMemo(() => fields.filter(f => f.type === "geo_city"), [fields]);
   const geoCoordsFields = useMemo(() => fields.filter(f => f.type === "geo_coords"), [fields]);
 
+  // ─── Campos auxiliares só dos gráficos estendidos (catálogo 2026-07-05) ──
+  const semanticFields = useMemo(() => fields.filter(f => f.type === "semantic_scale"), [fields]);
+  const matrixFields = useMemo(() => fields.filter(f => f.type === "matrix"), [fields]);
+  const dateRangeFields = useMemo(() => fields.filter(f => f.type === "date_range"), [fields]);
+  // Barra divergente: campos tipo Likert que o Dataº já coleta.
+  const divergingFields = useMemo(() => fields.filter(f => ["scale", "nps", "semantic_scale", "weighted"].includes(f.type)), [fields]);
+  // Radar: qualquer campo numérico/escala pode ser um eixo (precisa de 3+ eixos escolhidos).
+  const radarAxisFields = useMemo(() => [...numericFields, ...semanticFields], [numericFields, semanticFields]);
+  // Barra empilhada: campo de escolha OU um campo matrix sozinho (linhas viram barras, colunas viram segmentos).
+  const stackableFields = useMemo(() => [...choiceFields, ...matrixFields], [choiceFields, matrixFields]);
+
+  const chartKind = resolveChartKind(widget.config);
+
   const heatmapIndicators = (Array.isArray(widget.config.indicators) ? widget.config.indicators : []) as HeatmapIndicatorConfig[];
   function updateHeatmapIndicator(index: number, patch: Partial<HeatmapIndicatorConfig>) {
     onUpdateConfig({ indicators: heatmapIndicators.map((ind, i) => i === index ? { ...ind, ...patch } : ind) });
@@ -978,7 +1162,7 @@ function WidgetInspector({
         </>
       )}
 
-      {(widget.type === "bar_chart" || widget.type === "pie_chart" || widget.type === "donut_chart") && (
+      {!chartKind && (widget.type === "bar_chart" || widget.type === "pie_chart" || widget.type === "donut_chart") && (
         <>
           <div>
             <label {...label}>Campo de escolha</label>
@@ -1010,20 +1194,35 @@ function WidgetInspector({
             </div>
           </div>
           {widget.type === "bar_chart" && (
-            <div>
-              <label {...label}>Comparar com (opcional)</label>
-              <select className={input} style={inputStyle} value={(widget.config.compareFieldId as string) ?? ""}
-                onChange={e => onUpdateConfig({ compareFieldId: e.target.value || undefined })}>
-                <option value="">Sem comparação</option>
-                {choiceFields.filter(f => f.id !== widget.config.fieldId).map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-              <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Vira barras agrupadas — uma barra por opção deste campo, dentro de cada opção do campo principal.</p>
-            </div>
+            <>
+              <div>
+                <label {...label}>Comparar com (opcional)</label>
+                <select className={input} style={inputStyle} value={(widget.config.compareFieldId as string) ?? ""}
+                  onChange={e => onUpdateConfig({ compareFieldId: e.target.value || undefined })}>
+                  <option value="">Sem comparação</option>
+                  {choiceFields.filter(f => f.id !== widget.config.fieldId).map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+                <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Vira barras agrupadas — uma barra por opção deste campo, dentro de cada opção do campo principal.</p>
+              </div>
+              <div>
+                <label {...label}>Orientação</label>
+                <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+                  {[{ v: "vertical", l: "Vertical" }, { v: "horizontal", l: "Horizontal" }].map(o => (
+                    <button key={o.v} onClick={() => onUpdateConfig({ orientation: o.v === "vertical" ? undefined : o.v })}
+                      className="flex-1 py-1.5 text-2xs font-semibold"
+                      style={{ background: ((widget.config.orientation as string) ?? "vertical") === o.v ? "#c48a42" : "#fff", color: ((widget.config.orientation as string) ?? "vertical") === o.v ? "#fff" : "#5c3f13" }}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Horizontal ajuda quando o nome das categorias é longo.</p>
+              </div>
+            </>
           )}
         </>
       )}
 
-      {widget.type === "line_chart" && (
+      {!chartKind && widget.type === "line_chart" && (
         <>
           <div>
             <label {...label}>Intervalo</label>
@@ -1045,6 +1244,315 @@ function WidgetInspector({
           </div>
         </>
       )}
+
+      {/* ─── Editores dos gráficos estendidos (catálogo 2026-07-05) ─────── */}
+
+      {chartKind === "diverging_bar" && (
+        <>
+          <div>
+            <label {...label}>Campo (escala Likert)</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {divergingFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            {divergingFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de escala/NPS/semântico/ponderado neste formulário ainda.</p>}
+          </div>
+          <div>
+            <label {...label}>Valor neutro (opcional)</label>
+            <input type="number" className={input} style={inputStyle} placeholder="automático (ponto médio)"
+              value={(widget.config.neutralValue as number) ?? ""} onChange={e => onUpdateConfig({ neutralValue: e.target.value === "" ? undefined : Number(e.target.value) })} />
+            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Só se aplica a campo numérico (escala/NPS/semântico) — em campo ponderado o neutro é sempre a opção do meio.</p>
+          </div>
+        </>
+      )}
+
+      {chartKind === "stacked_bar" && (() => {
+        const stackFieldId = widget.config.fieldId as string ?? "";
+        const stackField = fields.find(f => f.id === stackFieldId);
+        const isMatrix = stackField?.type === "matrix";
+        return (
+          <>
+            <div>
+              <label {...label}>Campo (escolha ou matriz)</label>
+              <select className={input} style={inputStyle} value={stackFieldId}
+                onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined, stackFieldId: undefined })}>
+                <option value="">Selecione...</option>
+                {stackableFields.map(f => <option key={f.id} value={f.id}>{f.label}{f.type === "matrix" ? " (matriz)" : ""}</option>)}
+              </select>
+            </div>
+            {!isMatrix && stackField && (
+              <div>
+                <label {...label}>Empilhar por</label>
+                <select className={input} style={inputStyle} value={(widget.config.stackFieldId as string) ?? ""}
+                  onChange={e => onUpdateConfig({ stackFieldId: e.target.value || undefined })}>
+                  <option value="">Selecione...</option>
+                  {choiceFields.filter(f => f.id !== stackFieldId).map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+              </div>
+            )}
+            {isMatrix && <p className="text-2xs" style={{ color: "#a06d28" }}>Linhas da matriz viram as barras, colunas viram os segmentos.</p>}
+            <div>
+              <label {...label}>Mostrar como</label>
+              <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+                {[{ v: "count", l: "Número" }, { v: "percent", l: "100% empilhado" }].map(o => (
+                  <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
+                    className="flex-1 py-1.5 text-2xs font-semibold"
+                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+      {chartKind === "area" && (
+        <>
+          <div>
+            <label {...label}>Intervalo</label>
+            <select className={input} style={inputStyle} value={(widget.config.interval as string) ?? "day"}
+              onChange={e => onUpdateConfig({ interval: e.target.value })}>
+              <option value="day">Por dia</option>
+              <option value="week">Por semana</option>
+              <option value="month">Por mês</option>
+            </select>
+          </div>
+          <div>
+            <label {...label}>Comparar série por (opcional)</label>
+            <select className={input} style={inputStyle} value={(widget.config.seriesFieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ seriesFieldId: e.target.value || undefined })}>
+              <option value="">Total de respostas</option>
+              {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+        </>
+      )}
+
+      {chartKind === "histogram" && (
+        <>
+          <div>
+            <label {...label}>Campo numérico</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {numericFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label {...label}>Nº de faixas (opcional)</label>
+            <input type="number" min={2} max={20} className={input} style={inputStyle} placeholder="automático"
+              value={(widget.config.bins as number) ?? ""} onChange={e => onUpdateConfig({ bins: e.target.value === "" ? undefined : Number(e.target.value) })} />
+          </div>
+        </>
+      )}
+
+      {(chartKind === "scatter" || chartKind === "bubble") && (
+        <>
+          <div>
+            <label {...label}>Campo X</label>
+            <select className={input} style={inputStyle} value={(widget.config.xFieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ xFieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {numericFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label {...label}>Campo Y</label>
+            <select className={input} style={inputStyle} value={(widget.config.yFieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ yFieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {numericFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+          {chartKind === "bubble" && (
+            <div>
+              <label {...label}>Campo do tamanho (Z)</label>
+              <select className={input} style={inputStyle} value={(widget.config.zFieldId as string) ?? ""}
+                onChange={e => onUpdateConfig({ zFieldId: e.target.value || undefined })}>
+                <option value="">Selecione...</option>
+                {numericFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+            </div>
+          )}
+          {numericFields.length < 2 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Precisa de pelo menos 2 campos numéricos no formulário.</p>}
+        </>
+      )}
+
+      {chartKind === "treemap" && (
+        <div>
+          <label {...label}>Campo de escolha</label>
+          <select className={input} style={inputStyle} value={(widget.config.fieldId as string) ?? ""}
+            onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined })}>
+            <option value="">Selecione...</option>
+            {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+          </select>
+          {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de escolha neste formulário ainda.</p>}
+        </div>
+      )}
+
+      {chartKind === "range_bar" && (
+        <>
+          <div>
+            <label {...label}>Campo de período</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {dateRangeFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            {dateRangeFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de período (data início–fim) neste formulário ainda.</p>}
+          </div>
+          <div>
+            <label {...label}>Máx. de respostas mostradas</label>
+            <input type="number" min={5} max={100} className={input} style={inputStyle}
+              value={(widget.config.limit as number) ?? 30} onChange={e => onUpdateConfig({ limit: Number(e.target.value) })} />
+            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Mostra as mais recentes primeiro.</p>
+          </div>
+        </>
+      )}
+
+      {(chartKind === "boxplot" || chartKind === "violin") && (
+        <>
+          <div>
+            <label {...label}>Campo numérico</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {numericFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label {...label}>Comparar grupos por (opcional)</label>
+            <select className={input} style={inputStyle} value={(widget.config.groupFieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ groupFieldId: e.target.value || undefined })}>
+              <option value="">Um grupo só</option>
+              {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Até 8 grupos (opções do campo escolhido).</p>
+          </div>
+        </>
+      )}
+
+      {(chartKind === "dot_plot" || chartKind === "lollipop") && (
+        <>
+          <div>
+            <label {...label}>Campo de escolha</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label {...label}>Mostrar como</label>
+            <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+              {[{ v: "count", l: "Número" }, { v: "percent", l: "Percentual" }].map(o => (
+                <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
+                  className="flex-1 py-1.5 text-2xs font-semibold"
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {chartKind === "waffle" && (() => {
+        const waffleFieldId = widget.config.fieldId as string ?? "";
+        const waffleField = fields.find(f => f.id === waffleFieldId);
+        const waffleOptions = waffleField
+          ? (waffleField.type === "yes_no" ? [{ id: "Sim", label: "Sim" }, { id: "Não", label: "Não" }]
+            : ((waffleField.config as { options?: { id: string; label: string }[] } | null)?.options ?? []))
+          : [];
+        return (
+          <>
+            <div>
+              <label {...label}>Campo de escolha</label>
+              <select className={input} style={inputStyle} value={waffleFieldId}
+                onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined, optionId: undefined })}>
+                <option value="">Selecione...</option>
+                {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+            </div>
+            {waffleField && (
+              <div>
+                <label {...label}>Opção (opcional)</label>
+                <select className={input} style={inputStyle} value={(widget.config.optionId as string) ?? ""}
+                  onChange={e => onUpdateConfig({ optionId: e.target.value || undefined })}>
+                  <option value="">Mais respondida</option>
+                  {waffleOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </div>
+            )}
+          </>
+        );
+      })()}
+
+      {chartKind === "dumbbell" && (
+        <>
+          <div>
+            <label {...label}>Campo de escolha</label>
+            <select className={input} style={inputStyle} value={(widget.config.fieldId as string) ?? ""}
+              onChange={e => onUpdateConfig({ fieldId: e.target.value || undefined })}>
+              <option value="">Selecione...</option>
+              {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label {...label}>Data de corte (opcional)</label>
+            <input type="date" className={input} style={inputStyle}
+              value={(widget.config.splitDate as string) ?? ""} onChange={e => onUpdateConfig({ splitDate: e.target.value || undefined })} />
+            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Período A = envios até essa data; B = depois. Sem data, usa a data mediana de envio.</p>
+          </div>
+          <div>
+            <label {...label}>Mostrar como</label>
+            <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
+              {[{ v: "count", l: "Número" }, { v: "percent", l: "% do período" }].map(o => (
+                <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
+                  className="flex-1 py-1.5 text-2xs font-semibold"
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {chartKind === "radar" && (() => {
+        const axisIds = (Array.isArray(widget.config.axisFieldIds) ? widget.config.axisFieldIds as string[] : []);
+        return (
+          <>
+            <div>
+              <label {...label} className="mb-0">Eixos (mín. 3 campos numéricos/escala)</label>
+              <div className="flex flex-col gap-1 max-h-40 overflow-y-auto rounded-md p-1.5 mt-1" style={{ border: BRD, background: "#fff" }}>
+                {radarAxisFields.map(f => {
+                  const checked = axisIds.includes(f.id);
+                  return (
+                    <label key={f.id} className="flex items-center gap-1.5 text-xs" style={{ color: "#5c3f13" }}>
+                      <input type="checkbox" checked={checked}
+                        onChange={() => onUpdateConfig({ axisFieldIds: checked ? axisIds.filter(id => id !== f.id) : [...axisIds, f.id] })} />
+                      {f.label}
+                    </label>
+                  );
+                })}
+              </div>
+              {radarAxisFields.length < 3 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Precisa de pelo menos 3 campos numéricos/escala no formulário.</p>}
+            </div>
+            <div>
+              <label {...label}>Comparar por (opcional)</label>
+              <select className={input} style={inputStyle} value={(widget.config.compareFieldId as string) ?? ""}
+                onChange={e => onUpdateConfig({ compareFieldId: e.target.value || undefined })}>
+                <option value="">Média geral</option>
+                {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Um polígono por opção deste campo (até 6).</p>
+            </div>
+          </>
+        );
+      })()}
 
       {widget.type === "table" && (
         <>

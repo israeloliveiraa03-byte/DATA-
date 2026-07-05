@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { DataLogo } from "@/components/layout/data-logo";
-import type { SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
+import type { FilterCondition, PublicFilterField, SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
 
 interface PublicWidget {
   id: string; type: SupportedWidgetType; title: string | null;
@@ -17,18 +17,93 @@ interface PublicDashboard {
   showAds: boolean; widgets: PublicWidget[];
   theme: string | null; coverUrl: string | null; colorPalette: string | null;
   canvasColor: string | null;
+  filterFields: PublicFilterField[];
+}
+
+function emptyPublicCondition(field: PublicFilterField): FilterCondition {
+  if (field.kind === "choice") return { kind: "choice", fieldId: field.id, optionIds: [] };
+  if (field.kind === "numeric") return { kind: "numeric", fieldId: field.id };
+  if (field.kind === "geo") return { kind: "geo", fieldId: field.id, value: "" };
+  return { kind: "date", fieldId: field.id };
+}
+
+// Uma condição de filtro — mesmo leque de campos filtráveis do editor
+// (escolha/numérico/geo/data), temado claro/escuro (a página é do
+// pesquisador, segue o tema que ele escolheu pro dashboard publicado).
+function PublicFilterConditionRow({
+  condition, field, cardBorder, inputBg, textPrimary, onChange, onRemove,
+}: {
+  condition: FilterCondition;
+  field: PublicFilterField | undefined;
+  cardBorder: string; inputBg: string; textPrimary: string;
+  onChange: (c: FilterCondition) => void;
+  onRemove: () => void;
+}) {
+  const inputStyle = { border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary };
+  const small = "text-xs rounded px-2 py-1";
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {condition.kind === "choice" && (
+        <div className="flex flex-wrap gap-1">
+          {(field?.options ?? []).map(o => {
+            const checked = condition.optionIds.includes(o.id);
+            return (
+              <button key={o.id} type="button"
+                onClick={() => onChange({ ...condition, optionIds: checked ? condition.optionIds.filter(id => id !== o.id) : [...condition.optionIds, o.id] })}
+                className="text-xs rounded-full px-2 py-0.5 font-medium"
+                style={{ border: `1px solid ${cardBorder}`, background: checked ? "#c48a42" : inputBg, color: checked ? "#fff" : textPrimary }}>
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {condition.kind === "numeric" && (
+        <>
+          <input type="number" placeholder="mín" className={`${small} w-20`} style={inputStyle}
+            value={condition.min ?? ""} onChange={e => onChange({ ...condition, min: e.target.value === "" ? undefined : Number(e.target.value) })} />
+          <span className="text-xs" style={{ color: textPrimary }}>a</span>
+          <input type="number" placeholder="máx" className={`${small} w-20`} style={inputStyle}
+            value={condition.max ?? ""} onChange={e => onChange({ ...condition, max: e.target.value === "" ? undefined : Number(e.target.value) })} />
+        </>
+      )}
+      {condition.kind === "geo" && (
+        <select className={small} style={inputStyle}
+          value={condition.value} onChange={e => onChange({ ...condition, value: e.target.value })}>
+          <option value="">Selecione...</option>
+          {(field?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
+      )}
+      {condition.kind === "date" && (
+        <>
+          <input type="date" className={small} style={inputStyle}
+            value={condition.from ?? ""} onChange={e => onChange({ ...condition, from: e.target.value || undefined })} />
+          <span className="text-xs" style={{ color: textPrimary }}>a</span>
+          <input type="date" className={small} style={inputStyle}
+            value={condition.to ?? ""} onChange={e => onChange({ ...condition, to: e.target.value || undefined })} />
+        </>
+      )}
+      <button onClick={onRemove} style={{ color: "#c0392b" }} aria-label="Remover condição">
+        <i className="ti ti-x text-xs" />
+      </button>
+    </div>
+  );
 }
 
 export function PublicDashboardClient({ slug }: { slug: string }) {
   const [dashboard, setDashboard] = useState<PublicDashboard | null>(null);
   const [error,     setError]     = useState("");
-  // Filtro geral por data de resposta — uma linha só, acima de todos os
-  // widgets, nunca por widget (ver anti-padrão "per-chart filters" evitado
-  // aqui de propósito). O servidor já recorta as respostas ANTES de agregar
-  // (rota pública nunca expõe resposta crua pro navegador de qualquer jeito).
+  // Filtro geral — uma linha só, acima de todos os widgets, nunca por
+  // widget (ver anti-padrão "per-chart filters" evitado aqui de propósito).
+  // O servidor já recorta as respostas ANTES de agregar (rota pública nunca
+  // expõe resposta crua pro navegador de qualquer jeito). from/to = data de
+  // ENVIO; conditions = qualquer pergunta filtrável do formulário.
   const [from, setFrom] = useState("");
   const [to,   setTo]   = useState("");
+  const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [refetching, setRefetching] = useState(false);
+
+  const conditionsKey = JSON.stringify(conditions);
 
   useEffect(() => {
     let cancel = false;
@@ -37,6 +112,7 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
     if (to)   params.set("to", to);
+    if (conditions.length > 0) params.set("conditions", conditionsKey);
     const qs = params.toString();
     (async () => {
       try {
@@ -53,7 +129,7 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
     })();
     return () => { cancel = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, from, to]);
+  }, [slug, from, to, conditionsKey]);
 
   if (error) {
     return (
@@ -82,8 +158,27 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
   const textMuted = dark ? "#9c9884" : "#6b6350";
   const cardBg = dark ? "#1e1d17" : "#ffffff";
   const cardBorder = dark ? "#302e22" : "#ddd3bb";
+  const inputBg = dark ? "#14140f" : "#fff";
   const canvasBg = dashboard.canvasColor ?? cardBg;
-  const hasFilter = !!(from || to);
+  const hasFilter = !!(from || to || conditions.length > 0);
+  const filterFields = dashboard.filterFields ?? [];
+
+  function addCondition() {
+    const firstField = filterFields[0];
+    if (!firstField) return;
+    setConditions(prev => [...prev, emptyPublicCondition(firstField)]);
+  }
+  function updateConditionField(index: number, fieldId: string) {
+    const field = filterFields.find(f => f.id === fieldId);
+    if (!field) return;
+    setConditions(prev => prev.map((c, i) => i === index ? emptyPublicCondition(field) : c));
+  }
+  function updateCondition(index: number, cond: FilterCondition) {
+    setConditions(prev => prev.map((c, i) => i === index ? cond : c));
+  }
+  function removeCondition(index: number) {
+    setConditions(prev => prev.filter((_, i) => i !== index));
+  }
 
   return (
     <div className="min-h-screen relative" style={{ background: pageBg }}>
@@ -120,28 +215,48 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
                 Convive com o seletor de indicador que já existe dentro do
                 mapa de calor (esse é específico de um widget só; este aqui
                 é o filtro padrão, o mesmo recorte pra todo mundo). */}
-            <div className="flex flex-wrap items-center gap-2 mb-4 px-3 py-2 rounded-lg" style={{ border: `1px solid ${cardBorder}`, background: cardBg }}>
-              <span className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: textMuted }}>
-                <i className="ti ti-filter" /> Filtrar por data
-              </span>
-              <label className="text-xs flex items-center gap-1.5" style={{ color: textPrimary }}>
-                De
-                <input type="date" value={from} onChange={e => setFrom(e.target.value)}
-                  className="text-xs rounded px-2 py-1"
-                  style={{ border: `1px solid ${cardBorder}`, background: dark ? "#14140f" : "#fff", color: textPrimary }} />
-              </label>
-              <label className="text-xs flex items-center gap-1.5" style={{ color: textPrimary }}>
-                Até
-                <input type="date" value={to} onChange={e => setTo(e.target.value)}
-                  className="text-xs rounded px-2 py-1"
-                  style={{ border: `1px solid ${cardBorder}`, background: dark ? "#14140f" : "#fff", color: textPrimary }} />
-              </label>
-              {hasFilter && (
-                <button onClick={() => { setFrom(""); setTo(""); }} className="text-xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "#c0392b" }}>
-                  <i className="ti ti-x" /> Limpar
+            <div className="flex flex-col gap-2 mb-4 px-3 py-2 rounded-lg" style={{ border: `1px solid ${cardBorder}`, background: cardBg }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: textMuted }}>
+                  <i className="ti ti-filter" /> Filtrar
+                </span>
+                <label className="text-xs flex items-center gap-1.5" style={{ color: textPrimary }}>
+                  De
+                  <input type="date" value={from} onChange={e => setFrom(e.target.value)}
+                    className="text-xs rounded px-2 py-1"
+                    style={{ border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary }} />
+                </label>
+                <label className="text-xs flex items-center gap-1.5" style={{ color: textPrimary }}>
+                  Até
+                  <input type="date" value={to} onChange={e => setTo(e.target.value)}
+                    className="text-xs rounded px-2 py-1"
+                    style={{ border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary }} />
+                </label>
+                {hasFilter && (
+                  <button onClick={() => { setFrom(""); setTo(""); setConditions([]); }} className="text-xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "#c0392b" }}>
+                    <i className="ti ti-x" /> Limpar tudo
+                  </button>
+                )}
+                {refetching && <i className="ti ti-loader-2 animate-spin text-xs ml-auto flex-shrink-0" style={{ color: textMuted }} />}
+              </div>
+
+              {conditions.map((cond, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-1.5 pl-1" style={{ borderLeft: `2px solid ${cardBorder}` }}>
+                  <select className="text-xs rounded px-2 py-1 flex-shrink-0" style={{ border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary }}
+                    value={cond.fieldId} onChange={e => updateConditionField(i, e.target.value)}>
+                    {filterFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                  </select>
+                  <PublicFilterConditionRow condition={cond} field={filterFields.find(f => f.id === cond.fieldId)}
+                    cardBorder={cardBorder} inputBg={inputBg} textPrimary={textPrimary}
+                    onChange={c => updateCondition(i, c)} onRemove={() => removeCondition(i)} />
+                </div>
+              ))}
+
+              {filterFields.length > 0 && (
+                <button onClick={addCondition} className="self-start flex items-center gap-1 text-xs font-semibold" style={{ color: textPrimary }}>
+                  <i className="ti ti-plus" /> Adicionar condição
                 </button>
               )}
-              {refetching && <i className="ti ti-loader-2 animate-spin text-xs ml-auto flex-shrink-0" style={{ color: textMuted }} />}
             </div>
 
             {/* Sem "esqueleto" de recarregamento: enquanto refiltra, o

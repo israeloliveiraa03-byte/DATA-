@@ -1,5 +1,67 @@
 export type SupportedWidgetType = "number_card" | "bar_chart" | "line_chart" | "pie_chart" | "donut_chart" | "table" | "text" | "map" | "heatmap" | "image" | "crosstab" | "globe";
 
+// ─── Catálogo estendido de gráficos (2026-07-05) ──────────────────────────
+// O enum widget_type do Postgres tem só os 12 valores acima e mudá-lo exige
+// ALTER TYPE direto no banco (ver CLAUDE.md). Os gráficos novos NÃO criam
+// valor de enum: cada um persiste como um tipo já existente + a chave
+// `config.chartKind` (config é jsonb livre). Widgets antigos não têm
+// chartKind e continuam se comportando exatamente como antes — zero
+// migração, zero regressão.
+export type ChartKind =
+  | "diverging_bar"  // Likert em torno do ponto neutro (scale/nps/semantic_scale/weighted)
+  | "stacked_bar"    // parte-do-todo: escolha × escolha ou campo matrix
+  | "area"           // variação do gráfico de linha (mesmo motor temporal)
+  | "histogram"      // distribuição de campo numérico (binning)
+  | "scatter"        // correlação entre dois campos numéricos
+  | "bubble"         // scatter + 3ª dimensão no tamanho do ponto
+  | "treemap"        // proporção por área (muitas opções)
+  | "range_bar"      // duração/período por resposta (date_range)
+  | "boxplot"        // mediana/quartis/outliers por grupo (SVG próprio, cálculo d3-array)
+  | "dot_plot"       // alternativa limpa à barra pra muitos itens (SVG próprio)
+  | "lollipop"       // dot plot com haste até o eixo (SVG próprio)
+  | "waffle"         // grid 10×10 de quadrados = uma proporção (SVG próprio)
+  | "dumbbell"       // antes/depois por categoria, dividido por uma data de corte (SVG próprio)
+  | "radar"          // comparação multi-variável (várias perguntas na mesma escala)
+  | "violin";        // densidade (KDE gaussiana) por grupo (SVG próprio)
+
+// Pra qual valor REAL do enum do banco cada gráfico novo é serializado.
+// "area" cai em line_chart e treemap/waffle em pie_chart de propósito: se o
+// chartKind for ignorado por código antigo, a degradação é um gráfico da
+// mesma família com os mesmos dados — nunca um erro.
+export const CHART_KIND_DB_TYPE: Record<ChartKind, SupportedWidgetType> = {
+  diverging_bar: "bar_chart",
+  stacked_bar:   "bar_chart",
+  histogram:     "bar_chart",
+  scatter:       "bar_chart",
+  bubble:        "bar_chart",
+  range_bar:     "bar_chart",
+  boxplot:       "bar_chart",
+  dot_plot:      "bar_chart",
+  lollipop:      "bar_chart",
+  dumbbell:      "bar_chart",
+  radar:         "bar_chart",
+  violin:        "bar_chart",
+  area:          "line_chart",
+  treemap:       "pie_chart",
+  waffle:        "pie_chart",
+};
+
+export function resolveChartKind(config: Record<string, unknown> | null | undefined): ChartKind | undefined {
+  const kind = config?.chartKind;
+  return typeof kind === "string" && kind in CHART_KIND_DB_TYPE ? (kind as ChartKind) : undefined;
+}
+
+// Par divergente único do produto (parâmetro de design-system, não por
+// paleta): polo negativo quente ↔ polo positivo frio + cinza neutro no
+// meio — vermelho×azul é o par clássico seguro pra daltonismo (o
+// vermelho×verde não é). Passos mais claros são gerados por mistura com
+// branco conforme a distância do centro (uma matiz por lado, claro→escuro).
+export const DIVERGING_COLORS = {
+  negative: "#c0392b",
+  neutral:  "#9ca3af",
+  positive: "#1a56db",
+} as const;
+
 // Paleta de cores do dashboard inteiro (gráficos, mapa de calor, cruzamento,
 // globo) — guardada em dashboards.colorPalette, default "terracota" (visual
 // de hoje, zero regressão). accent é o rgb "r, g, b" usado em fundos com
@@ -53,6 +115,90 @@ export interface ChoiceChartConfig {
   // Só no gráfico de barras: um segundo campo de escolha transforma o
   // gráfico em barras agrupadas (comparação categoria A × categoria B,
   // mesmo motor do cruzamento de dados).
+  compareFieldId?: string;
+  // Só no gráfico de barras: "horizontal" deita as barras (bom pra
+  // categoria com nome longo). undefined = vertical, comportamento de sempre.
+  orientation?: "vertical" | "horizontal";
+}
+
+// ─── Configs dos gráficos novos (todos vivem em config jsonb + chartKind) ──
+
+// Barra divergente — distribuição de uma escala em torno do ponto neutro.
+// neutralValue: valor da escala considerado neutro; undefined = ponto médio
+// automático (ex.: 3 numa escala 1–5). Em campo weighted/escolha ordenada,
+// o neutro automático é a opção do meio (quantidade ímpar) ou nenhum
+// (quantidade par — metade pra cada lado).
+export interface DivergingChartConfig {
+  chartKind: "diverging_bar";
+  fieldId: string;
+  neutralValue?: number;
+}
+
+// Barra empilhada — parte-do-todo. Dois modos: campo de escolha + campo de
+// empilhamento (mesmo motor do cruzamento), OU um campo matrix sozinho
+// (linhas da matriz viram as barras, colunas viram os segmentos).
+export interface StackedBarConfig {
+  chartKind: "stacked_bar";
+  fieldId: string;        // escolha OU matrix
+  stackFieldId?: string;  // só quando fieldId é campo de escolha
+  displayMode?: DisplayMode; // "percent" = 100% empilhado
+}
+
+// Histograma — binning de campo numérico. bins: número de faixas;
+// undefined = automático (uma faixa por inteiro quando a escala é curta,
+// senão regra de Sturges limitada a 5–12).
+export interface HistogramConfig {
+  chartKind: "histogram";
+  fieldId: string;
+  bins?: number;
+}
+
+// Dispersão/bolhas — correlação entre dois campos numéricos; zFieldId (só
+// no bubble) dimensiona o ponto.
+export interface ScatterConfig {
+  chartKind: "scatter" | "bubble";
+  xFieldId: string;
+  yFieldId: string;
+  zFieldId?: string;
+}
+
+// Barra de intervalo — um período (campo date_range) por resposta.
+export interface RangeBarConfig {
+  chartKind: "range_bar";
+  fieldId: string;
+  limit?: number; // máx. de respostas exibidas (padrão 30, mais recentes)
+}
+
+// Boxplot/violino — distribuição de um campo numérico, opcionalmente
+// comparando grupos (campo de escolha).
+export interface DistributionConfig {
+  chartKind: "boxplot" | "violin";
+  fieldId: string;
+  groupFieldId?: string;
+}
+
+// Waffle — grid 10×10 representando a % de respostas que marcaram UMA opção.
+export interface WaffleConfig {
+  chartKind: "waffle";
+  fieldId: string;
+  optionId?: string;
+}
+
+// Dumbbell — antes/depois: divide as respostas (já recortadas pelo filtro
+// geral) em período A (até splitDate, inclusive) e período B (depois) e
+// compara cada opção nos dois. splitDate undefined = data mediana de envio.
+export interface DumbbellConfig {
+  chartKind: "dumbbell";
+  fieldId: string;
+  splitDate?: string; // yyyy-mm-dd
+  displayMode?: DisplayMode; // "percent" = % dentro de cada período
+}
+
+// Radar — cada eixo é um campo numérico/escala (média das respostas);
+// compareFieldId (escolha) desenha um polígono por opção.
+export interface RadarConfig {
+  chartKind: "radar";
+  axisFieldIds: string[];
   compareFieldId?: string;
 }
 
@@ -214,18 +360,67 @@ export interface GlobeConfig {
   displayMode?: DisplayMode;
 }
 
-export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | LineChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig | CrosstabConfig | GlobeConfig;
+export type WidgetConfig = NumberCardConfig | ChoiceChartConfig | LineChartConfig | TableConfig | TextConfig | MapConfig | HeatmapConfig | ImageConfig | CrosstabConfig | GlobeConfig
+  | DivergingChartConfig | StackedBarConfig | HistogramConfig | ScatterConfig | RangeBarConfig | DistributionConfig | WaffleConfig | DumbbellConfig | RadarConfig;
+
+// ─── Filtro geral dirigido pelas perguntas do formulário ──────────────────
+
+// Uma condição de filtro sobre UM campo. O "kind" é derivado do tipo do
+// campo na hora de montar (nunca inferido do valor na hora de aplicar):
+// - "choice": qualquer opção marcada dentro de optionIds casa (OU entre
+//   opções, inclusive em multiple_choice)
+// - "numeric": faixa min/max (qualquer um dos dois pode faltar)
+// - "geo": valor exato do campo geográfico (UF, município, região...)
+// - "date": intervalo do PRÓPRIO campo de data (date = dentro do intervalo;
+//   date_range = período que se sobrepõe ao intervalo)
+export type FilterCondition =
+  | { kind: "choice";  fieldId: string; optionIds: string[] }
+  | { kind: "numeric"; fieldId: string; min?: number; max?: number }
+  | { kind: "geo";     fieldId: string; value: string }
+  | { kind: "date";    fieldId: string; from?: string; to?: string };
 
 // Filtro geral do dashboard — um recorte só, aplicado a TODOS os widgets de
 // uma vez (padrão "uma linha de filtro acima de tudo", nunca filtro por
-// gráfico). from/to são datas ISO (yyyy-mm-dd); fieldId/optionId filtram por
-// uma opção de um campo de escolha. É estado de visualização, não config
-// salva — dashboards existentes não mudam em nada.
+// gráfico). É estado de visualização, não config salva.
+// - from/to: data de ENVIO da resposta (submittedAt), como sempre foi.
+// - conditions: lista de condições sobre campos do formulário, combinadas
+//   com E lógico entre elas.
+// - fieldId/optionId: formato legado (um campo, uma opção) — continua
+//   aceito e é normalizado pra uma condição "choice" na aplicação, então
+//   quem usava o filtro simples se comporta exatamente igual.
 export interface DashboardFilter {
   from?: string;
   to?: string;
   fieldId?: string;
   optionId?: string;
+  conditions?: FilterCondition[];
+}
+
+// Tipos de campo filtráveis por família — usados pra montar a UI do filtro
+// (editor e página pública) e pra validar condições vindas de query string.
+export const FILTER_NUMERIC_FIELD_TYPES = ["number", "scale", "nps", "stars", "slider", "semantic_scale"] as const;
+export const FILTER_GEO_FIELD_TYPES = ["geo_region", "geo_state", "geo_mesoregion", "geo_microregion", "geo_city", "geo_district", "geo_neighborhood", "geo_zone"] as const;
+export const FILTER_DATE_FIELD_TYPES = ["date", "date_range"] as const;
+
+export type FilterFieldKind = "choice" | "numeric" | "geo" | "date";
+
+export function filterKindForFieldType(fieldType: string): FilterFieldKind | undefined {
+  if ((CHOICE_FIELD_TYPES as readonly string[]).includes(fieldType)) return "choice";
+  if ((FILTER_NUMERIC_FIELD_TYPES as readonly string[]).includes(fieldType)) return "numeric";
+  if ((FILTER_GEO_FIELD_TYPES as readonly string[]).includes(fieldType)) return "geo";
+  if ((FILTER_DATE_FIELD_TYPES as readonly string[]).includes(fieldType)) return "date";
+  return undefined;
+}
+
+// Metadados de campo filtrável que a rota pública expõe pro leitor montar
+// condições (só rótulos/opções — nunca respostas cruas; values de campo
+// geográfico são valores DISTINTOS já visíveis nos mapas agregados).
+export interface PublicFilterField {
+  id: string;
+  label: string;
+  kind: FilterFieldKind;
+  options?: { id: string; label: string }[]; // kind "choice"
+  values?: string[];                          // kind "geo" — distintos observados
 }
 
 export interface ChoiceOption {
@@ -333,7 +528,74 @@ export interface CrosstabResult {
   grandTotal: number;
 }
 
-export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TimeSeriesResult | TableResult | TextResult | MapResult | HeatmapResult | ImageResult | CrosstabResult;
+// ─── Resultados dos gráficos novos ─────────────────────────────────────────
+// treemap, waffle, dot_plot e lollipop reaproveitam ChoiceAggResult;
+// stacked_bar reaproveita CrosstabResult; area reaproveita TimeSeriesResult.
+
+// Barra divergente — buckets em ordem de escala, cada um marcado com o lado
+// em relação ao neutro. O bucket neutro (se existir) fica no meio.
+export interface DivergingResult {
+  kind: "diverging";
+  buckets: { label: string; count: number; side: "neg" | "neu" | "pos" }[];
+  totalResponses: number;
+}
+
+export interface HistogramResult {
+  kind: "histogram";
+  bins: { label: string; count: number }[];
+  total: number;
+}
+
+export interface ScatterResult {
+  kind: "scatter";
+  points: { x: number; y: number; z?: number }[];
+  xLabel: string;
+  yLabel: string;
+  zLabel?: string;
+}
+
+// Barra de intervalo — start/end em timestamps (ms) pra escala contínua.
+export interface RangeBarResult {
+  kind: "rangebar";
+  rows: { label: string; start: number; end: number }[];
+}
+
+// Boxplot/violino — estatísticas e curva de densidade calculadas no motor
+// (a rota pública serializa isto, nunca os valores individuais).
+export interface DistributionGroupStats {
+  key: string;
+  label: string;
+  count: number;
+  min: number; q1: number; median: number; q3: number; max: number;
+  lowerWhisker: number; upperWhisker: number;
+  outliers: number[]; // limitado (não é lista exaustiva de respostas)
+  density: { x: number; w: number }[]; // KDE normalizada 0..1 (violino)
+}
+
+export interface DistributionResult {
+  kind: "distribution";
+  groups: DistributionGroupStats[];
+  fieldLabel: string;
+}
+
+export interface RadarResult {
+  kind: "radar";
+  axes: { key: string; label: string }[];
+  series: { key: string; label: string; values: Record<string, number | null> }[];
+}
+
+// Dumbbell — contagem (e total do período, pra %) por opção nos períodos A/B.
+export interface DumbbellResult {
+  kind: "dumbbell";
+  categories: { label: string; a: number; b: number }[];
+  periodALabel: string;
+  periodBLabel: string;
+  totalA: number;
+  totalB: number;
+}
+
+export type WidgetData = CountResult | NumericResult | ChoiceAggResult | TimeSeriesResult | TableResult | TextResult | MapResult | HeatmapResult | ImageResult | CrosstabResult
+  | DivergingResult | HistogramResult | ScatterResult | RangeBarResult | DistributionResult | RadarResult | DumbbellResult;
 
 export const NUMERIC_FIELD_TYPES = ["number", "scale", "nps", "stars", "slider"] as const;
 export const CHOICE_FIELD_TYPES = ["single_choice", "multiple_choice", "yes_no", "weighted", "consent"] as const;
@@ -351,4 +613,25 @@ export const SUPPORTED_WIDGET_TYPES: { value: SupportedWidgetType; label: string
   { value: "image",       label: "Imagem",  icon: "ti-photo",                   description: "Logo, foto ou brasão — conteúdo fixo, sem dado" },
   { value: "crosstab",    label: "Cruzamento", icon: "ti-table-options",        description: "Categoria A × categoria B, tipo tabela cruzada" },
   { value: "globe",       label: "Globo 3D",   icon: "ti-world",                description: "Mapa ou mapa de calor num globo interativo" },
+];
+
+// Catálogo dos gráficos estendidos — aparecem na paleta do builder como
+// widgets próprios, mas persistem como CHART_KIND_DB_TYPE[kind] +
+// config.chartKind (ver comentário no topo). w/h = tamanho inicial no canvas.
+export const EXTRA_CHART_TYPES: { kind: ChartKind; label: string; icon: string; description: string; w: number; h: number }[] = [
+  { kind: "diverging_bar", label: "Barra divergente", icon: "ti-arrows-horizontal",  description: "Escala/Likert em torno do ponto neutro", w: 66, h: 150 },
+  { kind: "stacked_bar",   label: "Barra empilhada",  icon: "ti-stack-2",            description: "Parte-do-todo por categoria (ou campo matriz)", w: 50, h: 200 },
+  { kind: "area",          label: "Área",             icon: "ti-chart-area-line",    description: "Como a linha, com a área preenchida", w: 50, h: 160 },
+  { kind: "histogram",     label: "Histograma",       icon: "ti-chart-histogram",    description: "Distribuição de um campo numérico", w: 50, h: 180 },
+  { kind: "scatter",       label: "Dispersão",        icon: "ti-chart-dots",         description: "Correlação entre dois campos numéricos", w: 50, h: 220 },
+  { kind: "bubble",        label: "Bolhas",           icon: "ti-chart-bubble",       description: "Dispersão + tamanho por um 3º campo", w: 50, h: 220 },
+  { kind: "treemap",       label: "Treemap",          icon: "ti-chart-treemap",      description: "Proporção por área — bom pra muitas opções", w: 50, h: 220 },
+  { kind: "range_bar",     label: "Intervalos",       icon: "ti-calendar-time",      description: "Período (data início–fim) por resposta", w: 66, h: 240 },
+  { kind: "boxplot",       label: "Boxplot",          icon: "ti-chart-candle",       description: "Mediana, quartis e outliers por grupo", w: 50, h: 220 },
+  { kind: "violin",        label: "Violino",          icon: "ti-wave-sine",          description: "Densidade da distribuição por grupo", w: 50, h: 220 },
+  { kind: "dot_plot",      label: "Pontos",           icon: "ti-grain",              description: "Alternativa limpa à barra pra muitos itens", w: 50, h: 200 },
+  { kind: "lollipop",      label: "Pirulito",         icon: "ti-antenna-bars-5",     description: "Pontos com haste até o eixo", w: 50, h: 200 },
+  { kind: "waffle",        label: "Waffle",           icon: "ti-layout-grid",        description: "Grid 10×10 mostrando uma proporção só", w: 33, h: 200 },
+  { kind: "dumbbell",      label: "Antes/depois",     icon: "ti-barbell",            description: "Compara cada categoria em dois períodos", w: 50, h: 220 },
+  { kind: "radar",         label: "Radar",            icon: "ti-chart-radar",        description: "Comparação multi-variável (mesma escala)", w: 50, h: 260 },
 ];

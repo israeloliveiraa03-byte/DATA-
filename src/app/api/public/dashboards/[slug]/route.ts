@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { dashboards, dashboardWidgets, researches, forms, formFields, responses, users } from "@/lib/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/utils";
-import { computeWidgetData, filterResponses } from "@/lib/dashboard/aggregate";
+import { buildPublicFilterFields, computeWidgetData, filterResponses, parseFilterConditionsParam } from "@/lib/dashboard/aggregate";
 import type { SupportedWidgetType } from "@/lib/dashboard/types";
 
 // Datas do filtro público chegam como query param — só aceita yyyy-mm-dd
@@ -15,9 +15,11 @@ function parseDateParam(value: string | null): string | undefined {
 
 // Rota pública — nunca expõe respostas cruas, só o resultado já agregado por widget
 // (mesmo o widget de tabela: os valores já vêm resolvidos, não a linha de resposta bruta).
-// ?from/?to (yyyy-mm-dd) aplicam o filtro geral de data de resposta ANTES da
-// agregação — o mesmo recorte pra todos os widgets, calculado no servidor
-// (o navegador continua sem receber nenhuma resposta bruta).
+// ?from/?to (yyyy-mm-dd) filtram a data de ENVIO; ?conditions (JSON de
+// FilterCondition[], ver parseFilterConditionsParam) filtra por qualquer
+// pergunta filtrável do formulário (escolha/numérico/geo/data) — tudo
+// aplicado ANTES da agregação, no servidor, mesmo recorte pra todos os
+// widgets (o navegador nunca recebe resposta bruta).
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ slug: string }> }
@@ -27,6 +29,7 @@ export async function GET(
   const filter = {
     from: parseDateParam(url.searchParams.get("from")),
     to:   parseDateParam(url.searchParams.get("to")),
+    conditions: parseFilterConditionsParam(url.searchParams.get("conditions")),
   };
 
   const dashboard = await db.query.dashboards.findFirst({
@@ -43,9 +46,11 @@ export async function GET(
   const fields = form
     ? await db.query.formFields.findMany({ where: eq(formFields.formId, form.id), orderBy: asc(formFields.order) })
     : [];
-  const allResponses = form
-    ? filterResponses(await db.query.responses.findMany({ where: eq(responses.formId, form.id) }), filter)
-    : [];
+  // rawResponses (sem filtro) alimenta as opções/valores distintos do
+  // filtro (buildPublicFilterFields) — precisam ficar estáveis conforme o
+  // leitor filtra, senão a lista de opções encolhe a cada clique.
+  const rawResponses = form ? await db.query.responses.findMany({ where: eq(responses.formId, form.id) }) : [];
+  const allResponses = filterResponses(rawResponses, filter);
 
   const widgets = await db.query.dashboardWidgets.findMany({
     where: eq(dashboardWidgets.dashboardId, dashboard.id),
@@ -70,5 +75,6 @@ export async function GET(
     researchTitle: research.title,
     showAds:      owner?.plan === "free" || !owner,
     widgets:      widgetsWithData,
+    filterFields: buildPublicFilterFields(fields, rawResponses),
   });
 }
