@@ -142,7 +142,21 @@ Objetivo de longo prazo: app de campo (celular/tablet, via Capacitor — planeja
   - Endpoint de sincronização em lote (`/api/sync/responses`) — hoje ainda é um `fetch` por resposta pendente, aceitável no volume atual, vira gargalo se acumular centenas
   - Conflito de versão em edição de entidade (`baseVersion` no PATCH de `/api/entities/[id]`, usando `entityVersions.version` que já existe) — só relevante quando `campo-client.tsx` (captura de GPS territorial) ganhar persistência local própria
   - Token de dispositivo (`device_tokens`, nova tabela) — só necessário quando o app Capacitor existir; o hook web de hoje usa cookie de sessão do NextAuth, não precisa disso
-  - Upload de mídia (`@vercel/blob` ou similar) — não existe nenhuma rota de upload/Blob no projeto hoje; fundação nova, não ajuste
+  - ~~Upload de mídia~~ — implementado, ver seção abaixo.
+
+Desde então (`a1e813f`), o app Capacitor (`mobile/`) foi construído de fato: SQLite local (`localDb.ts`), `syncWorker.ts` sincronizando `local_responses` em lote contra `/api/sync/responses`, token de dispositivo (`device_tokens`) e `~25` tipos de campo em `FormFillScreen.tsx`.
+
+## Upload de mídia no app de campo — captura foto/arquivo offline (2026-07-06)
+
+Fecha a lacuna que faltava desde a fila de sincronização: os tipos `image`/`file` do formulário agora funcionam no app de campo, com upload assíncrono numa fila própria (`a6577fb`).
+
+- **Vercel Blob** (`@vercel/blob`, instalado na raiz — não existia antes): store `datazero-media`, acesso público (URLs de alta entropia, não exigem token pra visualizar — decisão consciente de simplicidade). `BLOB_READ_WRITE_TOKEN` já configurado nas env vars da Vercel.
+- **`POST /api/media/upload`** (novo): multipart/form-data (`file` + `responseId` + `fieldId`), autenticado por `getRequestUserId` (token de dispositivo ou sessão). Valida que a resposta existe e pertence a quem envia, que o campo pertence ao formulário da resposta, e que o MIME é permitido pelo tipo do campo (`image`: jpeg/png/webp; `file`: mais pdf/txt/csv/doc(x)/xls(x)/odt/ods/zip). Limite **4MB** (não 10MB — teto de corpo de requisição de function da Vercel é ~4,5MB). Sobe via `put()` no path `respostas/{responseId}/{fieldId}/{uuid}.{ext}` e devolve a URL pública.
+- **`PATCH /api/responses/[id]`** (novo): `{ fieldId, value }` — atualiza só aquela chave dentro do `data` jsonb da resposta já salva (read-modify-write simples, sem migração). Usado pra trocar o placeholder local pela URL real do blob depois do upload.
+- **App de campo**: `mobile/src/lib/media.ts` (novo) — `capturePhoto()` usa `Camera.getPhoto` (`CameraSource.Prompt`: câmera ou galeria, quality 70, largura máx. 1600px) e `importPickedFile()` usa `<input type="file">` (seletor nativo do sistema via WebView, sem plugin novo pra isso); os dois gravam o arquivo em `Directory.Data/media/` via `@capacitor/filesystem`. `FormFillScreen.tsx` ganhou os tipos `image`/`file` (só faltavam esses dois — geo_map/geo_relational continuam fora, é outra decisão pendente): o id da resposta agora nasce na abertura do formulário (não só no salvar), pra mídia capturada durante o preenchimento já vincular à resposta certa; recapturar substitui a mídia pendente anterior do mesmo campo (remove da fila e apaga o arquivo antigo).
+- **Placeholder gravado no campo, antes do upload**: `{ kind: "media", localMediaId, fileName, mimeType, pending: true }`; depois de sincronizado vira `{ kind: "media", url, fileName, mimeType }`. Tabela `local_media` (schema já existia, sem uso) ganhou colunas `file_name`/`sync_error` via `ALTER TABLE` guardado por try/catch no init.
+- **`syncWorker.ts`**: nova fila de mídia, roda **depois** da fila de respostas (metadado leve primeiro, mídia mais pesada/instável depois) e só processa item cuja resposta dona já sincronizou. Erro 4xx marca `error` (não repete sozinho); rede/5xx mantém `pending`. Mídia cuja resposta nunca aparece localmente (formulário abandonado sem registrar) só vira erro depois de 24h — evita falso positivo com preenchimento demorado.
+- **Fora de escopo desta rodada**: renderização do valor `{ kind:"media", url }` nas telas de resposta do site principal (não fazia parte do pedido); se o upload subir mas o PATCH falhar, o retry re-sobe o arquivo (blob órfão inofensivo, aceitável por ora).
 
 ## Funcionalidades planejadas (visão de longo prazo)
 
