@@ -229,16 +229,16 @@ function AttributePanel({
         {rows.map(([key, value], i) => (
           <div key={i} className="flex items-center gap-1.5">
             <span className="text-xs text-gray-500 w-20 truncate flex-shrink-0">{key}</span>
-            <input className="flex-1 text-xs border border-gray-200 rounded px-1.5 py-1" value={value}
+            <input className="flex-1 text-xs border border-gray-200 rounded px-1.5 py-1 text-gray-800 bg-white" value={value}
               onChange={e => setRows(prev => prev.map((r, ri) => ri === i ? [r[0], e.target.value] : r))} />
             <button onClick={() => setRows(prev => prev.filter((_, ri) => ri !== i))} className="text-gray-300 hover:text-red-400">✕</button>
           </div>
         ))}
       </div>
       <div className="flex items-center gap-1.5 mb-3">
-        <input className="flex-1 text-xs border border-gray-200 rounded px-1.5 py-1" placeholder="novo campo (ex: nome)"
+        <input className="flex-1 text-xs border border-gray-200 rounded px-1.5 py-1 text-gray-800 bg-white placeholder:text-gray-400" placeholder="novo campo (ex: nome)"
           value={newKey} onChange={e => setNewKey(e.target.value)} onKeyDown={e => e.key === "Enter" && addRow()} />
-        <button onClick={addRow} className="text-xs px-2 py-1 rounded bg-gray-100">+</button>
+        <button onClick={addRow} className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">+</button>
       </div>
       <div className="flex gap-1.5">
         <button onClick={save} className="flex-1 text-xs font-semibold px-2 py-1.5 rounded bg-emerald-700 text-white">Salvar</button>
@@ -399,34 +399,34 @@ export function PolygonMapEditor({ value, onChange, center, neighbors = [] }: Po
       <div className="flex items-center gap-2 flex-wrap">
         <input ref={importInputRef} type="file" accept=".json,.geojson" className="hidden" onChange={handleImport} />
         <button type="button" onClick={() => importInputRef.current?.click()}
-          className="text-xs font-medium px-2.5 py-1.5 rounded border border-gray-200 bg-white hover:bg-gray-50">
+          className="text-xs font-medium px-2.5 py-1.5 rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">
           Importar GeoJSON
         </button>
         <button type="button" onClick={handleExport}
-          className="text-xs font-medium px-2.5 py-1.5 rounded border border-gray-200 bg-white hover:bg-gray-50">
+          className="text-xs font-medium px-2.5 py-1.5 rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">
           Exportar GeoJSON
         </button>
         <span className="inline-flex rounded border border-gray-200 overflow-hidden" role="group" aria-label="Mapa-base">
           {(Object.keys(EDITOR_BASEMAPS) as BasemapKey[]).map(k => (
             <button key={k} type="button" onClick={() => setBasemap(k)}
               aria-pressed={basemap === k}
-              className={`text-xs font-medium px-2.5 py-1.5 ${basemap === k ? "bg-gray-800 text-white" : "bg-white hover:bg-gray-50"}`}>
+              className={`text-xs font-medium px-2.5 py-1.5 ${basemap === k ? "bg-gray-800 text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
               {EDITOR_BASEMAPS[k].label}
             </button>
           ))}
         </span>
         <span className="inline-flex rounded border border-gray-200 overflow-hidden" role="group" aria-label="Desfazer e refazer">
           <button type="button" onClick={() => step(-1)} disabled={!canUndo} title="Desfazer (Ctrl+Z)"
-            className="text-xs font-medium px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white">
+            className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white">
             <i className="ti ti-arrow-back-up" aria-hidden="true" /> Desfazer
           </button>
           <button type="button" onClick={() => step(1)} disabled={!canRedo} title="Refazer (Ctrl+Shift+Z)"
-            className="text-xs font-medium px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white border-l border-gray-200">
+            className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white border-l border-gray-200">
             <i className="ti ti-arrow-forward-up" aria-hidden="true" /> Refazer
           </button>
         </span>
         {neighbors.length > 0 && (
-          <label className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded border border-gray-200 bg-white cursor-pointer select-none">
+          <label className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded border border-gray-200 bg-white text-gray-700 cursor-pointer select-none">
             <input type="checkbox" checked={showNeighbors} onChange={e => setShowNeighbors(e.target.checked)} className="accent-gray-700" />
             Territórios vizinhos
           </label>
