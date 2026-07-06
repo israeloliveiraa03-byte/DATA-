@@ -40,9 +40,11 @@ CREATE TABLE IF NOT EXISTS local_media (
   response_id TEXT,
   field_id    TEXT,
   file_path   TEXT NOT NULL,
+  file_name   TEXT,
   mime_type   TEXT NOT NULL,
   captured_at TEXT NOT NULL,
-  sync_status TEXT NOT NULL DEFAULT 'pending'
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  sync_error  TEXT
 );
 CREATE TABLE IF NOT EXISTS kv_cache (
   key   TEXT PRIMARY KEY,
@@ -68,6 +70,18 @@ async function initNative(): Promise<void> {
     : await sqlite.createConnection(DB_NAME, false, "no-encryption", 1, false);
   await sqliteDb.open();
   await sqliteDb.execute(SCHEMA_SQL);
+
+  // Migração guardada: colunas adicionadas DEPOIS da criação da tabela
+  // local_media. CREATE TABLE IF NOT EXISTS não altera tabela existente,
+  // então aparelhos que já tinham o banco precisam do ALTER — e em banco
+  // novo o ALTER falha porque a coluna já veio no CREATE. Os dois casos
+  // são esperados, por isso o catch silencioso.
+  for (const stmt of [
+    "ALTER TABLE local_media ADD COLUMN file_name TEXT",
+    "ALTER TABLE local_media ADD COLUMN sync_error TEXT",
+  ]) {
+    try { await sqliteDb.execute(stmt); } catch { /* coluna já existe */ }
+  }
 }
 
 export function initLocalDb(): Promise<void> {
@@ -216,22 +230,99 @@ export async function setEntityEditSyncState(
   lsSet("entityEdits", all.map(e => (e.id === id ? { ...e, syncStatus, syncError } : e)));
 }
 
-// ─── Mídia local (fotos etc. — referência ao arquivo, upload fica pra fase da
-//     rota de mídia no servidor, que ainda não existe) ────────────────────────
+// ─── Mídia local (fotos/arquivos capturados no preenchimento — o arquivo em
+//     si fica no Filesystem do aparelho; aqui só a referência e o estado de
+//     sincronização. Upload: fila de mídia do syncWorker) ─────────────────────
 
 export async function saveMedia(m: LocalMedia): Promise<void> {
   await initLocalDb();
   if (isNative() && sqliteDb) {
     await sqliteDb.run(
       `INSERT OR REPLACE INTO local_media
-       (id, response_id, field_id, file_path, mime_type, captured_at, sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [m.id, m.responseId, m.fieldId, m.filePath, m.mimeType, m.capturedAt, m.syncStatus]
+       (id, response_id, field_id, file_path, file_name, mime_type, captured_at, sync_status, sync_error)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [m.id, m.responseId, m.fieldId, m.filePath, m.fileName, m.mimeType, m.capturedAt, m.syncStatus, m.syncError]
     );
     return;
   }
   const all = lsGet<LocalMedia[]>("media", []);
   lsSet("media", [...all.filter(x => x.id !== m.id), m]);
+}
+
+export async function listMedia(): Promise<LocalMedia[]> {
+  await initLocalDb();
+  if (isNative() && sqliteDb) {
+    const res = await sqliteDb.query(
+      `SELECT * FROM local_media ORDER BY captured_at ASC`
+    );
+    return (res.values ?? []).map(rowToMedia);
+  }
+  return lsGet<LocalMedia[]>("media", [])
+    .sort((a, b) => a.capturedAt.localeCompare(b.capturedAt));
+}
+
+/** Pendentes em ordem de captura — recaptura do mesmo campo sobrescreve na ordem certa. */
+export async function getPendingMedia(): Promise<LocalMedia[]> {
+  const all = await listMedia();
+  return all.filter(m => m.syncStatus === "pending");
+}
+
+export async function setMediaSyncState(
+  id: string,
+  syncStatus: LocalMedia["syncStatus"],
+  syncError: string | null = null
+): Promise<void> {
+  await initLocalDb();
+  if (isNative() && sqliteDb) {
+    await sqliteDb.run(
+      `UPDATE local_media SET sync_status = ?, sync_error = ? WHERE id = ?`,
+      [syncStatus, syncError, id]
+    );
+    return;
+  }
+  const all = lsGet<LocalMedia[]>("media", []);
+  lsSet("media", all.map(m => (m.id === id ? { ...m, syncStatus, syncError } : m)));
+}
+
+/**
+ * Remove as mídias pendentes de um mesmo campo/resposta (recaptura antes de
+ * enviar: a foto anterior sai da fila pra não subir duas e a antiga
+ * sobrescrever a nova). Devolve as linhas removidas pra quem chamou poder
+ * apagar os arquivos do Filesystem também.
+ */
+export async function removePendingMediaForField(
+  responseId: string,
+  fieldId: string
+): Promise<LocalMedia[]> {
+  const all = await listMedia();
+  const doomed = all.filter(m =>
+    m.responseId === responseId && m.fieldId === fieldId && m.syncStatus === "pending"
+  );
+  if (doomed.length === 0) return [];
+  await initLocalDb();
+  if (isNative() && sqliteDb) {
+    for (const m of doomed) {
+      await sqliteDb.run(`DELETE FROM local_media WHERE id = ?`, [m.id]);
+    }
+    return doomed;
+  }
+  const ids = new Set(doomed.map(m => m.id));
+  lsSet("media", lsGet<LocalMedia[]>("media", []).filter(m => !ids.has(m.id)));
+  return doomed;
+}
+
+function rowToMedia(row: Record<string, unknown>): LocalMedia {
+  return {
+    id:         String(row.id),
+    responseId: (row.response_id as string | null) ?? null,
+    fieldId:    (row.field_id as string | null) ?? null,
+    filePath:   String(row.file_path),
+    fileName:   (row.file_name as string | null) ?? null,
+    mimeType:   String(row.mime_type),
+    capturedAt: String(row.captured_at),
+    syncStatus: row.sync_status as LocalMedia["syncStatus"],
+    syncError:  (row.sync_error as string | null) ?? null,
+  };
 }
 
 // ─── Cache de leitura (pesquisas/formulários/entidades baixados) ─────────────

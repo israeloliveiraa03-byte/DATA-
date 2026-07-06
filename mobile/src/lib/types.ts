@@ -82,10 +82,35 @@ export interface LocalMedia {
   fieldId:    string | null;
   // Caminho do arquivo salvo via @capacitor/filesystem no aparelho
   filePath:   string;
+  // Nome original do arquivo (pra exibição e pro upload) — coluna adicionada
+  // depois da criação da tabela, ver migração guardada em localDb.ts
+  fileName:   string | null;
   mimeType:   string;
   capturedAt: string;
   syncStatus: "pending" | "synced" | "error";
+  syncError:  string | null;
 }
+
+// Placeholder gravado no campo da resposta na hora da captura, ANTES do
+// upload — o syncWorker troca pela URL real do blob depois que a mídia sobe.
+// `kind: "media"` é o marcador reconhecível dos dois formatos (local e final).
+// (type, não interface: type ganha index signature implícita e encaixa no
+// Record<string, unknown> de AnswerValue sem cast)
+export type MediaPlaceholder = {
+  kind:         "media";
+  localMediaId: string;
+  fileName:     string;
+  mimeType:     string;
+  pending:      true;
+};
+
+// Valor final do campo depois da sincronização (o que fica no servidor).
+export type MediaValue = {
+  kind:     "media";
+  url:      string;
+  fileName: string;
+  mimeType: string;
+};
 
 export interface SyncResultItem {
   id:     string;

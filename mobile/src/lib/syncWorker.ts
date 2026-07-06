@@ -8,6 +8,9 @@
 // reenviar nunca duplica — "duplicate" é confirmação de que já está salvo).
 // Edições de entidade vão uma a uma no PATCH /api/entities/[id] (cada uma
 // precisa mesclar com a FeatureCollection atual da entidade).
+// Mídia (fotos/arquivos de campos image/file) vai por último, uma a uma
+// (upload multipart pro /api/media/upload + PATCH do campo na resposta) —
+// e só quando a resposta dona já subiu.
 //
 // Classificação de erro (mesma regra do hook offline do site):
 //   4xx = erro permanente (o dado está errado; sai da fila de retry, fica
@@ -19,8 +22,11 @@ import { Network } from "@capacitor/network";
 import {
   getPendingResponses, setResponseSyncState,
   getPendingEntityEdits, setEntityEditSyncState,
+  getPendingMedia, setMediaSyncState, listResponses,
 } from "./localDb";
-import { syncResponsesBatch, pushEntityBoundary, ApiError } from "./api";
+import { syncResponsesBatch, pushEntityBoundary, uploadMedia, patchResponseField, ApiError } from "./api";
+import { readMediaBlob } from "./media";
+import type { MediaValue } from "./types";
 
 export interface SyncSummary {
   synced:    number;
@@ -100,9 +106,76 @@ export async function runSync(): Promise<SyncSummary | null> {
       }
     }
 
+    // 3. Mídia (fotos/arquivos) — SEMPRE depois das respostas: o metadado
+    //    leve sobe primeiro; a mídia é pesada, pode falhar mais, e o upload
+    //    só faz sentido quando a resposta dela já existe no servidor.
+    //    Fluxo por item: upload do arquivo → PATCH trocando o placeholder
+    //    local pela URL real do blob → marca sincronizada.
+    const mediaPending = await getPendingMedia();
+    if (mediaPending.length > 0) {
+      const responseStatus = new Map(
+        (await listResponses()).map(r => [r.id, r.syncStatus])
+      );
+      for (const media of mediaPending) {
+        if (!media.responseId || !media.fieldId) {
+          summary.failed++;
+          await setMediaSyncState(media.id, "error", "Mídia sem vínculo com resposta/campo");
+          continue;
+        }
+        const st = responseStatus.get(media.responseId);
+        if (st === "pending") continue; // resposta ainda não subiu — fica pro próximo gatilho
+        if (st === undefined) {
+          // Resposta ainda não existe localmente: ou o formulário está sendo
+          // preenchido NESTE momento (um gatilho de rede pode disparar no meio
+          // — não é erro), ou foi abandonado sem registrar. Só vira erro
+          // depois de 24h sem a resposta aparecer.
+          const ageMs = Date.now() - new Date(media.capturedAt).getTime();
+          if (ageMs > 24 * 60 * 60 * 1000) {
+            summary.failed++;
+            await setMediaSyncState(media.id, "error", "Formulário não foi registrado — mídia sem resposta");
+          }
+          continue;
+        }
+        if (st === "error") {
+          summary.failed++;
+          await setMediaSyncState(media.id, "error", "A resposta desta mídia falhou ao sincronizar — revise a resposta primeiro");
+          continue;
+        }
+        try {
+          const blob = await readMediaBlob(media.filePath, media.mimeType);
+          const { url } = await uploadMedia({
+            responseId: media.responseId,
+            fieldId:    media.fieldId,
+            fileName:   media.fileName ?? "arquivo",
+            blob,
+          });
+          const value: MediaValue = {
+            kind:     "media",
+            url,
+            fileName: media.fileName ?? "arquivo",
+            mimeType: media.mimeType,
+          };
+          await patchResponseField(media.responseId, media.fieldId, value);
+          summary.synced++;
+          await setMediaSyncState(media.id, "synced");
+        } catch (err) {
+          if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+            // Erro permanente (validação/permissão) — sai do retry automático.
+            summary.failed++;
+            await setMediaSyncState(media.id, "error", err.message);
+          }
+          // Falha de rede/5xx (inclusive erro lendo o arquivo): continua
+          // "pending" pro próximo gatilho. Se o upload passou e só o PATCH
+          // falhou, o retry re-sobe o arquivo (blob órfão inofensivo) e
+          // repete o PATCH — aceitável nesta fase, simples > perfeito.
+        }
+      }
+    }
+
     const stillPending = await getPendingResponses();
     const stillPendingEdits = await getPendingEntityEdits();
-    summary.remaining = stillPending.length + stillPendingEdits.length;
+    const stillPendingMedia = await getPendingMedia();
+    summary.remaining = stillPending.length + stillPendingEdits.length + stillPendingMedia.length;
     lastSummary = summary;
     return summary;
   } finally {

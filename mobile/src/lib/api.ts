@@ -87,6 +87,53 @@ export async function syncResponsesBatch(
   return data.results;
 }
 
+/**
+ * Upload de mídia — multipart/form-data pro POST /api/media/upload.
+ * Não usa o helper request(): FormData define o próprio Content-Type
+ * (com boundary) e definir "application/json" à mão quebraria o parse.
+ */
+export async function uploadMedia(params: {
+  responseId: string;
+  fieldId:    string;
+  fileName:   string;
+  blob:       Blob;
+}): Promise<{ url: string }> {
+  const token = await getStoredToken();
+  const fd = new FormData();
+  fd.append("file", params.blob, params.fileName);
+  fd.append("responseId", params.responseId);
+  fd.append("fieldId", params.fieldId);
+
+  const res = await fetch(`${API_BASE}/api/media/upload`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  });
+  const json = (await res.json().catch(() => null)) as ApiEnvelope<{ url: string }> | null;
+  if (!res.ok || !json || !json.success) {
+    const message = json && !json.success ? json.error : `Erro ${res.status}`;
+    const code    = json && !json.success ? json.code : undefined;
+    throw new ApiError(message, res.status, code);
+  }
+  return json.data;
+}
+
+/**
+ * Atualiza UMA chave do data (jsonb) de uma resposta já sincronizada —
+ * PATCH /api/responses/[id]. Usado pra trocar o placeholder de mídia pela
+ * URL real do blob depois do upload.
+ */
+export async function patchResponseField(
+  responseId: string,
+  fieldId: string,
+  value: unknown
+): Promise<void> {
+  await request(`/api/responses/${responseId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ fieldId, value }),
+  });
+}
+
 export interface ApiEntity {
   id:              string;
   code:            string;

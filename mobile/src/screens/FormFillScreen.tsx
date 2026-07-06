@@ -4,14 +4,18 @@
 // (src/app/(public)/p/[slug]/respondent-client.tsx): mesmas chaves de config
 // (options com {id,label,weight}, min/max, semanticLeft/Right etc.), mesmas
 // respostas gravadas (opt.id, nunca opt.label). Tipos que exigem recurso que
-// o app ainda não tem (mapa, arquivo, assinatura desenhada) caem num aviso.
+// o app ainda não tem (mapa, assinatura desenhada) caem num aviso.
+// Campos image/file capturam via câmera/seletor do sistema, guardam o arquivo
+// no aparelho e gravam um placeholder — o upload é da fila de mídia do
+// syncWorker, depois que a resposta sobe.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Geolocation } from "@capacitor/geolocation";
 import { Network } from "@capacitor/network";
-import type { ApiForm, ApiFormField, Answers, AnswerValue, Opt } from "../lib/types";
-import { saveResponse } from "../lib/localDb";
+import type { ApiForm, ApiFormField, Answers, AnswerValue, MediaPlaceholder, Opt } from "../lib/types";
+import { saveResponse, saveMedia, removePendingMediaForField } from "../lib/localDb";
 import { runSync } from "../lib/syncWorker";
+import { capturePhoto, importPickedFile, deleteMediaFile, type CapturedMedia } from "../lib/media";
 
 // ─── Exibição condicional (mesma regra do site) ──────────────────────────────
 function conditionMet(cfg: Record<string, unknown>, answers: Answers): boolean {
@@ -33,10 +37,14 @@ function conditionMet(cfg: Record<string, unknown>, answers: Answers): boolean {
 
 // ─── Campo individual ────────────────────────────────────────────────────────
 
-function FieldInput({ field, value, onChange }: {
+function FieldInput({ field, value, onChange, responseId }: {
   field: ApiFormField;
   value: AnswerValue;
   onChange: (val: AnswerValue) => void;
+  // id (UUID) que a resposta local vai ter quando for gravada — gerado na
+  // abertura do formulário, pra mídia capturada antes do "Registrar" já
+  // nascer vinculada à resposta certa em local_media.
+  responseId: string;
 }) {
   const cfg = (field.config ?? {}) as Record<string, unknown>;
 
@@ -226,11 +234,17 @@ function FieldInput({ field, value, onChange }: {
     case "geo_coords":
       return <GeoCoordsInput value={value} onChange={onChange} />;
 
+    case "image":
+      return <MediaField mode="image" fieldId={field.id} responseId={responseId} value={value} onChange={onChange} />;
+
+    case "file":
+      return <MediaField mode="file" fieldId={field.id} responseId={responseId} value={value} onChange={onChange} />;
+
     case "section":
       return null;
 
     default:
-      // Tipo que o app ainda não renderiza (mapa, arquivo, assinatura, matriz
+      // Tipo que o app ainda não renderiza (mapa, assinatura, matriz
       // etc.) — visível como aviso em vez de sumir, pra ninguém achar que o
       // formulário está incompleto sem explicação.
       return (
@@ -274,6 +288,114 @@ function GeoCoordsInput({ value, onChange }: { value: AnswerValue; onChange: (v:
   );
 }
 
+// ─── Mídia (image/file) ──────────────────────────────────────────────────────
+// A captura grava o arquivo no aparelho + uma linha em local_media, e o valor
+// do campo vira um placeholder { kind:"media", localMediaId, pending:true }.
+// Recapturar substitui: a mídia pendente anterior do mesmo campo sai da fila
+// (e o arquivo é apagado) pra não subirem duas versões.
+
+function MediaField({ mode, fieldId, responseId, value, onChange }: {
+  mode: "image" | "file";
+  fieldId: string;
+  responseId: string;
+  value: AnswerValue;
+  onChange: (v: AnswerValue) => void;
+}) {
+  const [busy, setBusy]       = useState(false);
+  const [error, setError]     = useState("");
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const current = (value ?? null) as MediaPlaceholder | null;
+
+  async function registerCaptured(media: CapturedMedia) {
+    // Substituição: remove a pendente anterior deste campo (fila + arquivo).
+    const replaced = await removePendingMediaForField(responseId, fieldId);
+    for (const old of replaced) await deleteMediaFile(old.filePath);
+
+    await saveMedia({
+      id:         media.id,
+      responseId,
+      fieldId,
+      filePath:   media.filePath,
+      fileName:   media.fileName,
+      mimeType:   media.mimeType,
+      capturedAt: new Date().toISOString(),
+      syncStatus: "pending",
+      syncError:  null,
+    });
+
+    const placeholder: MediaPlaceholder = {
+      kind:         "media",
+      localMediaId: media.id,
+      fileName:     media.fileName,
+      mimeType:     media.mimeType,
+      pending:      true,
+    };
+    onChange(placeholder);
+    setPreview(media.previewDataUrl);
+  }
+
+  async function takePhoto() {
+    setBusy(true);
+    setError("");
+    try {
+      const media = await capturePhoto(); // null = cancelou
+      if (media) await registerCaptured(media);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível capturar a foto.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pickFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite escolher o mesmo arquivo de novo
+    if (!file) return;
+    setBusy(true);
+    setError("");
+    try {
+      await registerCaptured(await importPickedFile(file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível anexar o arquivo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      {mode === "image" ? (
+        <button type="button" className="btn btn--ghost" onClick={takePhoto} disabled={busy}>
+          {busy ? <span className="spinner" /> : null}
+          {current ? "Tirar outra foto" : "Tirar foto ou escolher da galeria"}
+        </button>
+      ) : (
+        <>
+          <input ref={fileInputRef} type="file" style={{ display: "none" }} onChange={pickFile} />
+          <button type="button" className="btn btn--ghost"
+            onClick={() => fileInputRef.current?.click()} disabled={busy}>
+            {busy ? <span className="spinner" /> : null}
+            {current ? "Escolher outro arquivo" : "Escolher arquivo"}
+          </button>
+        </>
+      )}
+
+      {preview && (
+        <img src={preview} alt="Prévia da foto capturada"
+          style={{ marginTop: 8, maxWidth: "100%", borderRadius: 8, display: "block" }} />
+      )}
+      {current && (
+        <p className="msg-success">
+          {current.fileName} — salvo neste aparelho, envia na sincronização.
+        </p>
+      )}
+      {error && <p className="msg-error">{error}</p>}
+    </div>
+  );
+}
+
 // ─── Tela ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -283,6 +405,12 @@ interface Props {
 }
 
 export function FormFillScreen({ form, onDone, onBack }: Props) {
+  // Id da resposta local, gerado já na abertura do formulário (não no salvar):
+  // mídia capturada durante o preenchimento nasce vinculada a ele em
+  // local_media. Se a pessoa abandonar o formulário sem registrar, a mídia
+  // órfã fica pendente sem resposta — a fila de mídia espera 24h (pode ser só
+  // um preenchimento longo) e então marca como erro em vez de tentar pra sempre.
+  const [responseId, setResponseId] = useState(() => crypto.randomUUID());
   const [answers, setAnswers] = useState<Answers>({});
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState("");
@@ -322,7 +450,7 @@ export function FormFillScreen({ form, onDone, onBack }: Props) {
       } catch { /* segue sem localização */ }
 
       await saveResponse({
-        id:         crypto.randomUUID(),
+        id:         responseId,
         formId:     form.id,
         researchId: form.researchId,
         data:       answers,
@@ -359,7 +487,7 @@ export function FormFillScreen({ form, onDone, onBack }: Props) {
               ? "Sem conexão agora — a resposta sincroniza sozinha quando a internet voltar (ou pelo botão Sincronizar)."
               : "A resposta foi gravada e enviada pra plataforma."}
           </p>
-          <button className="btn" onClick={() => { setAnswers({}); setSavedOffline(null); }}>
+          <button className="btn" onClick={() => { setAnswers({}); setSavedOffline(null); setResponseId(crypto.randomUUID()); }}>
             Coletar outra resposta
           </button>
           <div style={{ marginTop: 8 }}>
@@ -389,7 +517,7 @@ export function FormFillScreen({ form, onDone, onBack }: Props) {
                 {field.label} {field.required && <span className="field-required">*</span>}
               </label>
               {field.description && <p className="field-desc">{field.description}</p>}
-              <FieldInput field={field} value={answers[field.id] ?? null} onChange={val => setAnswer(field.id, val)} />
+              <FieldInput field={field} value={answers[field.id] ?? null} onChange={val => setAnswer(field.id, val)} responseId={responseId} />
             </>
           )}
         </div>
