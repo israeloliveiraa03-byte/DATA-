@@ -94,6 +94,12 @@ export const createEntitySchema = baseEntityFields.superRefine((data, ctx) => {
 export const updateEntitySchema = baseEntityFields.omit({ type: true }).partial().extend({
   status:     z.enum(["draft","published","archived"]).optional(),
   changeNote: z.string().max(500).optional(),
+  // Detecção de conflito offline: a versão de entityVersions que o cliente
+  // tinha quando começou a editar. Se outra pessoa salvou no meio tempo, o
+  // PATCH devolve 409 com a entidade atual completa (o cliente decide como
+  // mesclar). Opcional por compatibilidade — quem chama sem isso hoje (site)
+  // continua com o comportamento antigo de "último salvamento vence".
+  baseVersion: z.number().int().optional(),
 });
 
 export const linkResearchEntitySchema = z.object({

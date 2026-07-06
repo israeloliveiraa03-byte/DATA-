@@ -8,6 +8,9 @@ const __dirname  = dirname(__filename);
 const compat = new FlatCompat({ baseDirectory: __dirname });
 
 const eslintConfig = [
+  // O app de campo (mobile/, Vite + Capacitor) é um projeto separado com o
+  // próprio tsconfig — fora do lint do site (que roda no build do Vercel).
+  { ignores: ["mobile/**"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getRequestUserId } from "@/lib/auth/device";
 import { db } from "@/lib/db";
 import {
   entities, entityVersions, entityMunicipalities,
@@ -10,9 +11,11 @@ import { desc, isNull } from "drizzle-orm";
 import { createEntitySchema } from "@/lib/validations/entity";
 import { apiSuccess, apiError } from "@/lib/utils";
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return apiError("Não autorizado", 401);
+export async function GET(request: Request) {
+  // Cookie de sessão (site) ou token de dispositivo (app de campo, que lista
+  // entidades pra captação territorial offline).
+  const userId = await getRequestUserId(request);
+  if (!userId) return apiError("Não autorizado", 401);
 
   const data = await db.query.entities.findMany({
     where: isNull(entities.deletedAt),

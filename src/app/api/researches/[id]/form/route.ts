@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getRequestUserId } from "@/lib/auth/device";
 import { db } from "@/lib/db";
 import { researches, forms, formFields } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -6,19 +7,21 @@ import { apiSuccess, apiError } from "@/lib/utils";
 
 // GET — busca o formulário ativo da pesquisa
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await auth();
-  if (!session?.user?.id) return apiError("Não autorizado", 401);
+  // Cookie de sessão (site) ou token de dispositivo (app de campo, que baixa
+  // o formulário pra cache local antes de ir a campo sem internet).
+  const userId = await getRequestUserId(req);
+  if (!userId) return apiError("Não autorizado", 401);
 
   const research = await db.query.researches.findFirst({
     where: eq(researches.id, id),
   });
 
   if (!research)                             return apiError("Pesquisa não encontrada", 404);
-  if (research.ownerId !== session.user.id)  return apiError("Sem permissão", 403);
+  if (research.ownerId !== userId)           return apiError("Sem permissão", 403);
 
   const form = await db.query.forms.findFirst({
     where: eq(forms.researchId, id),
