@@ -3,6 +3,7 @@ import { formFields, responses } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getRequestUserId } from "@/lib/auth/device";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
 import { z } from "zod";
 
 // Atualiza UMA chave dentro do `data` (jsonb) de uma resposta já salva,
@@ -47,12 +48,12 @@ export async function PATCH(
 
   const response = await db.query.responses.findFirst({
     where: eq(responses.id, id),
-    columns: { id: true, formId: true, respondentId: true, data: true },
-    with: { research: { columns: { ownerId: true } } },
+    columns: { id: true, formId: true, respondentId: true, data: true, researchId: true },
   });
   if (!response) return apiError("Resposta não encontrada", 404);
-  if (response.respondentId !== userId && response.research.ownerId !== userId) {
-    return apiError("Sem permissão sobre esta resposta", 403);
+  if (response.respondentId !== userId) {
+    const access = await getResearchAccess(response.researchId, userId);
+    if (!access || !canEdit(access.role)) return apiError("Sem permissão sobre esta resposta", 403);
   }
 
   // Só aceita chave que corresponda a um campo real do formulário da resposta

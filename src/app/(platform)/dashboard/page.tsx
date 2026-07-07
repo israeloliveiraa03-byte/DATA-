@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { researches } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { getMyResearches } from "@/lib/researches/access";
 import Link from "next/link";
 import { ResearchStatusBadge } from "@/components/ui/badge";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 const CTA_CLASS = "inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold bg-brand-500 text-on-accent border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150";
+const ROLE_LABEL: Record<string, string> = { editor: "Convidado (editor)", viewer: "Convidado (visualizador)" };
 
 export default async function DashboardPage() {
   const session = await auth();
-  const myResearches = await db.query.researches.findMany({
-    where:   eq(researches.ownerId, session!.user!.id!),
-    orderBy: desc(researches.createdAt),
-    limit:   6,
-  });
+  const mine = await getMyResearches(session!.user!.id!);
+  const roleByResearchId = Object.fromEntries(mine.map(m => [m.research.id, m.role]));
+  const myResearches = mine.map(m => m.research);
 
   const stats = [
     { val: myResearches.length,                                          label: "Total",      icon: "ti-clipboard-list" },
@@ -96,7 +93,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {myResearches.map(r => (
+            {myResearches.slice(0, 6).map(r => (
               <Link
                 key={r.id}
                 href={`/researches/${r.id}`}
@@ -104,7 +101,14 @@ export default async function DashboardPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold truncate text-ink-100">{r.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold truncate text-ink-100">{r.title}</p>
+                      {roleByResearchId[r.id] !== "owner" && (
+                        <span className="text-2xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-teal-500/15 text-teal-500">
+                          {ROLE_LABEL[roleByResearchId[r.id]]}
+                        </span>
+                      )}
+                    </div>
                     {r.cityName && (
                       <p className="text-xs font-medium mt-0.5 flex items-center gap-1 text-ink-300">
                         <i className="ti ti-map-pin text-xs text-brand-400" aria-hidden="true" />

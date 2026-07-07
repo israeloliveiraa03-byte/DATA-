@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { researches, forms, formFields, responses } from "@/lib/db/schema";
+import { forms, formFields, responses } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { getResearchAccess } from "@/lib/researches/access";
 import { ResponsesClient } from "./responses-client";
 
 export default async function ResponsesPage({
@@ -13,11 +14,9 @@ export default async function ResponsesPage({
   const { id } = await params;
   const session = await auth();
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
-
-  if (!research || research.ownerId !== session?.user?.id) notFound();
+  const access = await getResearchAccess(id, session!.user!.id!);
+  if (!access) notFound();
+  const research = access.research;
 
   const form = await db.query.forms.findFirst({
     where: eq(forms.researchId, id),

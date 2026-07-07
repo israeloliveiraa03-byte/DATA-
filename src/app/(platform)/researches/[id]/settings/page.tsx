@@ -1,8 +1,6 @@
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { researches } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { getResearchAccess } from "@/lib/researches/access";
 import { ResearchSettingsClient } from "./settings-client";
 
 export default async function ResearchSettingsPage({
@@ -13,13 +11,8 @@ export default async function ResearchSettingsPage({
   const { id } = await params;
   const session = await auth();
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
+  const access = await getResearchAccess(id, session!.user!.id!);
+  if (!access) notFound();
 
-  if (!research || research.ownerId !== session?.user?.id) {
-    notFound();
-  }
-
-  return <ResearchSettingsClient research={research} />;
+  return <ResearchSettingsClient research={access.research} role={access.role} />;
 }

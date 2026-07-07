@@ -1,8 +1,7 @@
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { researches } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
+import { ResearchReadOnlyNotice } from "@/components/researches/readonly-notice";
 import { FormBuilderClient } from "./form-builder-client";
 
 export default async function FormBuilderPage({
@@ -13,13 +12,12 @@ export default async function FormBuilderPage({
   const { id } = await params;
   const session = await auth();
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
+  const access = await getResearchAccess(id, session!.user!.id!);
+  if (!access) notFound();
 
-  if (!research || research.ownerId !== session?.user?.id) {
-    notFound();
+  if (!canEdit(access.role)) {
+    return <ResearchReadOnlyNotice researchId={id} title={access.research.title} />;
   }
 
-  return <FormBuilderClient research={research} />;
+  return <FormBuilderClient research={access.research} />;
 }

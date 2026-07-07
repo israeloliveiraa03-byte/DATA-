@@ -2,19 +2,16 @@ import { auth } from "@/lib/auth";
 import { getRequestUserId } from "@/lib/auth/device";
 import { db } from "@/lib/db";
 import { researches } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
 import { createResearchSchema } from "@/lib/validations/research";
 import { apiSuccess, apiError, slugify } from "@/lib/utils";
+import { getMyResearches } from "@/lib/researches/access";
 
 export async function GET(request: Request) {
   // Cookie de sessão (site) ou token de dispositivo (app de campo).
   const userId = await getRequestUserId(request);
   if (!userId) return apiError("Não autorizado", 401);
-  const data = await db.query.researches.findMany({
-    where: eq(researches.ownerId, userId),
-    orderBy: desc(researches.createdAt),
-  });
-  return apiSuccess(data);
+  const mine = await getMyResearches(userId);
+  return apiSuccess(mine.map(m => m.research));
 }
 
 export async function POST(request: Request) {

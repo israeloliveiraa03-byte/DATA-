@@ -40,13 +40,15 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 
 ## Bugs ativos / bloqueadores conhecidos
 
-- **Dashboard-builder: "imagens somem ou estão cortadas"** — reportado por Israel em 2026-07-04, ainda não diagnosticado (poucos candidatos possíveis: widget de imagem novo, tiles do mapa Leaflet, capa do dashboard). Aguardando print de tela pra confirmar qual é antes de mexer — evitar diagnóstico às cegas em bug visual/WebGL.
 - Botão "Entrar com ORCID" no login (`(auth)/login/page.tsx`) chama `signIn("orcid", ...)`, mas `src/lib/auth/index.ts` só registra o provider do Google — o ORCID nunca foi configurado (precisa de client ID/secret do ORCID e decisão de Israel sobre isso). Clicar no botão hoje quebra. Descoberto em 2026-07-02 testando o Catálogo de Entidades, não é um bug introduzido agora.
 - `DATABASE_URL` no `.env.local` roda em Postgres 18 (Neon), que cria constraints NOT NULL nomeadas (recurso do PG 17+). O `drizzle-kit` do projeto (`^0.27.0`) não reconhece isso e propõe (incorretamente) remover o NOT NULL de quase toda coluna do banco sempre que `npm run db:push` é rodado — **nunca aceitar esse lote de `DROP CONSTRAINT ..._not_null` do prompt do `db:push`**. Até resolver (upgrade de `drizzle-kit`/`drizzle-orm`, não testado ainda), aplicar mudanças de schema aditivas (tabelas/colunas novas) via SQL direto, só com os `CREATE TABLE`/`CREATE TYPE`/`ALTER TABLE ADD CONSTRAINT` relevantes.
+- **Pendente de ação manual (2026-07-07)**: `scripts/sql/2026-07-07-research-team.sql` (tabelas `research_members`/`research_member_invites` da Equipe de pesquisa) ainda não foi aplicado no Neon de produção — o `.env.local` deste ambiente só tem um `DATABASE_URL` fictício, sem acesso ao banco real (mesma limitação de sempre; ver rotina já usada pra `device_tokens`). Rodar o SQL direto no Neon antes de testar a feature ao vivo.
 
 Testado ao vivo por Israel em 2026-06-30 na Pesquisa Gênesis (`pesquisa-genesis-mqy406bg`) — cascata geográfica e seleção de opções confirmadas funcionando.
 
 ## Bugs recém-resolvidos
+
+- ~~Dashboard-builder: "imagens somem ou estão cortadas"~~ — causa raiz era `leaflet/dist/leaflet.css` nunca carregado nas rotas de dashboard; corrigido centralizando o import em `map-common.tsx` durante o pacote de modernização de mapas/gráficos de 2026-07-04/05 (não estava mais pendente, só o registro no CLAUDE.md que ficou desatualizado até a auditoria de 2026-07-07).
 
 - ~~Página de respondente `/p/[slug]` retornando 404~~ — causa raiz: `page.tsx` da rota tinha sido apagado por engano no commit `b975c5c`. Recriado (`bf4ff28`).
 - ~~Preview de formulário não funcional~~ — botão "Preview" no form-builder não tinha `onClick`. Agora abre `/p/[slug]?preview=true` em nova aba (`4a0af11`).
@@ -130,7 +132,16 @@ Levantamento completo do projeto (rotas, links, botões) achou 3 páginas linkad
 - **Dataº Território ganhou aprovação de verdade**: antes, `POST /api/territorio` só fazia `console.log` e devolvia sucesso fake com "30 dias grátis" — não tinha nenhum efeito real. Agora exige login (a candidatura fica vinculada à conta de quem envia, tabela `territorio_applications`) e aprovar em `/admin/territorio` seta `users.plan = "institution"` direto na conta do candidato.
 - **Suporte v1** (`/suporte` pro usuário, `/admin/suporte` pra fila): chamado simples — assunto + mensagem + uma resposta do admin/suporte + status (`support_tickets`), sem conversa de múltiplas mensagens ainda.
 - **Bootstrap do primeiro admin**: como não existe UI pra promover ninguém antes de existir o primeiro admin, a conta do Israel (`israeloliveiraa03@gmail.com`) foi promovida via script SQL direto (apagado depois de rodar) — dali em diante, promover outros usuários já é possível pela tela `/admin/usuarios`.
-- **Fora de escopo, fase seguinte** (mais estrutural, afeta quem pode editar cada pesquisa existente): Equipe de pesquisa — colaboradores por pesquisa com papel dono/editor/visualizador. Usaria `organizations`/`organization_members` (`src/lib/db/schema/users.ts`), que já existem no schema com um enum `org_role` (`owner|admin|member`) mas nunca foram usados em nenhuma página/rota — são tabelas mortas até essa fase acontecer.
+## Equipe de pesquisa — colaboradores por pesquisa (2026-07-07)
+
+Fase estrutural adiada desde o pacote de Admin/Suporte (2026-07-04): cada pesquisa passa a ter, além do dono (`researches.ownerId`, inalterado), colaboradores com papel **editor** ou **visualizador**.
+
+- **Modelo de dados**: tabela nova dedicada (`research_members` + `research_member_invites`, `src/lib/db/schema/research-team.ts`), **não** as tabelas `organizations`/`organization_members` que já existiam mortas no schema — aquelas são por organização inteira (papéis `owner|admin|member`), granularidade errada pro que foi pedido aqui (decisão tomada com Israel). `organizations` continua reservada pra uma fase futura de faturamento institucional. Enum `research_role` só tem `editor|viewer` — "dono" nunca vira uma linha em `research_members`, é sempre `researches.ownerId`.
+- **Migração**: `scripts/sql/2026-07-07-research-team.sql`, aditiva — ver "Bugs ativos" acima, ainda pendente de rodar no Neon real.
+- **Permissão central**: `src/lib/researches/access.ts` (`getResearchAccess`, `canEdit`, `getMyResearches`) — usado em toda API/página que antes comparava só `research.ownerId !== userId`. Regra: leitura é livre pra qualquer papel; escrita (editar formulário/dashboard/configurações, vincular entidade) exige editor ou dono; excluir/encerrar pesquisa e gerenciar equipe é só do dono.
+- **Convite por link copiável** (mesmo padrão do autocadastro de pessoa em `/convite/[token]`, não usa e-mail de verdade): `POST /api/researches/[id]/team` gera token, expira em 7 dias; aceite em `/convite-equipe/[token]` exige login Google, sem checagem de e-mail exato (qualquer conta que tiver o link aceita — decisão consciente de simplicidade, igual o convite de pessoa).
+- **Corte de escopo desta rodada**: form-builder e dashboard-builder não ganharam modo de leitura de verdade — editor tem acesso igual ao dono nesses dois editores pesados (drag-and-drop, mapas, globo); visualizador é bloqueado na entrada com uma tela "Somente leitura" (`src/components/researches/readonly-notice.tsx`) em vez disso. Fazer um modo read-only de verdade nesses editores é trabalho futuro, se fizer falta.
+- **Card "Equipe"** na página da pesquisa (`research-page-client.tsx`, ao lado de "Entidades vinculadas"): lista dono + membros, convite/trocar papel/remover só visível pra quem é dono.
 
 ## Fila de sincronização offline — parte 1 implementada (2026-07-04)
 
@@ -172,7 +183,7 @@ Princípio: quem tem orçamento institucional paga o suficiente pra manter a pla
 
 - **Exploração** (gratuito) — 1 pesquisa ativa, até 50 respostas/mês, dashboard com anúncio obrigatório. Funil de entrada, sem cartão.
 - **Pesquisador** — R$29/mês por pesquisa ativa (usuários e respostas ilimitados na pesquisa); dashboard sem anúncio: +R$9/mês. Público: pesquisador individual/pós-graduando.
-- **Laboratório** — R$149/mês até 5 pesquisas ativas (pesquisa adicional: R$19/mês); colaboradores com papéis (dono/editor/visualizador — depende da feature "Equipe de pesquisa", ainda não construída); faturamento institucional com NF-e. Público: grupo de pesquisa universitário.
+- **Laboratório** — R$149/mês até 5 pesquisas ativas (pesquisa adicional: R$19/mês); colaboradores com papéis (dono/editor/visualizador — feature "Equipe de pesquisa" construída em 2026-07-07, mas ainda sem limite de colaboradores por plano nem cobrança de verdade); faturamento institucional com NF-e. Público: grupo de pesquisa universitário.
 - **Governo/Enterprise** — sob consulta, referência a partir de R$690/mês; contrato anual, boleto + NF-e centralizada, SLA. Público: prefeitura, secretaria, autarquia.
 - **Dataº Território** (gratuito) — acesso completo para instituições que representam comunidades tradicionais. Vagas calculadas para sustentabilidade (~10% da base pagante como referência). Fundamental para a base ética da plataforma.
 

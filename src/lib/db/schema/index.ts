@@ -6,3 +6,4 @@ export * from "./reliability";
 export * from "./assets";
 export * from "./support";
 export * from "./device-tokens";
+export * from "./research-team";

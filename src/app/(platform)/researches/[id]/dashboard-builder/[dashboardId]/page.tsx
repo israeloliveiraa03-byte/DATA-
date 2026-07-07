@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { researches, forms, formFields, responses, dashboards } from "@/lib/db/schema";
+import { forms, formFields, responses, dashboards } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
+import { ResearchReadOnlyNotice } from "@/components/researches/readonly-notice";
 import { DashboardBuilderClient } from "./dashboard-builder-client";
 
 export default async function DashboardBuilderPage({
@@ -13,8 +15,12 @@ export default async function DashboardBuilderPage({
   const { id, dashboardId } = await params;
   const session = await auth();
 
-  const research = await db.query.researches.findFirst({ where: eq(researches.id, id) });
-  if (!research || research.ownerId !== session?.user?.id) notFound();
+  const access = await getResearchAccess(id, session!.user!.id!);
+  if (!access) notFound();
+
+  if (!canEdit(access.role)) {
+    return <ResearchReadOnlyNotice researchId={id} title={access.research.title} />;
+  }
 
   const dashboard = await db.query.dashboards.findFirst({ where: eq(dashboards.id, dashboardId) });
   if (!dashboard || dashboard.researchId !== id) notFound();
@@ -34,7 +40,7 @@ export default async function DashboardBuilderPage({
 
   return (
     <DashboardBuilderClient
-      research={research}
+      research={access.research}
       dashboard={dashboard}
       fields={fields}
       responses={allResponses}

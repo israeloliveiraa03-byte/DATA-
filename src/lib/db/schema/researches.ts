@@ -2,6 +2,7 @@ import { pgTable, uuid, varchar, text, boolean, timestamp, integer, real, jsonb,
 import { relations } from "drizzle-orm";
 import { users, organizations } from "./users";
 import { researchEntities } from "./entities";
+import { researchMembers } from "./research-team";
 
 export const researchStatusEnum = pgEnum("research_status", ["draft","active","paused","closed","published"]);
 export const researchThemeEnum  = pgEnum("research_theme",  ["health","education","environment","culture","economy","governance","territory","other"]);
@@ -110,6 +111,7 @@ export const researchesRelations = relations(researches, ({ one, many }) => ({
   forms:        many(forms),
   responses:    many(responses),
   linkedEntities: many(researchEntities),
+  members:      many(researchMembers),
 }));
 
 export const formsRelations = relations(forms, ({ one, many }) => ({

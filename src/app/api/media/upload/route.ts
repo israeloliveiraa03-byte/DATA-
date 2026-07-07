@@ -5,6 +5,7 @@ import { formFields, responses } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getRequestUserId } from "@/lib/auth/device";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
 import { z } from "zod";
 
 // Upload de mídia de resposta (foto/arquivo capturado no app de campo).
@@ -81,12 +82,12 @@ export async function POST(request: Request) {
   // ou ao dono da pesquisa, que também pode anexar mídia.
   const response = await db.query.responses.findFirst({
     where: eq(responses.id, responseId),
-    columns: { id: true, formId: true, respondentId: true },
-    with: { research: { columns: { ownerId: true } } },
+    columns: { id: true, formId: true, respondentId: true, researchId: true },
   });
   if (!response) return apiError("Resposta não encontrada — sincronize a resposta antes da mídia", 404);
-  if (response.respondentId !== userId && response.research.ownerId !== userId) {
-    return apiError("Sem permissão sobre esta resposta", 403);
+  if (response.respondentId !== userId) {
+    const access = await getResearchAccess(response.researchId, userId);
+    if (!access || !canEdit(access.role)) return apiError("Sem permissão sobre esta resposta", 403);
   }
 
   // O campo precisa ser do formulário da resposta e de um tipo que aceite arquivo.

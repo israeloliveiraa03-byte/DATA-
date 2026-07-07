@@ -35,13 +35,84 @@ const THEME_MAP: Record<string, string> = {
 const FIELD_CLASS = "rounded-md border border-ink-700 bg-ink-950 text-ink-100 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500";
 const PILL_BTN = "flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold border border-ink-700 bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100 transition-colors duration-150";
 
+type TeamUser = { id: string; name: string; email: string; avatarUrl: string | null };
+type TeamMember = { id: string; role: "editor" | "viewer"; user: TeamUser };
+type TeamInvite = { id: string; email: string; role: "editor" | "viewer"; expiresAt: Date | string };
+
 interface ResearchPageClientProps {
   research: Research;
   linkedEntities: (ResearchEntity & { entity: Entity })[];
   availableEntities: Entity[];
+  role: "owner" | "editor" | "viewer";
+  teamOwner: TeamUser;
+  teamMembers: TeamMember[];
+  teamInvites: TeamInvite[];
 }
 
-export function ResearchPageClient({ research, linkedEntities, availableEntities }: ResearchPageClientProps) {
+const TEAM_ROLE_LABEL: Record<string, string> = { editor: "Editor", viewer: "Visualizador" };
+
+export function ResearchPageClient({ research, linkedEntities, availableEntities, role, teamOwner, teamMembers, teamInvites }: ResearchPageClientProps) {
+  const canEdit = role !== "viewer";
+  const isOwner = role === "owner";
+
+  const [members,        setMembers]        = useState(teamMembers);
+  const [pendingInvites, setPendingInvites]  = useState(teamInvites);
+  const [teamEmail,      setTeamEmail]       = useState("");
+  const [teamRole,       setTeamRole]        = useState<"editor" | "viewer">("viewer");
+  const [teamInviting,   setTeamInviting]    = useState(false);
+  const [teamError,      setTeamError]       = useState("");
+  const [copiedInviteId, setCopiedInviteId]  = useState<string | null>(null);
+
+  async function inviteTeamMember(e: React.FormEvent) {
+    e.preventDefault();
+    if (!teamEmail) return;
+    setTeamInviting(true);
+    setTeamError("");
+    try {
+      const res = await fetch(`/api/researches/${research.id}/team`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: teamEmail, role: teamRole }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setTeamError(json.error ?? "Erro ao gerar convite"); return; }
+      setPendingInvites(prev => [...prev, json.data]);
+      const link = `${window.location.origin}/convite-equipe/${json.data.token}`;
+      await navigator.clipboard.writeText(link);
+      setCopiedInviteId(json.data.id);
+      setTeamEmail("");
+      toast.success("Link do convite copiado.");
+    } catch {
+      setTeamError("Erro de conexão. Tente novamente.");
+    } finally {
+      setTeamInviting(false);
+    }
+  }
+
+  async function revokeInvite(inviteId: string) {
+    const res = await fetch(`/api/researches/${research.id}/team/invite/${inviteId}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("Erro ao revogar convite."); return; }
+    setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+    toast.success("Convite revogado.");
+  }
+
+  async function changeMemberRole(memberId: string, newRole: "editor" | "viewer") {
+    const res = await fetch(`/api/researches/${research.id}/team/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (!res.ok) { toast.error("Erro ao trocar o papel."); return; }
+    setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+    toast.success("Papel atualizado.");
+  }
+
+  async function removeMember(memberId: string) {
+    const res = await fetch(`/api/researches/${research.id}/team/${memberId}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("Erro ao remover membro."); return; }
+    setMembers(prev => prev.filter(m => m.id !== memberId));
+    toast.success("Membro removido.");
+  }
   const [status,      setStatus]      = useState(research.status);
   const [copied,      setCopied]      = useState(false);
   const [showQR,      setShowQR]      = useState(false);
@@ -658,7 +729,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                 </div>
               )}
 
-              {remainingEntities.length > 0 && (
+              {canEdit && remainingEntities.length > 0 && (
                 <form onSubmit={linkEntity} className="flex flex-col gap-2 pt-3 border-t border-ink-700">
                   <label htmlFor="vincular-entidade" className="sr-only">Vincular entidade existente</label>
                   <select
@@ -689,6 +760,90 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
               <Link href="/entidades" className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand-400 hover:underline">
                 <i className="ti ti-database" aria-hidden="true" /> Ver catálogo de entidades
               </Link>
+            </div>
+
+            {/* Equipe */}
+            <div className="rounded-lg p-4 border border-ink-700 bg-ink-900">
+              <p className="text-xs font-bold uppercase tracking-widest font-condensed mb-3 text-brand-400">Equipe</p>
+
+              <div className="flex flex-col gap-2 mb-3">
+                <div className="flex items-center justify-between px-3 py-2 rounded-md border border-ink-700 bg-ink-800">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold truncate text-ink-100">{teamOwner.name}</p>
+                    <p className="text-2xs truncate mt-0.5 text-ink-300">{teamOwner.email}</p>
+                  </div>
+                  <span className="text-2xs px-2 py-0.5 rounded-full font-bold flex-shrink-0 bg-brand-500/15 text-brand-400">Dono</span>
+                </div>
+
+                {members.map(m => (
+                  <div key={m.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-ink-700 bg-ink-800">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold truncate text-ink-100">{m.user.name}</p>
+                      <p className="text-2xs truncate mt-0.5 text-ink-300">{m.user.email}</p>
+                    </div>
+                    {isOwner ? (
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <select value={m.role} onChange={e => changeMemberRole(m.id, e.target.value as "editor" | "viewer")}
+                          className="text-2xs rounded border border-ink-700 bg-ink-950 text-ink-100 px-1.5 py-1">
+                          <option value="editor">Editor</option>
+                          <option value="viewer">Visualizador</option>
+                        </select>
+                        <button onClick={() => removeMember(m.id)} title="Remover"
+                          className="text-coral-500 hover:text-coral-600">
+                          <i className="ti ti-trash text-xs" aria-hidden="true" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-2xs px-2 py-0.5 rounded-full font-bold flex-shrink-0 bg-ink-700 text-ink-300">{TEAM_ROLE_LABEL[m.role]}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {isOwner && pendingInvites.length > 0 && (
+                <div className="flex flex-col gap-2 mb-3 pt-3 border-t border-ink-700">
+                  <p className="text-2xs font-semibold text-ink-300">Convites pendentes</p>
+                  {pendingInvites.map(inv => (
+                    <div key={inv.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-ink-700 bg-ink-800">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate text-ink-100">{inv.email}</p>
+                        <p className="text-2xs text-ink-300">{TEAM_ROLE_LABEL[inv.role]}</p>
+                      </div>
+                      <button onClick={() => revokeInvite(inv.id)}
+                        className="text-2xs font-semibold text-coral-500 hover:underline flex-shrink-0">
+                        Revogar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isOwner && (
+                <form onSubmit={inviteTeamMember} className="flex flex-col gap-2 pt-3 border-t border-ink-700">
+                  <label htmlFor="equipe-email" className="sr-only">E-mail do convidado</label>
+                  <input
+                    id="equipe-email"
+                    type="email"
+                    value={teamEmail}
+                    onChange={e => setTeamEmail(e.target.value)}
+                    placeholder="E-mail de quem você quer convidar"
+                    className={`w-full ${FIELD_CLASS}`}
+                  />
+                  <select value={teamRole} onChange={e => setTeamRole(e.target.value as "editor" | "viewer")}
+                    className={`w-full ${FIELD_CLASS}`}>
+                    <option value="viewer">Visualizador — só acompanha</option>
+                    <option value="editor">Editor — pode editar formulário e dashboard</option>
+                  </select>
+                  {teamError && <p className="text-2xs text-coral-500">{teamError}</p>}
+                  <button type="submit" disabled={!teamEmail || teamInviting}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-50 bg-brand-500 text-on-accent transition-colors duration-150">
+                    <i className={`ti ${teamInviting ? "ti-loader-2 animate-spin" : "ti-link"}`} aria-hidden="true" /> Gerar link de convite
+                  </button>
+                  {copiedInviteId && (
+                    <p className="text-2xs text-teal-500">Link copiado — envie pra pessoa convidada.</p>
+                  )}
+                </form>
+              )}
             </div>
 
             {/* Configurações rápidas */}

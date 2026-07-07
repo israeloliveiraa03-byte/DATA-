@@ -1,15 +1,16 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { dashboards, dashboardWidgets, researches } from "@/lib/db/schema";
+import { dashboards, dashboardWidgets } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { saveWidgetsSchema } from "@/lib/validations/dashboard";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
 
 async function assertOwner(dashboardId: string, userId: string) {
   const dashboard = await db.query.dashboards.findFirst({ where: eq(dashboards.id, dashboardId) });
   if (!dashboard) return apiError("Dashboard não encontrado", 404);
-  const research = await db.query.researches.findFirst({ where: eq(researches.id, dashboard.researchId) });
-  if (!research || research.ownerId !== userId) return apiError("Sem permissão", 403);
+  const access = await getResearchAccess(dashboard.researchId, userId);
+  if (!access || !canEdit(access.role)) return apiError("Sem permissão", 403);
   return null;
 }
 

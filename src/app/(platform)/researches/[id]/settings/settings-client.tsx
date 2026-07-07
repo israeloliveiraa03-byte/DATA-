@@ -10,9 +10,12 @@ const FIELD_CLASS = "w-full px-2.5 py-1.5 text-sm rounded-md border border-ink-7
 
 interface Props {
   research: Research;
+  role: "owner" | "editor" | "viewer";
 }
 
-export function ResearchSettingsClient({ research }: Props) {
+export function ResearchSettingsClient({ research, role }: Props) {
+  const canEdit = role !== "viewer";
+  const isOwner = role === "owner";
   const router = useRouter();
   const [title,       setTitle]       = useState(research.title);
   const [description, setDescription] = useState(research.description ?? "");
@@ -94,11 +97,11 @@ export function ResearchSettingsClient({ research }: Props) {
         <div className="rounded-lg p-4 mb-4 border border-ink-700 bg-ink-900">
           <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Identificação</p>
           <label htmlFor="pesquisa-titulo" className="text-xs font-semibold mb-1 block text-ink-100">Título</label>
-          <input id="pesquisa-titulo" value={title} onChange={e => setTitle(e.target.value)}
-            className={`${FIELD_CLASS} mb-3`} />
+          <input id="pesquisa-titulo" value={title} onChange={e => setTitle(e.target.value)} disabled={!canEdit}
+            className={`${FIELD_CLASS} mb-3 disabled:opacity-60`} />
           <label htmlFor="pesquisa-descricao" className="text-xs font-semibold mb-1 block text-ink-100">Descrição</label>
-          <textarea id="pesquisa-descricao" value={description} onChange={e => setDescription(e.target.value)} rows={3}
-            className={`${FIELD_CLASS} resize-y`} />
+          <textarea id="pesquisa-descricao" value={description} onChange={e => setDescription(e.target.value)} rows={3} disabled={!canEdit}
+            className={`${FIELD_CLASS} resize-y disabled:opacity-60`} />
         </div>
 
         <div className="rounded-lg p-4 mb-4 border border-ink-700 bg-ink-900">
@@ -110,8 +113,8 @@ export function ResearchSettingsClient({ research }: Props) {
                   <i className={`ti ${t.icon} text-sm text-brand-400`} aria-hidden="true" />
                   <span className="text-sm font-medium text-ink-100">{t.label}</span>
                 </div>
-                <button type="button" onClick={() => t.set(!t.value)}
-                  className={`w-9 h-5 rounded-full relative transition-colors duration-150 flex-shrink-0 ${t.value ? "bg-brand-500" : "bg-ink-700"}`}
+                <button type="button" onClick={() => t.set(!t.value)} disabled={!canEdit}
+                  className={`w-9 h-5 rounded-full relative transition-colors duration-150 flex-shrink-0 disabled:opacity-60 ${t.value ? "bg-brand-500" : "bg-ink-700"}`}
                   aria-label={t.label} aria-pressed={t.value}>
                   <span className="absolute w-3.5 h-3.5 bg-ink-950 rounded-full transition-all duration-150" style={{ left: t.value ? "18px" : "3px", top: "3px" }} />
                 </button>
@@ -121,38 +124,46 @@ export function ResearchSettingsClient({ research }: Props) {
           <p className="text-2xs text-ink-500 mt-3">As mudanças só valem depois de “Salvar configurações”.</p>
         </div>
 
-        <button onClick={saveSettings} disabled={saving}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded text-sm font-bold mb-6 bg-brand-500 text-on-accent border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
-          <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-device-floppy"} aria-hidden="true" />
-          {saving ? "Salvando..." : "Salvar configurações"}
-        </button>
-
-        <div className="rounded-lg p-4 border border-coral-500/40 bg-ink-900">
-          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-coral-500 mb-3">Zona de risco</p>
-
-          {status !== "closed" && (
-            <button onClick={() => toggleStatus("closed")} disabled={saving}
-              className="w-full flex items-center gap-1.5 px-3 py-2 rounded text-xs font-bold mb-2 border border-coral-500/40 bg-ink-950 text-coral-500 hover:bg-coral-50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
-              <i className="ti ti-lock" aria-hidden="true" /> Encerrar pesquisa
-            </button>
-          )}
-
-          <button onClick={deleteResearch} disabled={deleting}
-            className={`w-full flex items-center gap-1.5 px-3 py-2 rounded text-xs font-bold border transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
-              confirmDelete
-                ? "bg-coral-500 text-on-accent border-coral-500 hover:bg-coral-600 hover:border-coral-600"
-                : "border-coral-500/40 bg-ink-950 text-coral-500 hover:bg-coral-50"
-            }`}>
-            <i className={deleting ? "ti ti-loader-2 animate-spin" : "ti ti-trash"} aria-hidden="true" />
-            {deleting ? "Excluindo..." : confirmDelete ? "Confirmar exclusão — clique de novo" : "Excluir pesquisa"}
+        {canEdit && (
+          <button onClick={saveSettings} disabled={saving}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded text-sm font-bold mb-6 bg-brand-500 text-on-accent border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-device-floppy"} aria-hidden="true" />
+            {saving ? "Salvando..." : "Salvar configurações"}
           </button>
-          {confirmDelete && (
-            <p className="text-2xs mt-2 text-ink-300">
-              A pesquisa some das suas listas, mas os dados não são apagados de verdade (poderemos restaurar se pedir).{" "}
-              <button onClick={() => setConfirmDelete(false)} className="underline text-ink-100">Cancelar</button>
-            </p>
-          )}
-        </div>
+        )}
+
+        {!canEdit && (
+          <p className="text-xs mb-6 text-ink-300">Você tem acesso de visualizador — só o dono ou um editor pode alterar essas configurações.</p>
+        )}
+
+        {isOwner && (
+          <div className="rounded-lg p-4 border border-coral-500/40 bg-ink-900">
+            <p className="text-xs font-bold uppercase tracking-widest font-condensed text-coral-500 mb-3">Zona de risco</p>
+
+            {status !== "closed" && (
+              <button onClick={() => toggleStatus("closed")} disabled={saving}
+                className="w-full flex items-center gap-1.5 px-3 py-2 rounded text-xs font-bold mb-2 border border-coral-500/40 bg-ink-950 text-coral-500 hover:bg-coral-50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+                <i className="ti ti-lock" aria-hidden="true" /> Encerrar pesquisa
+              </button>
+            )}
+
+            <button onClick={deleteResearch} disabled={deleting}
+              className={`w-full flex items-center gap-1.5 px-3 py-2 rounded text-xs font-bold border transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
+                confirmDelete
+                  ? "bg-coral-500 text-on-accent border-coral-500 hover:bg-coral-600 hover:border-coral-600"
+                  : "border-coral-500/40 bg-ink-950 text-coral-500 hover:bg-coral-50"
+              }`}>
+              <i className={deleting ? "ti ti-loader-2 animate-spin" : "ti ti-trash"} aria-hidden="true" />
+              {deleting ? "Excluindo..." : confirmDelete ? "Confirmar exclusão — clique de novo" : "Excluir pesquisa"}
+            </button>
+            {confirmDelete && (
+              <p className="text-2xs mt-2 text-ink-300">
+                A pesquisa some das suas listas, mas os dados não são apagados de verdade (poderemos restaurar se pedir).{" "}
+                <button onClick={() => setConfirmDelete(false)} className="underline text-ink-100">Cancelar</button>
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

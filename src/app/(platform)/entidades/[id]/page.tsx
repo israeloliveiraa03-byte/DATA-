@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { entities, entityVersions, researchEntities, researches } from "@/lib/db/schema";
+import { entities, entityVersions, researchEntities } from "@/lib/db/schema";
 import { eq, desc, isNull, and } from "drizzle-orm";
+import { getMyResearches } from "@/lib/researches/access";
 import { EntidadeDetailClient } from "./entidade-detail-client";
 import type { Metadata } from "next";
 
@@ -37,10 +38,9 @@ export default async function EntidadeDetailPage({ params }: { params: Promise<{
     with: { research: true },
   });
 
-  const myResearches = await db.query.researches.findMany({
-    where: eq(researches.ownerId, session!.user!.id!),
-    orderBy: desc(researches.createdAt),
-  });
+  // Só dono/editor podem vincular entidade (é ação de escrita na pesquisa) — visualizador fica de fora da lista.
+  const mine = await getMyResearches(session!.user!.id!);
+  const myResearches = mine.filter(m => m.role !== "viewer").map(m => m.research);
 
   return (
     <EntidadeDetailClient

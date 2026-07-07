@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { dashboards, dashboardWidgets, researches } from "@/lib/db/schema";
+import { dashboards, dashboardWidgets } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
 
 export async function POST(
   _req: Request,
@@ -15,8 +16,8 @@ export async function POST(
   const dashboard = await db.query.dashboards.findFirst({ where: eq(dashboards.id, id) });
   if (!dashboard) return apiError("Dashboard não encontrado", 404);
 
-  const research = await db.query.researches.findFirst({ where: eq(researches.id, dashboard.researchId) });
-  if (!research || research.ownerId !== session.user.id) return apiError("Sem permissão", 403);
+  const access = await getResearchAccess(dashboard.researchId, session.user.id);
+  if (!access || !canEdit(access.role)) return apiError("Sem permissão", 403);
 
   const widgets = await db.query.dashboardWidgets.findMany({ where: eq(dashboardWidgets.dashboardId, id) });
 

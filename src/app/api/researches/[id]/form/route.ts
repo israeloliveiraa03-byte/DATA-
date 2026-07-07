@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { getRequestUserId } from "@/lib/auth/device";
 import { db } from "@/lib/db";
-import { researches, forms, formFields } from "@/lib/db/schema";
+import { forms, formFields } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
 
 // GET — busca o formulário ativo da pesquisa
 export async function GET(
@@ -16,12 +17,8 @@ export async function GET(
   const userId = await getRequestUserId(req);
   if (!userId) return apiError("Não autorizado", 401);
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
-
-  if (!research)                             return apiError("Pesquisa não encontrada", 404);
-  if (research.ownerId !== userId)           return apiError("Sem permissão", 403);
+  const access = await getResearchAccess(id, userId);
+  if (!access) return apiError("Pesquisa não encontrada", 404);
 
   const form = await db.query.forms.findFirst({
     where: eq(forms.researchId, id),
@@ -40,12 +37,10 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) return apiError("Não autorizado", 401);
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
-
-  if (!research)                             return apiError("Pesquisa não encontrada", 404);
-  if (research.ownerId !== session.user.id)  return apiError("Sem permissão", 403);
+  const access = await getResearchAccess(id, session.user.id);
+  if (!access) return apiError("Pesquisa não encontrada", 404);
+  if (!canEdit(access.role)) return apiError("Sem permissão de edição", 403);
+  const research = access.research;
 
   const body = await request.json();
   const { title, description, fields: rawFields = [] } = body;

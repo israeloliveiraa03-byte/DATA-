@@ -29,7 +29,14 @@ const PROGRESS_MAP: Record<string, number> = {
   draft: 20, active: 65, paused: 65, closed: 100, published: 100,
 };
 
-export function ResearchesClient({ researches }: { researches: Research[] }) {
+const ROLE_LABEL: Record<string, string> = { editor: "Convidado (editor)", viewer: "Convidado (visualizador)" };
+
+interface Props {
+  researches: Research[];
+  roleByResearchId?: Record<string, "owner" | "editor" | "viewer">;
+}
+
+export function ResearchesClient({ researches, roleByResearchId = {} }: Props) {
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [themeFilter,  setThemeFilter]  = useState("all");
@@ -185,6 +192,11 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-ink-800 border border-ink-700 text-ink-300">
                         {THEME_MAP[r.theme] ?? "Outro"}
                       </span>
+                      {roleByResearchId[r.id] && roleByResearchId[r.id] !== "owner" && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-500/15 text-teal-500">
+                          {ROLE_LABEL[roleByResearchId[r.id]]}
+                        </span>
+                      )}
                     </div>
 
                     {/* Título */}
@@ -245,7 +257,14 @@ export function ResearchesClient({ researches }: { researches: Research[] }) {
 
                   {/* Título e desc */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate text-ink-100">{r.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold truncate text-ink-100">{r.title}</p>
+                      {roleByResearchId[r.id] && roleByResearchId[r.id] !== "owner" && (
+                        <span className="text-2xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-teal-500/15 text-teal-500">
+                          {ROLE_LABEL[roleByResearchId[r.id]]}
+                        </span>
+                      )}
+                    </div>
                     {r.description && (
                       <p className="text-xs truncate mt-0.5 text-ink-300">{r.description}</p>
                     )}

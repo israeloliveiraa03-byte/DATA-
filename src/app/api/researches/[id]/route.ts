@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { researches } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getResearchAccess, canEdit } from "@/lib/researches/access";
 
 export async function GET(
   _req: Request,
@@ -12,14 +13,10 @@ export async function GET(
   const session = await auth();
   if (!session?.user?.id) return apiError("Não autorizado", 401);
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
+  const access = await getResearchAccess(id, session.user.id);
+  if (!access) return apiError("Não encontrada", 404);
 
-  if (!research)                               return apiError("Não encontrada", 404);
-  if (research.ownerId !== session.user.id)    return apiError("Sem permissão", 403);
-
-  return apiSuccess(research);
+  return apiSuccess(access.research);
 }
 
 export async function PATCH(
@@ -30,14 +27,16 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.id) return apiError("Não autorizado", 401);
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
-
-  if (!research)                               return apiError("Não encontrada", 404);
-  if (research.ownerId !== session.user.id)    return apiError("Sem permissão", 403);
+  const access = await getResearchAccess(id, session.user.id);
+  if (!access) return apiError("Não encontrada", 404);
+  if (!canEdit(access.role)) return apiError("Sem permissão de edição", 403);
 
   const body = await request.json();
+
+  // Mudar o status (ex.: encerrar) é ação de zona de risco — só o dono.
+  if (body.status !== undefined && access.role !== "owner") {
+    return apiError("Só o dono da pesquisa pode encerrá-la", 403);
+  }
 
   const [updated] = await db
     .update(researches)
@@ -56,12 +55,9 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user?.id) return apiError("Não autorizado", 401);
 
-  const research = await db.query.researches.findFirst({
-    where: eq(researches.id, id),
-  });
-
-  if (!research)                               return apiError("Não encontrada", 404);
-  if (research.ownerId !== session.user.id)    return apiError("Sem permissão", 403);
+  const access = await getResearchAccess(id, session.user.id);
+  if (!access) return apiError("Não encontrada", 404);
+  if (access.role !== "owner") return apiError("Só o dono pode excluir a pesquisa", 403);
 
   await db
     .update(researches)

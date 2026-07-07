@@ -1,22 +1,23 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { dashboards, dashboardWidgets, researches } from "@/lib/db/schema";
+import { dashboards, dashboardWidgets } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { updateDashboardSchema } from "@/lib/validations/dashboard";
 import { apiSuccess, apiError, slugify } from "@/lib/utils";
+import { getResearchAccess, canEdit, type ResearchRole } from "@/lib/researches/access";
 
 type OwnedDashboardResult =
-  | { ok: true; dashboard: typeof dashboards.$inferSelect; research: typeof researches.$inferSelect }
+  | { ok: true; dashboard: typeof dashboards.$inferSelect; role: ResearchRole }
   | { ok: false; error: Response };
 
 async function loadOwnedDashboard(id: string, userId: string): Promise<OwnedDashboardResult> {
   const dashboard = await db.query.dashboards.findFirst({ where: eq(dashboards.id, id) });
   if (!dashboard) return { ok: false, error: apiError("Dashboard não encontrado", 404) };
 
-  const research = await db.query.researches.findFirst({ where: eq(researches.id, dashboard.researchId) });
-  if (!research || research.ownerId !== userId) return { ok: false, error: apiError("Sem permissão", 403) };
+  const access = await getResearchAccess(dashboard.researchId, userId);
+  if (!access) return { ok: false, error: apiError("Sem permissão", 403) };
 
-  return { ok: true, dashboard, research };
+  return { ok: true, dashboard, role: access.role };
 }
 
 export async function GET(
@@ -49,6 +50,7 @@ export async function PATCH(
 
   const result = await loadOwnedDashboard(id, session.user.id);
   if (!result.ok) return result.error;
+  if (!canEdit(result.role)) return apiError("Sem permissão de edição", 403);
   const { dashboard } = result;
 
   const body = await request.json();
@@ -95,6 +97,7 @@ export async function DELETE(
 
   const result = await loadOwnedDashboard(id, session.user.id);
   if (!result.ok) return result.error;
+  if (!canEdit(result.role)) return apiError("Sem permissão de edição", 403);
 
   await db.delete(dashboards).where(eq(dashboards.id, id));
   return apiSuccess({ id });
