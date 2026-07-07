@@ -33,6 +33,10 @@ export const entities = pgTable("entities", {
   latitude:    text("latitude"),
   longitude:   text("longitude"),
   boundaryPolygon: jsonb("boundary_polygon"),
+  // Rede — Mapa Geral: hidden|approximate|exact. Só quem criou a entidade
+  // decide (entities.createdBy) — decisão de Israel, mesmo motivo de
+  // simplicidade do varchar em researches.networkVisibility.
+  locationDisclosure: varchar("location_disclosure", { length: 20 }).notNull().default("hidden"),
   createdBy:   uuid("created_by").notNull().references(() => users.id),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:   timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

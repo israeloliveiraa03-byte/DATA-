@@ -49,6 +49,11 @@ export const researches = pgTable("researches", {
   closesAt:       timestamp("closes_at",      { withTimezone: true }),
   publicDashboard:boolean("public_dashboard").notNull().default(false),
   publicUrl:      varchar("public_url",  { length: 300 }),
+  // Rede — Mapa Geral: hidden|approximate|exact. Varchar simples (não enum
+  // do Postgres), mesmo motivo do users.role — evita o drama de enum novo
+  // se algum dia precisar de um quarto nível. Só entidade com pino próprio
+  // vinculada é que faz a pesquisa aparecer no mapa (ver network-map.ts).
+  networkVisibility: varchar("network_visibility", { length: 20 }).notNull().default("hidden"),
   // Confiabilidade estatística — universo da pesquisa e amostra necessária.
   // Ver "Confiabilidade estatística" no CLAUDE.md / src/lib/dashboard/reliability.ts.
   universeSize:              integer("universe_size"),

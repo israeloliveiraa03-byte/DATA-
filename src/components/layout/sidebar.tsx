@@ -21,7 +21,8 @@ const nav = [
   {
     label: "Rede",
     items: [
-      { href: "/notas-tecnicas", icon: "ti-notebook", label: "Notas técnicas" },
+      { href: "/mapa-geral",     icon: "ti-map-2",      label: "Mapa Geral" },
+      { href: "/notas-tecnicas", icon: "ti-notebook",   label: "Notas técnicas" },
       { href: "/colaboracao",    icon: "ti-hand-heart", label: "Colaboração" },
     ],
   },

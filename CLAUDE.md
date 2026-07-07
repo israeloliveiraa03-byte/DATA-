@@ -161,6 +161,16 @@ Primeira fase da "Rede" (camada de visibilidade sobre Pesquisa/Entidade, ver art
 - **Página `/colaboracao`**: lista todas as chamadas (aberta/preenchida/encerrada), form de nova chamada (pesquisas e entidades **próprias** do usuário como opções — não tem busca global de entidade ainda, mesmo corte de escopo de outros formulários de vínculo do projeto), botão "Quero colaborar", e pra quem criou, aceitar/recusar candidaturas.
 - **Ainda fora de escopo**: o hook que transforma candidatura aceita em convite automático de Equipe de pesquisa (fase 4, já com o comentário `// Fase 4 (Rede) hooka aqui` deixado em `applications/[appId]/route.ts`); opt-in + Mapa Geral (fase 3).
 
+## Rede — fase 3: opt-in + Mapa Geral (2026-07-08)
+
+- **Bandeiras aditivas** (sem tabela nova): `researches.network_visibility` e `entities.location_disclosure`, ambas `varchar(20)` com default `'hidden'` (valores `hidden|approximate|exact` — varchar simples, não enum do Postgres, mesmo motivo do `users.role`). Migração `scripts/sql/2026-07-08-network-visibility.sql`, já aplicada em produção.
+- **Quem decide**: `location_disclosure` da entidade é só de quem criou (`entities.createdBy`, endpoint dedicado `PATCH /api/entities/[id]/disclosure` — separado do PATCH geral de entidade, que hoje não checa dono nenhum); `network_visibility` da pesquisa entra no PATCH geral que já existe, com a mesma regra `canEdit` (dono/editor) da Equipe de pesquisa.
+- **Cálculo do pino** (`src/lib/entities/network-pin.ts`): sem precisar de nenhum dataset novo de centróide municipal. `exact` usa `entities.latitude`/`longitude` se existir, senão `turf.centroid` do contorno marcado (`findBoundaryFeature`, já existia); `approximate` arredonda pra 1 casa decimal (~11km de imprecisão) — anonimização por arredondamento, técnica simples e suficiente pro v1.
+- **Pesquisa só ganha pino via entidade vinculada**: sem centróide de `stateCode`/`cityCode` soltos, uma pesquisa só aparece no mapa se tiver ao menos uma entidade vinculada (`research_entities`) com pino próprio visível — anexada ao primeiro vínculo que servir (`src/lib/network/build-network-map.ts`, reaproveitado tanto pela página `/mapa-geral` quanto por `GET /api/network-map`).
+- **Página `/mapa-geral`**: Leaflet via `next/dynamic({ssr:false})` (`src/components/network/network-map.tsx`), reaproveitando `BasemapLayers`/`ScrollZoomOnFocus` de `map-common.tsx` — nenhum setup de mapa novo. Pino com halo pulsante quando a entidade/pesquisa tem chamada de colaboração aberta vinculada.
+- **Oculto por padrão** — decisão deliberada dado o público do Dataº (comunidades tradicionais): nem entidade nem pesquisa aparecem no mapa geral até alguém optar explicitamente pra um dos três níveis (oculta/aproximada/exata); não existe nenhum nudge de UI puxando pra "exata".
+- **Fecha o roteiro da Rede** exceto a fase 4 (candidatura aceita → convite automático de equipe), ainda pendente.
+
 ## Fila de sincronização offline — parte 1 implementada (2026-07-04)
 
 Objetivo de longo prazo: app de campo (celular/tablet, via Capacitor — planejado, não construído ainda) capturando resposta e ponto de GPS territorial sem internet. Antes de investir no app, foram corrigidos os passos 1–4 do offline que já existiam pela metade no site:

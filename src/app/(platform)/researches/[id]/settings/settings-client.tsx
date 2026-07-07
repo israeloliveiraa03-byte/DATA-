@@ -23,6 +23,7 @@ export function ResearchSettingsClient({ research, role }: Props) {
   const [collectGps,     setCollectGps]     = useState(research.collectGps);
   const [offlineEnabled, setOfflineEnabled] = useState(research.offlineEnabled);
   const [publicDashboard,setPublicDashboard] = useState(research.publicDashboard);
+  const [networkVisibility, setNetworkVisibility] = useState(research.networkVisibility);
   const [status,      setStatus]      = useState(research.status);
   const [saving,      setSaving]      = useState(false);
   const [deleting,    setDeleting]    = useState(false);
@@ -33,7 +34,7 @@ export function ResearchSettingsClient({ research, role }: Props) {
     try {
       const res = await fetch(`/api/researches/${research.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, allowAnonymous, collectGps, offlineEnabled, publicDashboard }),
+        body: JSON.stringify({ title, description, allowAnonymous, collectGps, offlineEnabled, publicDashboard, networkVisibility }),
       });
       if (!res.ok) { toast.error("Erro ao salvar configurações."); return; }
       toast.success("Configurações salvas.");
@@ -122,6 +123,29 @@ export function ResearchSettingsClient({ research, role }: Props) {
             ))}
           </div>
           <p className="text-2xs text-ink-500 mt-3">As mudanças só valem depois de “Salvar configurações”.</p>
+        </div>
+
+        <div className="rounded-lg p-4 mb-4 border border-ink-700 bg-ink-900">
+          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Visibilidade no Mapa Geral</p>
+          <p className="text-xs text-ink-300 mb-3">
+            Só aparece se tiver ao menos uma entidade vinculada com localização também visível.
+          </p>
+          <div className="flex flex-col gap-2">
+            {([
+              { value: "hidden" as const,      label: "Oculta",     desc: "Não aparece no mapa geral." },
+              { value: "approximate" as const, label: "Aproximada", desc: "Pino no local aproximado da entidade vinculada." },
+              { value: "exact" as const,        label: "Exata",      desc: "Localização real, herdada da entidade vinculada." },
+            ]).map(opt => (
+              <label key={opt.value} className={`flex items-start gap-2 px-3 py-2 rounded-md border ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-60"} ${networkVisibility === opt.value ? "border-brand-500/60 bg-brand-500/10" : "border-ink-700"}`}>
+                <input type="radio" name="networkVisibility" checked={networkVisibility === opt.value} disabled={!canEdit}
+                  onChange={() => setNetworkVisibility(opt.value)} className="mt-0.5" />
+                <span>
+                  <span className="block text-xs font-bold text-ink-100">{opt.label}</span>
+                  <span className="block text-2xs text-ink-300">{opt.desc}</span>
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
 
         {canEdit && (

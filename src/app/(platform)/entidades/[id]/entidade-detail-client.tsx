@@ -104,6 +104,26 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
   const [savingName,  setSavingName]  = useState(false);
   const [nameError,   setNameError]   = useState("");
 
+  const [disclosure,       setDisclosure]       = useState(entity.locationDisclosure);
+  const [savingDisclosure, setSavingDisclosure] = useState(false);
+  const isCreator = entity.createdBy === currentUserId;
+
+  async function updateDisclosure(value: "hidden" | "approximate" | "exact") {
+    setSavingDisclosure(true);
+    try {
+      const res = await fetch(`/api/entities/${entity.id}/disclosure`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationDisclosure: value }),
+      });
+      if (!res.ok) { toast.error("Erro ao atualizar visibilidade."); return; }
+      setDisclosure(value);
+      toast.success("Visibilidade no Mapa Geral atualizada.");
+    } finally {
+      setSavingDisclosure(false);
+    }
+  }
+
   const [notes,        setNotes]        = useState(initialNotes);
   const [noteTitle,    setNoteTitle]    = useState("");
   const [noteBody,     setNoteBody]     = useState("");
@@ -501,6 +521,39 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                       </li>
                     ))}
                   </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Visibilidade no Mapa Geral</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-ink-300 mb-3">
+                  Controla se esta entidade aparece no Mapa Geral da Rede, e com que precisão de localização.
+                </p>
+                {isCreator ? (
+                  <div className="flex flex-col gap-2">
+                    {([
+                      { value: "hidden" as const,      label: "Oculta",     desc: "Não aparece no mapa geral." },
+                      { value: "approximate" as const, label: "Aproximada", desc: "Pino arredondado (~11km), sem coordenada exata." },
+                      { value: "exact" as const,        label: "Exata",      desc: "Localização real do contorno/ponto marcado." },
+                    ]).map(opt => (
+                      <label key={opt.value} className={`flex items-start gap-2 px-3 py-2 rounded-md border cursor-pointer ${disclosure === opt.value ? "border-brand-500/60 bg-brand-500/10" : "border-ink-700"}`}>
+                        <input type="radio" name="disclosure" checked={disclosure === opt.value} disabled={savingDisclosure}
+                          onChange={() => updateDisclosure(opt.value)} className="mt-0.5" />
+                        <span>
+                          <span className="block text-xs font-bold text-ink-100">{opt.label}</span>
+                          <span className="block text-2xs text-ink-300">{opt.desc}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <Badge variant={disclosure === "hidden" ? "default" : "teal"}>
+                    {disclosure === "hidden" ? "Oculta" : disclosure === "approximate" ? "Aproximada" : "Exata"}
+                  </Badge>
                 )}
               </CardContent>
             </Card>
