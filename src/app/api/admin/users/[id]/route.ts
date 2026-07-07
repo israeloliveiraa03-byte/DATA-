@@ -6,7 +6,7 @@ import { apiSuccess, apiError } from "@/lib/utils";
 import { z } from "zod";
 
 const patchSchema = z.object({
-  plan: z.enum(["free", "pro", "institution"]).optional(),
+  plan: z.enum(["free", "pesquisador", "laboratorio", "governo", "territorio"]).optional(),
   role: z.enum(["user", "support", "admin"]).optional(),
 });
 

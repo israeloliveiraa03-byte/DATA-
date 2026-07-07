@@ -70,9 +70,11 @@ export function UsersAdminClient({ users }: { users: AdminUser[] }) {
                   <select id={`plan-${u.id}`} value={u.plan} disabled={savingId === u.id}
                     onChange={e => updateUser(u.id, { plan: e.target.value })}
                     className={SELECT_CLASS}>
-                    <option value="free">Gratuito</option>
-                    <option value="pro">Pro</option>
-                    <option value="institution">Instituição</option>
+                    <option value="free">Exploração</option>
+                    <option value="pesquisador">Pesquisador</option>
+                    <option value="laboratorio">Laboratório</option>
+                    <option value="governo">Governo</option>
+                    <option value="territorio">Território</option>
                   </select>
                 </td>
                 <td className="px-3 py-2">

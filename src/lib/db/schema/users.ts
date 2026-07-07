@@ -1,7 +1,10 @@
 import { pgTable, uuid, varchar, text, boolean, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-export const planEnum    = pgEnum("plan",     ["free", "pro", "institution"]);
+// 5 tiers reais do modelo de negócio (CLAUDE.md, "Modelo de negócio",
+// revisado 2026-07-04). Substituiu o enum antigo (free/pro/institution)
+// em 2026-07-09 via ALTER TYPE RENAME VALUE — ver scripts/sql/2026-07-09-billing.sql.
+export const planEnum = pgEnum("plan", ["free", "pesquisador", "laboratorio", "governo", "territorio"]);
 export const orgRoleEnum = pgEnum("org_role", ["owner", "admin", "member"]);
 
 export const users = pgTable("users", {

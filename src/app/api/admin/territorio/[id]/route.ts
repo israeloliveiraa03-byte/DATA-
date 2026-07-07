@@ -35,7 +35,7 @@ export async function PATCH(
   // Aprovar já libera o benefício direto na conta que se candidatou —
   // sem isso, a aprovação seria só um registro sem efeito prático.
   if (parsed.data.status === "approved") {
-    await db.update(users).set({ plan: "institution" }).where(eq(users.id, application.applicantUserId));
+    await db.update(users).set({ plan: "territorio" }).where(eq(users.id, application.applicantUserId));
   }
 
   return apiSuccess(updated);

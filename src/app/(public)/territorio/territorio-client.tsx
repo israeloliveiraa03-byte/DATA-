@@ -163,7 +163,7 @@ export function TerritorioClient({ loggedIn }: { loggedIn: boolean }) {
   );
 
   // Candidatura precisa estar vinculada a uma conta de verdade — é o que
-  // permite aprovar direto na conta certa depois (plan = "institution"),
+  // permite aprovar direto na conta certa depois (plan = "territorio"),
   // em vez de só arquivar um formulário solto.
   if (!loggedIn) return (
     <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#fbf3e7", padding: "24px" }}>
