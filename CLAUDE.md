@@ -151,7 +151,15 @@ Primeira fase da "Rede" (camada de visibilidade sobre Pesquisa/Entidade, ver art
 - **Card na entidade**: `entidade-detail-client.tsx` ganhou "Notas técnicas sobre esta entidade" (só notas com `entity_id` = a própria entidade — notas gerais por tipo ficam só na listagem global, pra não poluir toda entidade do mesmo tipo).
 - **API**: `/api/notes` (CRUD das próprias notas), `/api/notes/public` (lista pública com filtro), `/api/notes/[id]/endorse` (toggle de endosso).
 - **Sem taxa, sem cobrança** — essa fase não mexe em modelo de negócio.
-- **Ainda fora de escopo (fases seguintes da Rede, já roteirizadas)**: chamadas de colaboração, bandeiras de opt-in (`network_visibility`/`location_disclosure`) e o Mapa Geral em si.
+- **Ainda fora de escopo nesta fase**: bandeiras de opt-in (`network_visibility`/`location_disclosure`) e o Mapa Geral em si (fase 3, roteirizada).
+
+## Rede — fase 2: chamadas de colaboração (2026-07-08)
+
+- **Schema** (`src/lib/db/schema/collaboration.ts`): `collaboration_calls` (tipo `fieldwork|data_gap|expertise|funding`, ligada opcionalmente a uma pesquisa e/ou entidade) + `collaboration_applications` (candidatura simples, sem thread de mensagens). Migração `scripts/sql/2026-07-08-collaboration.sql`, já aplicada em produção.
+- **Sem taxa sobre nenhum tipo de chamada, inclusive `funding`** — decisão explícita de Israel (2026-07-08), documentada também na seção "Modelo de negócio" acima.
+- **Permissão**: criar chamada ligada a uma pesquisa exige editor+ dessa pesquisa (reaproveita `getResearchAccess`/`canEdit` da Equipe de pesquisa); ligada só a entidade ou solta, qualquer pessoa logada pode criar. Aceitar/recusar candidatura e mudar status da chamada é só de quem criou.
+- **Página `/colaboracao`**: lista todas as chamadas (aberta/preenchida/encerrada), form de nova chamada (pesquisas e entidades **próprias** do usuário como opções — não tem busca global de entidade ainda, mesmo corte de escopo de outros formulários de vínculo do projeto), botão "Quero colaborar", e pra quem criou, aceitar/recusar candidaturas.
+- **Ainda fora de escopo**: o hook que transforma candidatura aceita em convite automático de Equipe de pesquisa (fase 4, já com o comentário `// Fase 4 (Rede) hooka aqui` deixado em `applications/[appId]/route.ts`); opt-in + Mapa Geral (fase 3).
 
 ## Fila de sincronização offline — parte 1 implementada (2026-07-04)
 
