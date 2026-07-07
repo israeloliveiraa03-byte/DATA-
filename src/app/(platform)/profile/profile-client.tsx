@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { User } from "@/lib/types";
 
 const PALETTE = [
@@ -13,6 +13,11 @@ const PALETTE = [
 ];
 
 type Note = { id: string; title: string; body: string; tags: string[]; public: boolean; createdAt: string; };
+type ApiNote = { id: string; title: string; body: string; tags: string[]; visibility: "public" | "private"; createdAt: string };
+
+function fromApiNote(n: ApiNote): Note {
+  return { id: n.id, title: n.title, body: n.body, tags: n.tags, public: n.visibility === "public", createdAt: new Date(n.createdAt).toLocaleDateString("pt-BR") };
+}
 type ProfileType = "researcher" | "institution";
 type ActiveTab = "perfil" | "notas" | "privacidade";
 
@@ -90,6 +95,8 @@ export function ProfileClient({ user }: { user: User }) {
   const [noteBody,      setNoteBody]      = useState("");
   const [noteTags,      setNoteTags]      = useState("");
   const [notePublic,    setNotePublic]    = useState(true);
+  const [noteSaving,    setNoteSaving]    = useState(false);
+  const [noteError,     setNoteError]     = useState("");
 
   const photoRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -119,18 +126,46 @@ export function ProfileClient({ user }: { user: User }) {
     } finally { setSaving(false); }
   }
 
-  function openNewNote() { setEditNote(null); setNoteTitle(""); setNoteBody(""); setNoteTags(""); setNotePublic(true); setNoteModal(true); }
-  function openEditNote(n: Note) { setEditNote(n); setNoteTitle(n.title); setNoteBody(n.body); setNoteTags(n.tags.join(", ")); setNotePublic(n.public); setNoteModal(true); }
-  function saveNote() {
+  useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/notes");
+      if (!res.ok) return;
+      const notes = (await res.json()).data as ApiNote[];
+      setNotes(notes.map(fromApiNote));
+    })();
+  }, []);
+
+  function openNewNote() { setEditNote(null); setNoteTitle(""); setNoteBody(""); setNoteTags(""); setNotePublic(true); setNoteError(""); setNoteModal(true); }
+  function openEditNote(n: Note) { setEditNote(n); setNoteTitle(n.title); setNoteBody(n.body); setNoteTags(n.tags.join(", ")); setNotePublic(n.public); setNoteError(""); setNoteModal(true); }
+
+  async function saveNote() {
     const tags = noteTags.split(",").map(t => t.trim()).filter(Boolean);
-    if (editNote) {
-      setNotes(prev => prev.map(n => n.id === editNote.id ? { ...n, title: noteTitle, body: noteBody, tags, public: notePublic } : n));
-    } else {
-      setNotes(prev => [...prev, { id: Math.random().toString(36).slice(2,10), title: noteTitle, body: noteBody, tags, public: notePublic, createdAt: new Date().toLocaleDateString("pt-BR") }]);
+    const visibility = notePublic ? "public" : "private";
+    setNoteSaving(true);
+    setNoteError("");
+    try {
+      const res = await fetch(editNote ? `/api/notes/${editNote.id}` : "/api/notes", {
+        method:  editNote ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ title: noteTitle, body: noteBody, tags, visibility }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setNoteError(json.error ?? "Erro ao salvar a nota"); return; }
+      const saved = fromApiNote(json.data);
+      setNotes(prev => editNote ? prev.map(n => n.id === saved.id ? saved : n) : [saved, ...prev]);
+      setNoteModal(false);
+    } catch {
+      setNoteError("Erro de conexão. Tente novamente.");
+    } finally {
+      setNoteSaving(false);
     }
-    setNoteModal(false);
   }
-  function deleteNote(id: string) { setNotes(prev => prev.filter(n => n.id !== id)); }
+
+  async function deleteNote(id: string) {
+    const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
+    if (!res.ok) return;
+    setNotes(prev => prev.filter(n => n.id !== id));
+  }
 
   const accent = color;
   const accentLight = color + "15";
@@ -578,11 +613,12 @@ export function ProfileClient({ user }: { user: User }) {
                 </div>
                 <Toggle value={notePublic} onChange={() => setNotePublic(v => !v)} accent={accent} />
               </div>
+              {noteError && <p className="text-xs" style={{ color: "#c0392b" }}>{noteError}</p>}
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={() => setNoteModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13", fontFamily: "Inter, sans-serif" }}>Cancelar</button>
-              <button onClick={saveNote} disabled={!noteTitle || !noteBody} className="flex-1 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50" style={{ background: accent, color: "#fff", fontFamily: "Inter, sans-serif" }}>
-                {editNote ? "Salvar alterações" : "Publicar nota"}
+              <button onClick={saveNote} disabled={!noteTitle || !noteBody || noteSaving} className="flex-1 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50" style={{ background: accent, color: "#fff", fontFamily: "Inter, sans-serif" }}>
+                {noteSaving ? "Salvando..." : editNote ? "Salvar alterações" : "Publicar nota"}
               </button>
             </div>
           </div>

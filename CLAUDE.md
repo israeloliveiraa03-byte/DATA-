@@ -142,6 +142,17 @@ Fase estrutural adiada desde o pacote de Admin/Suporte (2026-07-04): cada pesqui
 - **Corte de escopo desta rodada**: form-builder e dashboard-builder não ganharam modo de leitura de verdade — editor tem acesso igual ao dono nesses dois editores pesados (drag-and-drop, mapas, globo); visualizador é bloqueado na entrada com uma tela "Somente leitura" (`src/components/researches/readonly-notice.tsx`) em vez disso. Fazer um modo read-only de verdade nesses editores é trabalho futuro, se fizer falta.
 - **Card "Equipe"** na página da pesquisa (`research-page-client.tsx`, ao lado de "Entidades vinculadas"): lista dono + membros, convite/trocar papel/remover só visível pra quem é dono.
 
+## Rede — fase 1: notas técnicas com backend real (2026-07-08)
+
+Primeira fase da "Rede" (camada de visibilidade sobre Pesquisa/Entidade, ver artefato de arquitetura de 2026-07-07): notas metodológicas deixam de ser decorativas. A aba "Notas técnicas" do perfil (`profile-client.tsx`) só mexia em estado local do React (`saveNote`/`deleteNote` nunca chamavam API — sumia tudo ao atualizar a página); agora persiste de verdade.
+
+- **Schema** (`src/lib/db/schema/technical-notes.ts`): `technical_notes` (nota geral por `entity_type` OU específica por `entity_id`, nunca as duas — decisão de Israel, validada só na UI/API, não dá pra expressar isso limpo como constraint do Postgres) + `technical_note_endorsements` (endosso leve de pares, unique por nota+usuário). Migração `scripts/sql/2026-07-08-technical-notes.sql`, já aplicada em produção.
+- **Correção de premissa do artefato original**: a ideia era notas aparecerem "no perfil público do pesquisador" — mas essa página **não existe** (`users.publicProfile` não é lido em lugar nenhum além do próprio editor de perfil). Construir um perfil público do zero ficou fora de escopo desta fase; a superfície pública virou uma listagem simples nova, `/notas-tecnicas` (filtro por tipo de entidade e busca por tag), que cobre a mesma necessidade sem inventar uma feature maior.
+- **Card na entidade**: `entidade-detail-client.tsx` ganhou "Notas técnicas sobre esta entidade" (só notas com `entity_id` = a própria entidade — notas gerais por tipo ficam só na listagem global, pra não poluir toda entidade do mesmo tipo).
+- **API**: `/api/notes` (CRUD das próprias notas), `/api/notes/public` (lista pública com filtro), `/api/notes/[id]/endorse` (toggle de endosso).
+- **Sem taxa, sem cobrança** — essa fase não mexe em modelo de negócio.
+- **Ainda fora de escopo (fases seguintes da Rede, já roteirizadas)**: chamadas de colaboração, bandeiras de opt-in (`network_visibility`/`location_disclosure`) e o Mapa Geral em si.
+
 ## Fila de sincronização offline — parte 1 implementada (2026-07-04)
 
 Objetivo de longo prazo: app de campo (celular/tablet, via Capacitor — planejado, não construído ainda) capturando resposta e ponto de GPS territorial sem internet. Antes de investir no app, foram corrigidos os passos 1–4 do offline que já existiam pela metade no site:
@@ -186,7 +197,7 @@ Princípio: quem tem orçamento institucional paga o suficiente pra manter a pla
 - **Governo/Enterprise** — sob consulta, referência a partir de R$690/mês; contrato anual, boleto + NF-e centralizada, SLA. Público: prefeitura, secretaria, autarquia.
 - **Dataº Território** (gratuito) — acesso completo para instituições que representam comunidades tradicionais. Vagas calculadas para sustentabilidade (~10% da base pagante como referência). Fundamental para a base ética da plataforma.
 
-**Receita complementar**: dashboard sem anúncio avulso (R$9/mês); certificação de instrumento na biblioteca (R$120 avaliação única ou R$29/mês manutenção); chamada de colaboração paga (taxa de 12% sobre o valor arrecadado); biblioteca de território (R$1 de crédito por uso de terceiro do GeoJSON publicado).
+**Receita complementar**: dashboard sem anúncio avulso (R$9/mês); certificação de instrumento na biblioteca (R$120 avaliação única ou R$29/mês manutenção); biblioteca de território (R$1 de crédito por uso de terceiro do GeoJSON publicado). Chamada de colaboração **não** cobra taxa — decisão revista em 2026-07-07: colaboração é ponte entre pessoas e território, não produto de monetização (substitui o rascunho anterior, que previa 12% sobre valor arrecadado).
 
 **Custo de operar (excluindo IA, ainda não decidida)**: infra fixa (Vercel + Neon + storage + e-mail) ≈ R$1.300/mês em estágio inicial-crescimento; custo variável por conta pagante ≈ R$4/mês (gateway de pagamento + banda/armazenamento incremental). Com ticket médio de R$35, margem de contribuição ≈ 89%; breakeven do fixo em ≈42 contas pagantes. Meio de pagamento recomendado: gateway brasileiro (Asaas/Iugu/Pagar.me) em vez de Stripe puro — Stripe não resolve Pix/boleto/NF-e nativamente no Brasil, e universidade/governo vão exigir isso.
 

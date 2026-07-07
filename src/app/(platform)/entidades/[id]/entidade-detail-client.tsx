@@ -73,14 +73,26 @@ interface EntityWithChildren extends Entity {
   personDetails:  EntityPersonDetails | null;
 }
 
+interface EntityNote {
+  id: string;
+  title: string;
+  body: string;
+  visibility: "public" | "private";
+  authorId: string;
+  author: { id: string; name: string };
+  createdAt: Date | string;
+}
+
 interface Props {
   entity: EntityWithChildren;
   versions: EntityVersion[];
   links: (ResearchEntity & { research: Research })[];
   myResearches: Research[];
+  notes: EntityNote[];
+  currentUserId: string;
 }
 
-export function EntidadeDetailClient({ entity: initialEntity, versions: initialVersions, links: initialLinks, myResearches }: Props) {
+export function EntidadeDetailClient({ entity: initialEntity, versions: initialVersions, links: initialLinks, myResearches, notes: initialNotes, currentUserId }: Props) {
   const router = useRouter();
   const { municipalities, adminDivisions, orgDocument, personDetails, ...baseEntity } = initialEntity;
   const [entity,   setEntity]   = useState<Entity>(baseEntity);
@@ -91,6 +103,43 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
   const [changeNote,  setChangeNote]  = useState("");
   const [savingName,  setSavingName]  = useState(false);
   const [nameError,   setNameError]   = useState("");
+
+  const [notes,        setNotes]        = useState(initialNotes);
+  const [noteTitle,    setNoteTitle]    = useState("");
+  const [noteBody,     setNoteBody]     = useState("");
+  const [notePublic,   setNotePublic]   = useState(true);
+  const [notingNew,    setNotingNew]    = useState(false);
+  const [noteSaving,   setNoteSaving]   = useState(false);
+  const [noteError,    setNoteError]    = useState("");
+
+  async function addEntityNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteTitle || !noteBody) return;
+    setNoteSaving(true);
+    setNoteError("");
+    try {
+      const res = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: noteTitle, body: noteBody, entityId: entity.id, visibility: notePublic ? "public" : "private" }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setNoteError(json.error ?? "Erro ao publicar a nota"); return; }
+      setNotes(prev => [{ ...json.data, author: { id: currentUserId, name: "Você" } }, ...prev]);
+      setNoteTitle(""); setNoteBody(""); setNotePublic(true); setNotingNew(false);
+      toast.success("Nota publicada.");
+    } catch {
+      setNoteError("Erro de conexão. Tente novamente.");
+    } finally {
+      setNoteSaving(false);
+    }
+  }
+
+  async function deleteEntityNote(noteId: string) {
+    const res = await fetch(`/api/notes/${noteId}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("Erro ao excluir a nota."); return; }
+    setNotes(prev => prev.filter(n => n.id !== noteId));
+  }
 
   const [selectedResearchId, setSelectedResearchId] = useState("");
   const [relationNote,       setRelationNote]       = useState("");
@@ -397,6 +446,61 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                     />
                     {linkError && <p className="text-xs text-coral-500">{linkError}</p>}
                   </form>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Notas técnicas sobre esta entidade</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setNotingNew(v => !v)}>
+                  <i className="ti ti-plus" aria-hidden="true" /> Nova nota
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {notingNew && (
+                  <form onSubmit={addEntityNote} className="flex flex-col gap-2 mb-4 pb-4 border-b border-ink-700">
+                    <Input value={noteTitle} onChange={e => setNoteTitle(e.target.value)} placeholder="Título da nota" />
+                    <textarea
+                      value={noteBody}
+                      onChange={e => setNoteBody(e.target.value)}
+                      rows={4}
+                      placeholder="Orientações, recomendações e aprendizados sobre esta entidade..."
+                      className="w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"
+                    />
+                    <label className="flex items-center gap-2 text-xs text-ink-300">
+                      <input type="checkbox" checked={notePublic} onChange={e => setNotePublic(e.target.checked)} />
+                      Visível pra rede (desmarque pra manter privada, só sua)
+                    </label>
+                    {noteError && <p className="text-xs text-coral-500">{noteError}</p>}
+                    <Button type="submit" size="sm" loading={noteSaving} disabled={!noteTitle || !noteBody}>Publicar nota</Button>
+                  </form>
+                )}
+
+                {notes.length === 0 ? (
+                  <p className="text-xs text-ink-300">Nenhuma nota técnica ainda sobre esta entidade.</p>
+                ) : (
+                  <ul className="flex flex-col gap-3">
+                    {notes.map(note => (
+                      <li key={note.id} className="px-3 py-2 rounded-md border border-ink-700">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className="text-sm font-bold text-ink-100">{note.title}</p>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge variant={note.visibility === "public" ? "teal" : "default"}>
+                              {note.visibility === "public" ? "Pública" : "Privada"}
+                            </Badge>
+                            {note.authorId === currentUserId && (
+                              <button onClick={() => deleteEntityNote(note.id)} title="Excluir" className="text-coral-500 hover:text-coral-600">
+                                <i className="ti ti-trash text-xs" aria-hidden="true" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-ink-300 whitespace-pre-wrap line-clamp-4">{note.body}</p>
+                        <p className="text-2xs text-ink-500 mt-1.5">{note.author.name}</p>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </CardContent>
             </Card>

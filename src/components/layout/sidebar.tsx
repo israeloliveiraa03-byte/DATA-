@@ -19,6 +19,12 @@ const nav = [
     ],
   },
   {
+    label: "Rede",
+    items: [
+      { href: "/notas-tecnicas", icon: "ti-notebook", label: "Notas técnicas" },
+    ],
+  },
+  {
     label: "Conta",
     items: [
       { href: "/profile",  icon: "ti-user-circle", label: "Perfil"  },

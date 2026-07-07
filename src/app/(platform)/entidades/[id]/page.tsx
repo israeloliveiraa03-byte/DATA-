@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { entities, entityVersions, researchEntities } from "@/lib/db/schema";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { entities, entityVersions, researchEntities, technicalNotes } from "@/lib/db/schema";
+import { eq, desc, isNull, and, or } from "drizzle-orm";
 import { getMyResearches } from "@/lib/researches/access";
 import { EntidadeDetailClient } from "./entidade-detail-client";
 import type { Metadata } from "next";
@@ -42,12 +42,22 @@ export default async function EntidadeDetailPage({ params }: { params: Promise<{
   const mine = await getMyResearches(session!.user!.id!);
   const myResearches = mine.filter(m => m.role !== "viewer").map(m => m.research);
 
+  const userId = session!.user!.id!;
+  // Notas específicas desta entidade: públicas de qualquer autor, ou privadas só do próprio autor.
+  const notes = await db.query.technicalNotes.findMany({
+    where: and(eq(technicalNotes.entityId, id), or(eq(technicalNotes.visibility, "public"), eq(technicalNotes.authorId, userId))),
+    orderBy: desc(technicalNotes.createdAt),
+    with: { author: { columns: { id: true, name: true } } },
+  });
+
   return (
     <EntidadeDetailClient
       entity={entity}
       versions={versions}
       links={links}
       myResearches={myResearches}
+      notes={notes}
+      currentUserId={userId}
     />
   );
 }
