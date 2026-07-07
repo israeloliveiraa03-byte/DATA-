@@ -101,11 +101,19 @@ export function ColaboracaoClient({ calls: initialCalls, currentUserId, myResear
     const res = await fetch(`/api/collaboration-calls/${callId}/applications/${appId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }),
     });
+    const json = await res.json();
     if (!res.ok) { toast.error("Erro ao atualizar candidatura."); return; }
     setCalls(prev => prev.map(c => c.id === callId
       ? { ...c, applications: c.applications.map(a => a.id === appId ? { ...a, status } : a) }
       : c));
-    toast.success(status === "accepted" ? "Candidatura aceita." : "Candidatura recusada.");
+
+    if (json.data.teamInvite) {
+      const link = `${window.location.origin}/convite-equipe/${json.data.teamInvite.token}`;
+      await navigator.clipboard.writeText(link);
+      toast.success("Candidatura aceita — link de convite pra equipe copiado, envie pra pessoa.");
+    } else {
+      toast.success(status === "accepted" ? "Candidatura aceita." : "Candidatura recusada.");
+    }
   }
 
   return (

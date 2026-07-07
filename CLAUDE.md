@@ -169,7 +169,9 @@ Primeira fase da "Rede" (camada de visibilidade sobre Pesquisa/Entidade, ver art
 - **Pesquisa só ganha pino via entidade vinculada**: sem centróide de `stateCode`/`cityCode` soltos, uma pesquisa só aparece no mapa se tiver ao menos uma entidade vinculada (`research_entities`) com pino próprio visível — anexada ao primeiro vínculo que servir (`src/lib/network/build-network-map.ts`, reaproveitado tanto pela página `/mapa-geral` quanto por `GET /api/network-map`).
 - **Página `/mapa-geral`**: Leaflet via `next/dynamic({ssr:false})` (`src/components/network/network-map.tsx`), reaproveitando `BasemapLayers`/`ScrollZoomOnFocus` de `map-common.tsx` — nenhum setup de mapa novo. Pino com halo pulsante quando a entidade/pesquisa tem chamada de colaboração aberta vinculada.
 - **Oculto por padrão** — decisão deliberada dado o público do Dataº (comunidades tradicionais): nem entidade nem pesquisa aparecem no mapa geral até alguém optar explicitamente pra um dos três níveis (oculta/aproximada/exata); não existe nenhum nudge de UI puxando pra "exata".
-- **Fecha o roteiro da Rede** exceto a fase 4 (candidatura aceita → convite automático de equipe), ainda pendente.
+## Rede — fase 4: candidatura aceita vira convite de equipe (2026-07-08)
+
+Fecha o roteiro da Rede planejado no artefato de 2026-07-07. Em `PATCH /api/collaboration-calls/[id]/applications/[appId]`, aceitar uma candidatura de tipo `fieldwork`/`expertise` ligada a uma pesquisa gera automaticamente um `research_member_invites` (papel `editor`, reaproveita a mesma tabela/token da Equipe de pesquisa) — o link volta na resposta, o client copia pra área de transferência e mostra toast pra quem aceitou enviar à pessoa. Quem cria a chamada já provou ter edição na pesquisa (regra do `POST /api/collaboration-calls`), então o convite sai mesmo que essa pessoa seja só editora, não dona — bypassa de propósito a regra "só dono convida" do endpoint manual de equipe, porque aqui é uma ação automatizada de um fluxo diferente, não o convite manual em si.
 
 ## Fila de sincronização offline — parte 1 implementada (2026-07-04)
 
