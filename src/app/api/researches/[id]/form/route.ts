@@ -73,74 +73,109 @@ export async function POST(
     form = updated;
   }
 
-  // Remove campos antigos e recria
-  await db.delete(formFields).where(eq(formFields.formId, form.id));
+  // Upsert dos campos — preserva o id de quem já existia neste formulário
+  // (antes: apagava e recriava TUDO a cada salvamento, trocando o id de toda
+  // pergunta mesmo sem mudança nenhuma; isso desconectava silenciosamente as
+  // respostas já coletadas — responses.data é keyed pelo id do campo — e os
+  // widgets de dashboard já configurados, que ficavam "órfãos" apontando pro
+  // id antigo. Bug encontrado em 2026-07-14 revisando por que mapas/gráficos
+  // publicados apareciam vazios mesmo com respostas reais no banco).
+  const existingFields = await db.query.formFields.findMany({
+    where: eq(formFields.formId, form.id),
+  });
+  const existingIds = new Set(existingFields.map(f => f.id));
 
   if (rawFields.length > 0) {
-    const fieldsToInsert = rawFields.map((f: Record<string, unknown>, idx: number) => ({
-      formId:       form!.id,
-      type:         (f.type as string) || "short_text",
-      label:        (f.label as string) || "Pergunta",
-      description:  (f.description as string) || "",
-      placeholder:  (f.placeholder as string) || "",
-      required:     Boolean(f.required),
-      order:        idx,
-      config:       {
-        options:      f.options,
-        min:          f.scaleMin,
-        max:          f.scaleMax,
-        label:        f.scaleLabel,
-        matrixRows:   f.matrixRows,
-        matrixCols:   f.matrixCols,
-        rankingItems: f.rankingItems,
-        totalPoints:  f.totalPoints,
-        cardCategories: f.cardCategories,
-        cardItems:    f.cardItems,
-        semanticLeft: f.semanticLeft,
-        semanticRight:f.semanticRight,
-        timelineStart:f.timelineStart,
-        timelineEnd:  f.timelineEnd,
-        zoneOptions:  f.zoneOptions,
-        placeholder:  f.placeholder,
-        // Novos tipos (2026-07-04): tudo vive em config (jsonb), sem mudança de schema
-        tableColumns:        f.tableColumns,
-        availabilityDays:    f.availabilityDays,
-        availabilityPeriods: f.availabilityPeriods,
-        geoMapMode:          f.geoMapMode,
-        condDependsOn:       f.condDependsOn,
-        condOperator:        f.condOperator,
-        condValue:           f.condValue,
-        pairwiseItems:       f.pairwiseItems,
-        formula:             f.formula,
-        consentText:         f.consentText,
-        consentItems:        f.consentItems,
-        uploadItems:         f.uploadItems,
+    const prepared = rawFields.map((f: Record<string, unknown>, idx: number) => ({
+      clientId: typeof f.id === "string" ? f.id : undefined,
+      condDependsOn: f.condDependsOn as string | undefined,
+      values: {
+        formId:       form!.id,
+        type:         (f.type as string) || "short_text",
+        label:        (f.label as string) || "Pergunta",
+        description:  (f.description as string) || "",
+        placeholder:  (f.placeholder as string) || "",
+        required:     Boolean(f.required),
+        order:        idx,
+        config:       {
+          options:      f.options,
+          min:          f.scaleMin,
+          max:          f.scaleMax,
+          label:        f.scaleLabel,
+          matrixRows:   f.matrixRows,
+          matrixCols:   f.matrixCols,
+          rankingItems: f.rankingItems,
+          totalPoints:  f.totalPoints,
+          cardCategories: f.cardCategories,
+          cardItems:    f.cardItems,
+          semanticLeft: f.semanticLeft,
+          semanticRight:f.semanticRight,
+          timelineStart:f.timelineStart,
+          timelineEnd:  f.timelineEnd,
+          zoneOptions:  f.zoneOptions,
+          placeholder:  f.placeholder,
+          // Novos tipos (2026-07-04): tudo vive em config (jsonb), sem mudança de schema
+          tableColumns:        f.tableColumns,
+          availabilityDays:    f.availabilityDays,
+          availabilityPeriods: f.availabilityPeriods,
+          geoMapMode:          f.geoMapMode,
+          condDependsOn:       f.condDependsOn,
+          condOperator:        f.condOperator,
+          condValue:           f.condValue,
+          pairwiseItems:       f.pairwiseItems,
+          formula:             f.formula,
+          consentText:         f.consentText,
+          consentItems:        f.consentItems,
+          uploadItems:         f.uploadItems,
+        } as Record<string, unknown>,
       },
     }));
 
     try {
-      const inserted = await db.insert(formFields).values(fieldsToInsert)
-        .returning({ id: formFields.id });
+      const idMap = new Map<string, string>(); // id enviado pelo cliente -> id real no banco
+      const submittedIds = new Set<string>();
+      const realIdByIdx: string[] = [];
+
+      for (const item of prepared) {
+        if (item.clientId && existingIds.has(item.clientId)) {
+          await db.update(formFields).set(item.values).where(eq(formFields.id, item.clientId));
+          idMap.set(item.clientId, item.clientId);
+          submittedIds.add(item.clientId);
+          realIdByIdx.push(item.clientId);
+        } else {
+          const [created] = await db.insert(formFields).values(item.values).returning({ id: formFields.id });
+          if (item.clientId) idMap.set(item.clientId, created.id);
+          submittedIds.add(created.id);
+          realIdByIdx.push(created.id);
+        }
+      }
+
+      // Apaga só quem foi removido no editor (não veio nesse salvamento) —
+      // preserva todo o resto, diferente do delete-tudo de antes.
+      for (const ef of existingFields) {
+        if (!submittedIds.has(ef.id)) {
+          await db.delete(formFields).where(eq(formFields.id, ef.id));
+        }
+      }
 
       // Campos condicionais referenciam outra pergunta pelo id (condDependsOn).
-      // Como os campos são apagados e recriados a cada salvamento (ids novos),
-      // remapeamos a referência do id enviado pelo cliente para o id recém-criado.
-      const idMap = new Map<string, string>();
-      rawFields.forEach((f: Record<string, unknown>, idx: number) => {
-        if (f.id && inserted[idx]) idMap.set(String(f.id), inserted[idx].id);
-      });
-      for (let idx = 0; idx < rawFields.length; idx++) {
-        const dep = rawFields[idx]?.condDependsOn as string | undefined;
-        if (!dep || !inserted[idx]) continue;
+      // Só precisa remapear quando o campo referenciado é novo (ganhou id na
+      // hora); campo que já existia manteve o id, a referência já está certa.
+      for (let idx = 0; idx < prepared.length; idx++) {
+        const dep = prepared[idx].condDependsOn;
+        if (!dep) continue;
         const newDep = idMap.get(dep);
         if (!newDep || newDep === dep) continue;
         await db.update(formFields)
-          .set({ config: { ...fieldsToInsert[idx].config, condDependsOn: newDep } })
-          .where(eq(formFields.id, inserted[idx].id));
+          .set({ config: { ...prepared[idx].values.config, condDependsOn: newDep } })
+          .where(eq(formFields.id, realIdByIdx[idx]));
       }
     } catch (err) {
       return apiError("Erro ao salvar campos: " + String(err), 500);
     }
+  } else {
+    // Formulário esvaziado no editor — sem campos enviados, apaga os que existiam.
+    await db.delete(formFields).where(eq(formFields.formId, form.id));
   }
 
   return apiSuccess({ formId: form.id, fieldCount: rawFields.length });
