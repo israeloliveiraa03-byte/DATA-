@@ -65,7 +65,7 @@ export function NotasTecnicasClient({ notes: initialNotes, isLoggedIn }: Props) 
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
-          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          <select aria-label="Filtrar por tipo de entidade" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
             className="text-xs px-3 py-2 rounded-md border border-ink-700 bg-ink-900 text-ink-100">
             <option value="all">Todos os tipos</option>
             {Object.entries(TYPE_MAP).map(([k, label]) => <option key={k} value={k}>{label}</option>)}

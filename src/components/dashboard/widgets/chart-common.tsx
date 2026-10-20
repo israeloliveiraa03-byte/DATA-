@@ -31,11 +31,11 @@ export function mixHex(a: string, b: string, t: number): string {
   return `#${ch(0)}${ch(2)}${ch(4)}`;
 }
 
-export function EmptyState() {
+export function EmptyState({ message, icon }: { message?: string; icon?: string } = {}) {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center gap-1.5 text-center px-4">
-      <i className="ti ti-chart-dots-3 text-xl text-ink-600" aria-hidden="true" />
-      <p className="text-xs text-ink-500">Aguardando respostas suficientes para este indicador</p>
+      <i className={`ti ${icon ?? "ti-chart-dots-3"} text-xl text-ink-600`} aria-hidden="true" />
+      <p className="text-xs text-ink-500">{message ?? "Aguardando respostas suficientes para este indicador"}</p>
     </div>
   );
 }

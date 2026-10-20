@@ -647,7 +647,7 @@ function FieldInput({
           </button>
           {value && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
-              style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-700))" }}>
+              style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-400))" }}>
               <i className="ti ti-check" /> {value as string}
             </div>
           )}
@@ -1021,11 +1021,11 @@ function CepField({
       )}
 
       {resolved && (
-        <div className="mt-2 px-4 py-3 rounded-xl text-xs" style={{ background: "rgb(var(--color-brand-50))", border: "1px solid rgb(var(--color-brand-200))", color: "rgb(var(--color-brand-700))" }}>
+        <div className="mt-2 px-4 py-3 rounded-xl text-xs" style={{ background: "rgb(var(--color-brand-50))", border: "1px solid rgb(var(--color-brand-200))", color: "rgb(var(--color-brand-400))" }}>
           <p className="flex items-center gap-1.5 font-bold mb-1">
             <i className="ti ti-map-pin-check" /> Endereço localizado
           </p>
-          <p style={{ color: "rgb(var(--color-brand-700))" }}>
+          <p style={{ color: "rgb(var(--color-brand-400))" }}>
             {resolved.logradouro && `${resolved.logradouro}, `}
             {resolved.bairro && `${resolved.bairro} — `}
             {resolved.localidade}/{resolved.uf}
@@ -1364,7 +1364,7 @@ function SignatureField({
         <button onClick={clear} className="text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>Limpar</button>
       </div>
       {signedDataUrl && (
-        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "rgb(var(--color-brand-700))" }}>
+        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "rgb(var(--color-brand-400))" }}>
           <i className="ti ti-check" /> Assinatura capturada
         </p>
       )}
@@ -1985,7 +1985,7 @@ function QrBarcodeField({
       )}
       {typeof value === "string" && value && (
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
-          style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-700))" }}>
+          style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-400))" }}>
           <i className="ti ti-check" /> Código lido: {value}
         </div>
       )}
@@ -2196,7 +2196,7 @@ export function RespondentClient({
       </div>
 
       {/* Conteúdo */}
-      <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex items-start sm:items-center justify-center px-4 py-6 sm:p-6">
         <div className="w-full max-w-lg">
 
           {/* Capa e título (só no primeiro campo) */}

@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import type { User } from "@/lib/types";
 
 const PALETTE = [
-  { id: "terracota",  color: "#b07d20", label: "Terracota" },
+  { id: "terracota",  color: "#8a5d12", label: "Terracota" },
   { id: "floresta",   color: "#0a6e45", label: "Floresta"  },
   { id: "oceano",     color: "#1a56db", label: "Oceano"    },
   { id: "territorio", color: "#534ab7", label: "Território"},
-  { id: "rio",        color: "#0d9e75", label: "Rio"       },
+  { id: "rio",        color: "#0a7558", label: "Rio"       },
   { id: "rosa",       color: "#9f4e6e", label: "Rosa"      },
 ];
 
@@ -169,6 +169,9 @@ export function ProfileClient({ user }: { user: User }) {
 
   const accent = color;
   const accentLight = color + "15";
+  // Cor de destaque usada como TEXTO: misturada com a tinta do tema — fica
+  // mais escura no claro e mais clara no escuro, sempre com contraste ≥ 4,5:1.
+  const accentText = `color-mix(in srgb, ${color} 62%, rgb(var(--color-ink-50)))`;
 
   const iStyle = { border: BRD, background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-50))", fontFamily: "Inter, sans-serif" };
   const iCls = "w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-all";
@@ -177,7 +180,7 @@ export function ProfileClient({ user }: { user: User }) {
     { label: "ORCID", logo: <OrcidLogo />, bg: "#fff", border: BRD, val: orcid, set: setOrcid, ph: "0000-0000-0000-0000", connected: !!orcid },
     { label: "Lattes (CNPq)", logo: <span style={{ fontSize: "11px", fontWeight:900, fontFamily:"sans-serif", background:"#003a6e", color:"#fff", padding:"1px 4px", borderRadius:"3px" }}>CNPq</span>, bg: "#003a6e", border: "#003a6e", val: lattes, set: setLattes, ph: "lattes.cnpq.br/...", connected: !!lattes },
     { label: "Google Scholar", logo: <ScholarLogo />, bg: "#fff", border: BRD, val: scholar, set: setScholar, ph: "scholar.google.com/citations?user=...", connected: !!scholar },
-    { label: "ResearchGate", logo: <span style={{ fontSize:"12px", fontWeight:900, fontFamily:"Georgia,serif", color:"#fff" }}>RG</span>, bg: "#00d0af", border: "#00b89a", val: researchgate, set: setResearchgate, ph: "researchgate.net/profile/...", connected: !!researchgate },
+    { label: "ResearchGate", logo: <span style={{ fontSize:"12px", fontWeight:900, fontFamily:"Georgia,serif", color:"#04362f" }}>RG</span>, bg: "#00d0af", border: "#00b89a", val: researchgate, set: setResearchgate, ph: "researchgate.net/profile/...", connected: !!researchgate },
     { label: "LinkedIn", logo: <LinkedInLogo />, bg: "#0077B5", border: "#006097", val: linkedin, set: setLinkedin, ph: "linkedin.com/in/...", connected: !!linkedin },
     { label: "Site pessoal", logo: <i className="ti ti-world" style={{ color:"rgb(var(--color-ink-500))", fontSize:"16px" }} />, bg: "rgb(var(--color-ink-950))", border: "rgb(var(--color-ink-700))", val: website, set: setWebsite, ph: "seuperfil.com.br", connected: !!website },
   ];
@@ -229,7 +232,7 @@ export function ProfileClient({ user }: { user: User }) {
             )}
 
           {/* Tipo de perfil */}
-          <div style={{ position: "absolute", top: "12px", left: "12px", display: "flex", background: "rgba(255,255,255,0.92)", border: BRD, borderRadius: "8px", overflow: "hidden", backdropFilter: "blur(8px)", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div style={{ position: "absolute", top: "12px", left: "12px", display: "flex", background: "rgb(var(--color-ink-900) / 0.92)", border: BRD, borderRadius: "8px", overflow: "hidden", backdropFilter: "blur(8px)", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
             {(["researcher","institution"] as ProfileType[]).map(t => (
               <button key={t} onClick={() => setProfileType(t)}
                 className="px-3 py-1.5 text-xs font-bold transition-all"
@@ -244,17 +247,17 @@ export function ProfileClient({ user }: { user: User }) {
             {coverImage && (
               <button onClick={() => setCoverImage(null)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "rgb(var(--color-coral-500))", backdropFilter: "blur(8px)" }}>
+                style={{ background: "rgb(var(--color-ink-900) / 0.92)", border: BRD, color: "rgb(var(--color-coral-500))", backdropFilter: "blur(8px)" }}>
                 <i className="ti ti-x text-xs" /> Remover imagem
               </button>
             )}
             <button onClick={() => coverRef.current?.click()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-              style={{ background: "rgba(255,255,255,0.92)", border: BRD, color: "rgb(var(--color-ink-100))", backdropFilter: "blur(8px)" }}>
+              style={{ background: "rgb(var(--color-ink-900) / 0.92)", border: BRD, color: "rgb(var(--color-ink-100))", backdropFilter: "blur(8px)" }}>
               <i className="ti ti-photo text-xs" /> Imagem de capa
             </button>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ background: "rgba(255,255,255,0.92)", border: BRD, backdropFilter: "blur(8px)" }}>
+              style={{ background: "rgb(var(--color-ink-900) / 0.92)", border: BRD, backdropFilter: "blur(8px)" }}>
               <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgb(var(--color-ink-500))" }}>Cor</span>
               {PALETTE.map(p => (
                 <button key={p.id} onClick={() => setColor(p.color)} title={p.label}
@@ -282,17 +285,17 @@ export function ProfileClient({ user }: { user: User }) {
                 <i className="ti ti-camera text-white text-xl" />
               </div>
             </div>
-            <div style={{ position: "absolute", bottom: "2px", right: "2px", width: "18px", height: "18px", borderRadius: "50%", background: "#10b981", border: "2.5px solid #fff" }} />
+            <div style={{ position: "absolute", bottom: "2px", right: "2px", width: "18px", height: "18px", borderRadius: "50%", background: "rgb(var(--color-brand-500))", border: "2.5px solid rgb(var(--color-ink-900))" }} />
             <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
           </div>
 
           <div className="flex items-center gap-3 pb-1.5">
             {savedMsg && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "#ecfdf5", color: "#065f46" }}>
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-400))" }}>
                 <i className="ti ti-check" /> {savedMsg}
               </span>
             )}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "rgb(var(--color-teal-50))", color: "rgb(var(--color-teal-600))", border: "1px solid rgb(var(--color-teal-500) / 0.3)" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Identidade verificada
             </div>
@@ -319,17 +322,17 @@ export function ProfileClient({ user }: { user: User }) {
             {cargo && <span>{cargo}</span>}
             {cargo && institution && <span style={{ width: "3px", height: "3px", borderRadius: "50%", background: "rgb(var(--color-ink-500))", display: "inline-block" }} />}
             {institution && <span>{institution}</span>}
-            {city && <><span style={{ width: "3px", height: "3px", borderRadius: "50%", background: "rgb(var(--color-ink-500))", display: "inline-block" }} /><span className="flex items-center gap-1"><i className="ti ti-map-pin text-xs" style={{ color: accent }} />{city}</span></>}
+            {city && <><span style={{ width: "3px", height: "3px", borderRadius: "50%", background: "rgb(var(--color-ink-500))", display: "inline-block" }} /><span className="flex items-center gap-1"><i className="ti ti-map-pin text-xs" style={{ color: accentText }} />{city}</span></>}
           </div>
           <div className="flex items-center gap-2 flex-wrap mb-3">
             {orcid && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "#f0fae0", color: "#3a6600", border: "1px solid #a0c840" }}>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-400))", border: "1px solid rgb(var(--color-brand-500) / 0.3)" }}>
                 <svg viewBox="0 0 256 256" width="12" height="12"><circle cx="128" cy="128" r="128" fill="#A6CE39"/><path d="M86 75h18v106H86z" fill="#fff"/><circle cx="95" cy="61" r="11" fill="#fff"/><path d="M120 75h46c39 0 58 22 58 53s-19 53-58 53h-46V75zm18 91h26c26 0 40-14 40-38s-14-38-40-38h-26v76z" fill="#fff"/></svg>
                 ORCID
               </div>
             )}
             {lattes && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "#e8f0fe", color: "#1e3a8a", border: "1px solid #93b4f0" }}>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "rgb(var(--color-teal-50))", color: "rgb(var(--color-teal-600))", border: "1px solid rgb(var(--color-teal-500) / 0.3)" }}>
                 <span style={{ fontSize: "11px", fontWeight: 900, background: "#003a6e", color: "#fff", padding: "0 3px", borderRadius: "2px" }}>CNPq</span>
                 Lattes
               </div>
@@ -369,7 +372,7 @@ export function ProfileClient({ user }: { user: User }) {
           ] as const).map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className="flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all -mb-px"
-              style={{ borderBottomColor: activeTab === tab.key ? accent : "transparent", color: activeTab === tab.key ? accent : "rgb(var(--color-ink-500))", fontFamily: "Inter, sans-serif", letterSpacing: "0.01em" }}>
+              style={{ borderBottomColor: activeTab === tab.key ? accent : "transparent", color: activeTab === tab.key ? accentText : "rgb(var(--color-ink-500))", fontFamily: "var(--font-sans), Inter, sans-serif", letterSpacing: "0.01em" }}>
               <i className={`ti ${tab.icon}`} style={{ fontSize: "14px" }} />
               {tab.label}
               {"count" in tab && (
@@ -391,7 +394,7 @@ export function ProfileClient({ user }: { user: User }) {
 
               {/* Identidade */}
               <div className="rounded-xl p-5" style={{ border: BRD, background: "rgb(var(--color-ink-900))", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <p className="text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: accent, fontSize: "11px" }}>
+                <p className="text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: accentText, fontSize: "11px" }}>
                   Identidade <span style={{ flex: 1, height: "1px", background: "rgb(var(--color-ink-700))", display: "inline-block" }} />
                 </p>
                 {[
@@ -422,7 +425,7 @@ export function ProfileClient({ user }: { user: User }) {
 
                 {/* Links */}
                 <div className="rounded-xl p-5" style={{ border: BRD, background: "rgb(var(--color-ink-900))", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                  <p className="text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: accent, fontSize: "11px" }}>
+                  <p className="text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: accentText, fontSize: "11px" }}>
                     Links acadêmicos <span style={{ flex: 1, height: "1px", background: "rgb(var(--color-ink-700))", display: "inline-block" }} />
                   </p>
                   {LINKS.map(link => (
@@ -438,7 +441,7 @@ export function ProfileClient({ user }: { user: User }) {
                         onFocus={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${accent}18`; e.currentTarget.style.background = "#fff"; }}
                         onBlur={e => { e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "rgb(var(--color-ink-950))"; }} />
                       {link.connected && (
-                        <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "rgb(var(--color-brand-500))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <i className="ti ti-check" style={{ color: "#fff", fontSize: "11px" }} />
                         </div>
                       )}
@@ -450,7 +453,7 @@ export function ProfileClient({ user }: { user: User }) {
                 <div className="rounded-xl p-4 relative overflow-hidden" style={{ background: "rgb(var(--color-ink-900))", border: `1.5px solid ${accent}40` }}>
                   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: `linear-gradient(90deg, rgb(var(--color-brand-500)), #534ab7, rgb(var(--color-brand-500)))` }} />
                   <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "100px", height: "100px", borderRadius: "50%", background: `radial-gradient(circle, ${accent}18, transparent)` }} />
-                  <p className="text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5" style={{ color: accent, fontSize: "11px" }}>
+                  <p className="text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5" style={{ color: accentText, fontSize: "11px" }}>
                     <i className="ti ti-eye" /> Preview do perfil público
                   </p>
                   <div className="flex items-center gap-2.5 mb-2 relative z-10">
@@ -478,9 +481,9 @@ export function ProfileClient({ user }: { user: User }) {
               <div className="col-span-1 sm:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { icon: "ti-clipboard-list", bg: "rgb(var(--color-ink-950))", color: accent,    val: "1",             label: "Pesquisas" },
-                  { icon: "ti-notebook",       bg: "#ecfdf5", color: "rgb(var(--color-brand-500))", val: String(notes.length), label: "Notas técnicas" },
-                  { icon: "ti-users",          bg: "#eff6ff", color: "#1a56db", val: "0",             label: "Colaborações" },
-                  { icon: "ti-eye",            bg: "#f5f3ff", color: "#534ab7", val: "—",             label: "Visualizações" },
+                  { icon: "ti-notebook",       bg: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-500))", val: String(notes.length), label: "Notas técnicas" },
+                  { icon: "ti-users",          bg: "rgb(var(--color-teal-50))", color: "rgb(var(--color-teal-500))", val: "0",             label: "Colaborações" },
+                  { icon: "ti-eye",            bg: "rgb(var(--color-purple-50))", color: "rgb(var(--color-purple-500))", val: "—",             label: "Visualizações" },
                 ].map(s => (
                   <div key={s.label} className="flex items-center gap-3 rounded-xl p-4 transition-all"
                     style={{ border: BRD, background: "rgb(var(--color-ink-900))", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -526,14 +529,14 @@ export function ProfileClient({ user }: { user: User }) {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1.5">
                             <h3 style={{ fontSize: "14px", fontWeight: 700, color: "rgb(var(--color-ink-50))", fontFamily: "var(--font-serif), Georgia, serif" }}>{note.title}</h3>
-                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: note.public ? "#ecfdf5" : "rgb(var(--color-ink-950))", color: note.public ? "#065f46" : "rgb(var(--color-ink-500))", border: BRD }}>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: note.public ? "rgb(var(--color-brand-50))" : "rgb(var(--color-ink-950))", color: note.public ? "rgb(var(--color-brand-400))" : "rgb(var(--color-ink-500))", border: BRD }}>
                               {note.public ? "Pública" : "Privada"}
                             </span>
                           </div>
                           <p className="text-xs leading-relaxed mb-2 line-clamp-3" style={{ color: "rgb(var(--color-ink-300))" }}>{note.body}</p>
                           <div className="flex items-center gap-2 flex-wrap">
                             {note.tags.map(tag => (
-                              <span key={tag} className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: accentLight, color: accent }}>#{tag}</span>
+                              <span key={tag} className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: accentLight, color: accentText }}>#{tag}</span>
                             ))}
                             <span className="text-xs ml-auto" style={{ color: "rgb(var(--color-ink-500))" }}>{note.createdAt}</span>
                           </div>
@@ -554,7 +557,7 @@ export function ProfileClient({ user }: { user: User }) {
           {activeTab === "privacidade" && (
             <div style={{ maxWidth: "540px" }}>
               <div className="rounded-xl p-5" style={{ border: BRD, background: "rgb(var(--color-ink-900))", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: accent, fontSize: "11px" }}>Visibilidade do perfil</p>
+                <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: accentText, fontSize: "11px" }}>Visibilidade do perfil</p>
                 {[
                   { label: "Perfil público",   desc: "Seu perfil aparece na rede de pesquisadores do Dataº", val: publicProfile,    tog: () => setPublicProfile(v => !v) },
                   { label: "Exibir pesquisas", desc: "Mostra suas pesquisas ativas e publicadas no perfil",  val: showResearches,   tog: () => setShowResearches(v => !v) },
@@ -570,7 +573,7 @@ export function ProfileClient({ user }: { user: User }) {
                 ))}
               </div>
               <div className="rounded-lg p-3 flex items-start gap-2 mt-4" style={{ background: "rgb(var(--color-ink-950))", border: `1px solid ${accent}30` }}>
-                <i className="ti ti-shield-check flex-shrink-0 mt-0.5" style={{ color: accent, fontSize: "16px" }} />
+                <i className="ti ti-shield-check flex-shrink-0 mt-0.5" style={{ color: accentText, fontSize: "16px" }} />
                 <p className="text-xs leading-relaxed" style={{ color: "rgb(var(--color-ink-100))" }}>
                   Seus dados são tratados em conformidade com a <strong>LGPD</strong>. Você controla tudo que é visível publicamente.
                 </p>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, type ComponentType } from "react";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { DataLogo } from "@/components/layout/data-logo";
+import { FocusHeader } from "@/components/layout/focus-header";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { computeWidgetData, filterResponses } from "@/lib/dashboard/aggregate";
 import {
@@ -343,7 +343,6 @@ export function DashboardBuilderClient({
 }: {
   research: Research; dashboard: Dashboard; fields: FormField[]; responses: ResponseRow[];
 }) {
-  const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
   const widgetRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   // widgetRefs é um ref (mutação não re-renderiza) — sem isso, o array de
@@ -694,50 +693,43 @@ export function DashboardBuilderClient({
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: "rgb(var(--color-ink-950))" }}>
 
       {/* TOPBAR */}
-      <header className="h-12 flex items-center justify-between px-4 flex-shrink-0 z-50" style={{ background: "rgb(var(--color-ink-950))", borderBottom: BRD }}>
-        <button onClick={() => router.push(`/researches/${research.id}/dashboard-builder`)}>
-          <DataLogo className="text-lg" />
-        </button>
-        <div className="flex items-center gap-2">
-          <input value={title} onChange={e => setTitle(e.target.value)}
-            className="text-sm font-semibold border-none bg-transparent outline-none text-center border-b-2 border-transparent transition-colors min-w-48 px-1"
-            style={{ color: "rgb(var(--color-ink-50))" }}
-            onFocus={e => e.currentTarget.style.borderBottomColor = "rgb(var(--color-gold))"}
-            onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"} />
-          {savedAt && <span className="text-xs flex items-center gap-1" style={{ color: "rgb(var(--color-ink-500))" }}><i className="ti ti-check" style={{ color: "rgb(var(--color-brand-500))" }} /> Salvo às {savedAt}</span>}
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={undo} disabled={history.length === 0} title="Desfazer (Ctrl+Z)"
-            className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30"
-            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
-            <i className="ti ti-arrow-back-up text-sm" />
-          </button>
-          <button onClick={redo} disabled={future.length === 0} title="Refazer (Ctrl+Shift+Z)"
-            className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30 mr-1"
-            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
-            <i className="ti ti-arrow-forward-up text-sm" />
-          </button>
-          {isPublic && publicSlug && (
-            <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/d/${publicSlug}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md"
-              style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-700))" }}>
-              <i className="ti ti-link" /> Copiar link público
+      <FocusHeader
+        backHref={`/researches/${research.id}/dashboard-builder`}
+        backLabel="Voltar para os painéis da pesquisa"
+        context={<>Painel · {research.title}</>}
+        title={title}
+        onTitleChange={setTitle}
+        titleLabel="Título do painel"
+        status={savedAt ? <><i className="ti ti-circle-check text-brand-500" aria-hidden="true" /> Salvo às {savedAt}</> : undefined}
+        actions={<>
+          <div className="hidden sm:flex items-center rounded-md border border-ink-700 bg-ink-900 p-0.5 mr-1">
+            <button onClick={undo} disabled={history.length === 0} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"
+              className="h-7 w-7 flex items-center justify-center rounded text-ink-300 hover:bg-ink-800 hover:text-ink-50 disabled:opacity-30 disabled:pointer-events-none">
+              <i className="ti ti-arrow-back-up text-sm" aria-hidden="true" />
             </button>
+            <button onClick={redo} disabled={future.length === 0} title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer"
+              className="h-7 w-7 flex items-center justify-center rounded text-ink-300 hover:bg-ink-800 hover:text-ink-50 disabled:opacity-30 disabled:pointer-events-none">
+              <i className="ti ti-arrow-forward-up text-sm" aria-hidden="true" />
+            </button>
+          </div>
+          {isPublic && publicSlug && (
+            <a href={`/d/${publicSlug}`} target="_blank" rel="noopener noreferrer" className={buttonClasses("ghost", "sm", "hidden lg:inline-flex")}>
+              <i className="ti ti-external-link" aria-hidden="true" /> Ver página
+            </a>
           )}
-          <button onClick={togglePublish} disabled={publishing}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md disabled:opacity-50"
-            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
-            <i className={`ti ${isPublic ? "ti-lock" : "ti-world"}`} />
-            {isPublic ? "Despublicar" : "Publicar"}
-          </button>
-          <button onClick={save} disabled={saving}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md disabled:opacity-50"
-            style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", border: "1.5px solid rgb(var(--color-amber-600))" }}>
-            <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-device-floppy"} />
-            {saving ? "Salvando..." : "Salvar"}
-          </button>
-        </div>
-      </header>
+          {isPublic && publicSlug && (
+            <Button variant="ghost" size="sm" className="hidden md:inline-flex" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/d/${publicSlug}`); toast.success("Link público copiado."); }}>
+              <i className="ti ti-link" aria-hidden="true" /> Copiar link
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" onClick={togglePublish} loading={publishing} aria-label={isPublic ? "Despublicar painel" : "Publicar painel"}>
+            {!publishing && <i className={`ti ${isPublic ? "ti-lock" : "ti-world-upload"}`} aria-hidden="true" />} <span className="hidden sm:inline">{isPublic ? "Despublicar" : "Publicar"}</span>
+          </Button>
+          <Button size="sm" onClick={save} loading={saving}>
+            {!saving && <i className="ti ti-device-floppy" aria-hidden="true" />} {saving ? "Salvando" : "Salvar"}
+          </Button>
+        </>}
+      />
 
       <div className="flex flex-1 overflow-hidden">
 

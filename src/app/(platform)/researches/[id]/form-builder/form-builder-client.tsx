@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Research } from "@/lib/types";
-import { DataLogo } from "@/components/layout/data-logo";
+import { FocusHeader } from "@/components/layout/focus-header";
+import { Button } from "@/components/ui/button";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -443,7 +443,7 @@ function FieldPreview({ field }: { field: Field }) {
   // Lógica
   if (field.type === "conditional") return (
     <div className="p-3 rounded-lg mt-1" style={{ background: "rgb(var(--color-brand-50))", border: "1px solid rgb(var(--color-brand-200))" }}>
-      <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: "rgb(var(--color-brand-700))" }}>
+      <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: "rgb(var(--color-brand-400))" }}>
         <i className="ti ti-git-branch" /> Esta pergunta aparece condicionalmente
       </div>
       <p className="text-xs mt-1" style={{ color: "rgb(var(--color-brand-500))" }}>Configure a condição no painel de propriedades.</p>
@@ -468,7 +468,7 @@ function FieldPreview({ field }: { field: Field }) {
   if (field.type === "geo_coords")       return <div className={cls + " flex items-center gap-2"} style={empty}><i className="ti ti-crosshair"/>Capturar localização GPS</div>;
   if (field.type === "geo_map")          return (
     <div className="rounded-lg overflow-hidden mt-1" style={{ border: "1px solid rgb(var(--color-ink-700))", height: "80px", background: "rgb(var(--color-brand-50))" }}>
-      <div className="w-full h-full flex items-center justify-center gap-2 text-xs font-semibold" style={{ color: "rgb(var(--color-brand-700))" }}>
+      <div className="w-full h-full flex items-center justify-center gap-2 text-xs font-semibold" style={{ color: "rgb(var(--color-brand-400))" }}>
         <i className="ti ti-map-2 text-lg" /> Mapa interativo — clique para marcar ponto ou desenhar área
       </div>
     </div>
@@ -1293,7 +1293,6 @@ function hydrateFields(saved: SavedField[]): Field[] {
 }
 
 export function FormBuilderClient({ research, savedForm, savedFields }: { research: Research; savedForm?: SavedForm | null; savedFields?: SavedField[] }) {
-  const router = useRouter();
   const [fields,          setFields]          = useState<Field[]>(() => hydrateFields(savedFields ?? []));
   const [selectedId,      setSelectedId]      = useState<string | null>(null);
   const [saving,          setSaving]          = useState(false);
@@ -1377,33 +1376,23 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
       <div className="flex flex-col h-screen overflow-hidden" style={{ background: "rgb(var(--color-ink-950))" }}>
 
         {/* TOPBAR */}
-        <header className="h-12 flex items-center justify-between px-4 flex-shrink-0 z-50"
-          style={{ background: "rgb(var(--color-ink-950))", borderBottom: BRD }}>
-          <button onClick={() => router.push("/dashboard")}>
-            <DataLogo className="text-lg" />
-          </button>
-          <div className="flex items-center gap-2">
-            <input value={formTitle} onChange={e => setFormTitle(e.target.value)}
-              className="text-sm font-semibold border-none bg-transparent outline-none text-center border-b-2 border-transparent transition-colors min-w-48 px-1"
-              style={{ color: "rgb(var(--color-ink-50))" }}
-              onFocus={e => e.currentTarget.style.borderBottomColor = "rgb(var(--color-gold))"}
-              onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"} />
-            {savedAt && <span className="text-xs flex items-center gap-1" style={{ color: "rgb(var(--color-ink-500))" }}><i className="ti ti-check" style={{ color: "rgb(var(--color-brand-500))" }} /> Salvo às {savedAt}</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => window.open(`/p/${research.slug}?preview=true`, "_blank")}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md"
-              style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
-              <i className="ti ti-eye" /> Preview
-            </button>
-            <button onClick={save} disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md disabled:opacity-50"
-              style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", border: "1.5px solid rgb(var(--color-amber-600))" }}>
-              <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-device-floppy"} />
-              {saving ? "Salvando..." : "Salvar"}
-            </button>
-          </div>
-        </header>
+        <FocusHeader
+          backHref={`/researches/${research.id}`}
+          backLabel="Voltar para a pesquisa"
+          context={<>Instrumento de coleta · {research.title}</>}
+          title={formTitle}
+          onTitleChange={setFormTitle}
+          titleLabel="Título do instrumento"
+          status={savedAt ? <><i className="ti ti-circle-check text-brand-500" aria-hidden="true" /> Salvo às {savedAt}</> : undefined}
+          actions={<>
+            <Button variant="secondary" size="sm" aria-label="Visualizar formulário" onClick={() => window.open(`/p/${research.slug}?preview=true`, "_blank")}>
+              <i className="ti ti-eye" aria-hidden="true" /> <span className="hidden sm:inline">Visualizar</span>
+            </Button>
+            <Button size="sm" onClick={save} loading={saving}>
+              {!saving && <i className="ti ti-device-floppy" aria-hidden="true" />} {saving ? "Salvando" : "Salvar"}
+            </Button>
+          </>}
+        />
 
         <div className="flex flex-1 overflow-hidden">
 
@@ -1487,15 +1476,15 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
                         <i className="ti ti-layout-navbar text-white text-xs" />
                       </div>
                       <input value={field.label} onChange={e => updateField({ ...field, label: e.target.value })}
-                        onClick={e => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()} aria-label="Título da seção"
                         className="flex-1 bg-transparent border-none outline-none text-white text-sm font-semibold" />
                       <div className="flex gap-1">
                         {[
-                          { icon: "ti-arrow-up",   action: () => idx > 0 && moveField(idx, idx - 1) },
-                          { icon: "ti-arrow-down", action: () => idx < fields.length - 1 && moveField(idx, idx + 1) },
-                          { icon: "ti-x",          action: () => { setFields(prev => prev.filter(f => f.id !== field.id)); setSelectedId(null); } },
+                          { icon: "ti-arrow-up",   label: "Mover seção para cima",  action: () => idx > 0 && moveField(idx, idx - 1) },
+                          { icon: "ti-arrow-down", label: "Mover seção para baixo", action: () => idx < fields.length - 1 && moveField(idx, idx + 1) },
+                          { icon: "ti-x",          label: "Remover seção",          action: () => { setFields(prev => prev.filter(f => f.id !== field.id)); setSelectedId(null); } },
                         ].map((btn, i) => (
-                          <button key={i} onClick={e => { e.stopPropagation(); btn.action(); }}
+                          <button key={i} type="button" aria-label={btn.label} title={btn.label} onClick={e => { e.stopPropagation(); btn.action(); }}
                             className="w-5 h-5 rounded flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
                             <i className={`ti ${btn.icon} text-white text-xs`} />
                           </button>
@@ -1532,11 +1521,11 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
                           style={{ background: info.bg, color: info.color }}>{info.label}</span>
                         <div className="flex gap-1">
                           {[
-                            { icon: "ti-arrow-up",   action: () => idx > 0 && moveField(idx, idx - 1) },
-                            { icon: "ti-arrow-down", action: () => idx < fields.length - 1 && moveField(idx, idx + 1) },
-                            { icon: "ti-trash",      action: () => { setFields(prev => prev.filter(f => f.id !== field.id)); setSelectedId(null); }, danger: true },
+                            { icon: "ti-arrow-up",   label: "Mover pergunta para cima",  action: () => idx > 0 && moveField(idx, idx - 1) },
+                            { icon: "ti-arrow-down", label: "Mover pergunta para baixo", action: () => idx < fields.length - 1 && moveField(idx, idx + 1) },
+                            { icon: "ti-trash",      label: "Remover pergunta",          action: () => { setFields(prev => prev.filter(f => f.id !== field.id)); setSelectedId(null); }, danger: true },
                           ].map((btn, i) => (
-                            <button key={i} onClick={e => { e.stopPropagation(); btn.action(); }}
+                            <button key={i} type="button" aria-label={btn.label} title={btn.label} onClick={e => { e.stopPropagation(); btn.action(); }}
                               className="w-6 h-6 rounded flex items-center justify-center transition-colors"
                               style={{ border: BRD, background: "rgb(var(--color-ink-950))", color: btn.danger ? "rgb(var(--color-coral-500))" : "rgb(var(--color-ink-500))" }}>
                               <i className={`ti ${btn.icon} text-xs`} />
