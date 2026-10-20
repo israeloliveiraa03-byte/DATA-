@@ -146,7 +146,7 @@ export function MobileNav({ open, onClose, role }: { open: boolean; onClose: () 
   if (!open) return null;
   return (
     <div className="lg:hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Menu">
-      <button className="absolute inset-0 bg-ink-50/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} aria-label="Fechar menu" />
+      <button className="absolute inset-0 bg-black/45 backdrop-blur-[2px] animate-fade-in" onClick={onClose} aria-label="Fechar menu" />
       <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-ink-900 border-r border-ink-700 shadow-xl flex flex-col animate-slide-in-left">
         <div className="flex h-14 items-center justify-between pl-5 pr-2 border-b border-ink-700">
           <DataLogo className="text-[1.35rem] text-ink-50" />

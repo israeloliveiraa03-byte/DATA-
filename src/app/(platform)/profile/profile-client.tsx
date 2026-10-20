@@ -511,7 +511,7 @@ export function ProfileClient({ user }: { user: User }) {
               </div>
               {notes.length === 0 ? (
                 <div className="text-center py-16 rounded-xl" style={{ border: "2px dashed rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))" }}>
-                  <i className="ti ti-notebook text-4xl block mb-3" style={{ color: "rgb(var(--color-ink-600))" }} />
+                  <i className="ti ti-notebook text-4xl block mb-3" style={{ color: "rgb(var(--color-ink-500))" }} />
                   <p className="text-sm font-semibold mb-1" style={{ color: "rgb(var(--color-ink-50))", fontFamily: "var(--font-serif), Georgia, serif" }}>Nenhuma nota ainda</p>
                   <p className="text-xs mb-4" style={{ color: "rgb(var(--color-ink-500))" }}>Publique orientações para outros pesquisadores</p>
                   <button onClick={openNewNote} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold" style={{ background: accent, color: "#fff" }}>

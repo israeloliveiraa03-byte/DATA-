@@ -23,7 +23,7 @@ const config: Config = {
           400: v("brand-400"), 500: v("brand-500"), 600: v("brand-600"), 700: v("brand-700"),
         },
         // Texto/ícone sobre preenchimento de acento (botão primário, chips sólidos)
-        "on-accent": "#ffffff",
+        "on-accent": v("on-accent"),
         gold:   v("gold"),
         teal:   { 50: v("teal-50"),   500: v("teal-500"),   600: v("teal-600") },
         amber:  { 50: v("amber-50"),  500: v("amber-500"),  600: v("amber-600") },

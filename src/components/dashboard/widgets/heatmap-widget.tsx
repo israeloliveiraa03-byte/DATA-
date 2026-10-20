@@ -162,7 +162,9 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
     const stateData = groupKey ? byState[groupKey] : undefined;
     const label = labelFor(codarea, groupKey);
     const content = stateData
-      ? `<b>${label}</b><br/><span style="font-size:15px;font-weight:600">${stateData.value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${isPercentLike ? "%" : ""}</span> <span style="opacity:.7">· ${stateData.count} resposta${stateData.count === 1 ? "" : "s"}</span>`
+      ? isPercentLike
+        ? `<b>${label}</b><br/><span style="font-size:15px;font-weight:600">${stateData.value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span> <span style="opacity:.7">· base ${stateData.count} resposta${stateData.count === 1 ? "" : "s"}</span>`
+        : `<b>${label}</b><br/><span style="font-size:15px;font-weight:600">${stateData.count.toLocaleString("pt-BR")}</span> <span style="opacity:.7">resposta${stateData.count === 1 ? "" : "s"}</span>`
       : `<b>${label}</b><br/><span style="opacity:.7">Sem dados</span>`;
     layer.bindTooltip(content, { sticky: true, direction: "top", offset: [0, -6] });
     layer.on({

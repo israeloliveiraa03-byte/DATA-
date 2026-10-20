@@ -128,7 +128,7 @@ export default function LandingPage() {
             <li key={c.n} className="bg-ink-900 p-6 sm:p-7">
               <div className="flex items-center justify-between">
                 <span className="w-11 h-11 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center"><i className={`ti ${c.icon} text-xl`} aria-hidden="true" /></span>
-                <span className="font-serif text-3xl text-ink-600 font-semibold">{c.n}</span>
+                <span className="font-serif text-3xl text-ink-500/80 font-semibold tabular" aria-hidden="true">{c.n}</span>
               </div>
               <h3 className="mt-5 font-serif text-xl font-semibold text-ink-50">{c.title}</h3>
               <p className="mt-2 text-sm text-ink-300 leading-relaxed">{c.text}</p>

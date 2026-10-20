@@ -26,7 +26,7 @@
   --color-ink-50:  23 19 13;
   --color-ink-100: 42 36 28;
   --color-ink-300: 98 87 70;
-  --color-ink-500: 135 122 101;
+  --color-ink-500: 112 100 80;
   --color-ink-600: 206 193 168;
   --color-ink-700: 228 219 200;
   --color-ink-800: 243 237 225;
@@ -48,7 +48,7 @@
   --color-teal-500:  42 118 128;
   --color-teal-600:  31 92 100;
   --color-amber-50:  250 240 218;
-  --color-amber-500: 150 98 22;
+  --color-amber-500: 140 90 20;
   --color-amber-600: 118 76 16;
   --color-coral-50:  250 232 224;
   --color-coral-500: 166 72 42;
@@ -57,8 +57,10 @@
   --color-purple-500: 88 76 164;
   --color-purple-600: 68 58 132;
 
-  /* Dourado dos rótulos editoriais (kicker) */
-  --color-gold: 168 113 36;
+  /* Dourado dos rótulos editoriais (kicker) — escurecido para 5,3:1 no papel */
+  --color-gold: 140 92 24;
+  /* Texto sobre preenchimento de acento (botão primário etc.) */
+  --color-on-accent: 255 255 255;
 
   /* Séries de gráfico — ordem fixa, distinguíveis entre si e em P&B */
   --color-chart-1: 59 93 66;
@@ -78,21 +80,24 @@
   --color-ink-50:  248 246 239;
   --color-ink-100: 233 230 220;
   --color-ink-300: 172 172 158;
-  --color-ink-500: 120 122 108;
+  --color-ink-500: 140 143 128;
   --color-ink-600: 66 71 59;
   --color-ink-700: 46 51 42;
   --color-ink-800: 33 37 30;
   --color-ink-900: 25 28 23;
   --color-ink-950: 17 19 15;
 
-  --color-brand-50:  38 56 42;
-  --color-brand-100: 48 72 54;
+  /* No escuro o botão primário é verde claro com texto escuro — branco
+     sobre verde escuro não atinge 4,5:1 neste fundo. brand-700 continua
+     escuro porque é cor de faixa institucional (com texto branco). */
+  --color-brand-50:  34 50 38;
+  --color-brand-100: 44 66 50;
   --color-brand-200: 76 110 84;
   --color-brand-300: 110 150 118;
-  --color-brand-400: 150 192 158;
-  --color-brand-500: 74 122 86;
-  --color-brand-600: 88 140 101;
-  --color-brand-700: 120 168 130;
+  --color-brand-400: 150 196 162;
+  --color-brand-500: 124 184 138;
+  --color-brand-600: 146 200 158;
+  --color-brand-700: 30 48 36;
 
   --color-teal-50:   28 48 50;
   --color-teal-500:  98 176 186;
@@ -108,6 +113,7 @@
   --color-purple-600: 186 178 238;
 
   --color-gold: 214 170 98;
+  --color-on-accent: 15 26 18;
 
   --color-chart-1: 122 170 132;
   --color-chart-2: 224 172 82;
@@ -235,6 +241,11 @@ p { text-wrap: pretty; }
 
 /* ── Leaflet no registro editorial ─────────────────────────────────────── */
 .leaflet-container {
+  /* Isola as camadas internas do Leaflet (z-index 400–1000) num contexto
+     próprio — sem isso o mapa passa por cima de barras fixas, menus e
+     janelas sobrepostas da página. */
+  isolation: isolate;
+  z-index: 0;
   width: 100%;
   height: 100%;
   font-family: var(--font-sans), Inter, system-ui, sans-serif;

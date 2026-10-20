@@ -64,7 +64,7 @@ export function MunicipalityPicker({ value, onChange }: MunicipalityPickerProps)
           {value.map(v => (
             <span
               key={v.cityCode}
-              className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 text-xs px-2.5 py-1"
+              className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-400 text-xs px-2.5 py-1"
             >
               {v.cityName}/{v.stateCode}
               <button type="button" onClick={() => removeCity(v.cityCode)} className="hover:opacity-70 transition-opacity duration-150" aria-label={`Remover ${v.cityName}`}>

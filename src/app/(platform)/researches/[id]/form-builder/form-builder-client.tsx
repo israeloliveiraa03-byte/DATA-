@@ -265,7 +265,7 @@ function newField(type: FieldType): Field {
 
 function FieldPreview({ field }: { field: Field }) {
   const cls  = "w-full px-3 py-2 rounded-lg border text-xs cursor-not-allowed";
-  const empty = { border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-600))" };
+  const empty = { border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-500))" };
 
   if (field.type === "instruction") return (
     <div className="text-xs italic p-3 rounded-lg" style={{ background: "rgb(var(--color-ink-950))", border: "1px solid rgb(var(--color-ink-700))", color: "rgb(var(--color-ink-100))" }}>
@@ -302,7 +302,7 @@ function FieldPreview({ field }: { field: Field }) {
   if (field.type === "signature" || field.type === "signature_meta") return (
     <div className={cls + " flex flex-col items-center justify-center"} style={{ ...empty, height: "56px" }}>
       <i className="ti ti-signature mr-1" /> Área de assinatura
-      {field.type === "signature_meta" && <span className="text-xs mt-0.5" style={{ color: "rgb(var(--color-ink-600))", fontSize: "11px" }}>Captura: hora · GPS · dispositivo</span>}
+      {field.type === "signature_meta" && <span className="text-xs mt-0.5" style={{ color: "rgb(var(--color-ink-500))", fontSize: "11px" }}>Captura: hora · GPS · dispositivo</span>}
     </div>
   );
 
@@ -364,7 +364,7 @@ function FieldPreview({ field }: { field: Field }) {
             style={{ border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-500))" }}>{n}</div>
         ))}
       </div>
-      {field.scaleLabel && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-600))" }}>{field.scaleLabel}</p>}
+      {field.scaleLabel && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>{field.scaleLabel}</p>}
     </div>
   );
 
@@ -403,7 +403,7 @@ function FieldPreview({ field }: { field: Field }) {
           style={{ border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-100))" }}>
           <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
             style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))", border: "1px solid rgb(var(--color-ink-700))" }}>{i+1}</span>
-          <i className="ti ti-grip-vertical text-xs" style={{ color: "rgb(var(--color-ink-600))" }} />
+          <i className="ti ti-grip-vertical text-xs" style={{ color: "rgb(var(--color-ink-500))" }} />
           {item}
         </div>
       ))}
@@ -510,9 +510,9 @@ function FieldPreview({ field }: { field: Field }) {
         ))}
       </div>
       {[0,1].map(i => (
-        <div key={i} className="flex" style={{ borderBottom: "1px solid rgb(var(--color-ink-800))", background: i % 2 === 0 ? "#fff" : "rgb(var(--color-ink-950))" }}>
+        <div key={i} className="flex" style={{ borderBottom: "1px solid rgb(var(--color-ink-800))", background: i % 2 === 0 ? "rgb(var(--color-ink-900))" : "rgb(var(--color-ink-950))" }}>
           {field.tableColumns.map((_, j) => (
-            <div key={j} className="flex-1 px-2 py-1.5 text-xs" style={{ color: "rgb(var(--color-ink-600))", borderLeft: j > 0 ? "1px solid rgb(var(--color-ink-800))" : "none" }}>...</div>
+            <div key={j} className="flex-1 px-2 py-1.5 text-xs" style={{ color: "rgb(var(--color-ink-500))", borderLeft: j > 0 ? "1px solid rgb(var(--color-ink-800))" : "none" }}>...</div>
           ))}
         </div>
       ))}
@@ -651,7 +651,7 @@ function DevModal({ type, onClose }: { type: FieldType; onClose: () => void }) {
         </div>
         <p className="text-sm leading-relaxed mb-5" style={{ color: "rgb(var(--color-ink-100))" }}>{desc}</p>
         <button onClick={onClose} className="w-full py-2 rounded-lg text-sm font-bold"
-          style={{ background: "rgb(var(--color-brand-500))", color: "#fff" }}>
+          style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))" }}>
           Entendido
         </button>
       </div>
@@ -1398,7 +1398,7 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
             </button>
             <button onClick={save} disabled={saving}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md disabled:opacity-50"
-              style={{ background: "rgb(var(--color-brand-500))", color: "#fff", border: "1.5px solid rgb(var(--color-amber-600))" }}>
+              style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", border: "1.5px solid rgb(var(--color-amber-600))" }}>
               <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-device-floppy"} />
               {saving ? "Salvando..." : "Salvar"}
             </button>
@@ -1417,7 +1417,7 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md mb-1 text-left transition-all relative"
                     style={{ border: BRD, background: item.dev ? "rgb(var(--color-ink-800))" : "rgb(var(--color-ink-900))", opacity: item.dev ? 0.75 : 1 }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = item.dev ? "rgb(var(--color-ink-600))" : "rgb(var(--color-gold))"; e.currentTarget.style.background = item.dev ? "rgb(var(--color-ink-800))" : "rgb(var(--color-ink-950))"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"; e.currentTarget.style.background = item.dev ? "rgb(var(--color-ink-800))" : "#fff"; }}>
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"; e.currentTarget.style.background = item.dev ? "rgb(var(--color-ink-800))" : "rgb(var(--color-ink-900))"; }}>
                     <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0" style={{ background: item.bg, color: item.color }}>
                       <i className={`ti ${item.icon}`} />
                     </div>
@@ -1468,7 +1468,7 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
             {/* Campos */}
             {fields.length === 0 ? (
               <div className="text-center py-16 rounded-xl" style={{ border: "2px dashed rgb(var(--color-ink-600))", background: "rgb(var(--color-ink-950))" }}>
-                <i className="ti ti-forms text-3xl block mb-2" style={{ color: "rgb(var(--color-ink-600))" }} />
+                <i className="ti ti-forms text-3xl block mb-2" style={{ color: "rgb(var(--color-ink-500))" }} />
                 <p className="text-sm font-semibold mb-1" style={{ color: "rgb(var(--color-ink-100))" }}>Nenhum campo adicionado</p>
                 <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Clique nos tipos de campo no painel esquerdo</p>
               </div>
@@ -1519,7 +1519,7 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
                       style={{ background: "rgb(var(--color-ink-900))", border: selected ? "2px solid rgb(var(--color-brand-500))" : BRD, boxShadow: selected ? "0 0 0 3px rgba(196,138,66,0.1)" : "none" }}>
 
                       <div className="flex items-start gap-2 mb-3">
-                        <i className="ti ti-grip-vertical text-base mt-0.5 cursor-grab" style={{ color: "rgb(var(--color-ink-600))" }} />
+                        <i className="ti ti-grip-vertical text-base mt-0.5 cursor-grab" style={{ color: "rgb(var(--color-ink-500))" }} />
                         {qNum !== null && (
                           <span className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap mt-0.5"
                             style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))", border: BRD }}>P{qNum}</span>

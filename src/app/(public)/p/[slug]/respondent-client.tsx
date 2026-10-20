@@ -267,7 +267,7 @@ function FieldInput({
                 style={{
                   border: value === n ? "2px solid rgb(var(--color-brand-500))" : BRD,
                   background: value === n ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))",
-                  color: value === n ? "#fff" : "rgb(var(--color-ink-100))",
+                  color: value === n ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))",
                 }}
               >{n}</button>
             ))}
@@ -304,8 +304,8 @@ function FieldInput({
                 className="w-10 h-10 rounded-lg text-sm font-bold transition-all"
                 style={{
                   border: current === n ? "2px solid rgb(var(--color-brand-500))" : BRD,
-                  background: current === n ? (n <= 6 ? "rgb(var(--color-coral-500))" : n <= 8 ? "rgb(var(--color-brand-500))" : "rgb(var(--color-brand-500))") : "#fff",
-                  color: current === n ? "#fff" : "rgb(var(--color-ink-100))",
+                  background: current === n ? (n <= 6 ? "rgb(var(--color-coral-500))" : n <= 8 ? "rgb(var(--color-brand-500))" : "rgb(var(--color-brand-500))") : "rgb(var(--color-ink-900))",
+                  color: current === n ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))",
                 }}
               >{n}</button>
             ))}
@@ -359,7 +359,7 @@ function FieldInput({
                   style={{
                     border: current === n ? "2px solid rgb(var(--color-brand-500))" : BRD,
                     background: current === n ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))",
-                    color: current === n ? "#fff" : "rgb(var(--color-ink-100))",
+                    color: current === n ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))",
                   }}
                 >{n}</button>
               ))}
@@ -1602,7 +1602,7 @@ function PhotoAnnotationField({
         {notes.map((n, i) => (
           <div key={i}
             className="absolute w-6 h-6 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center text-xs font-bold pointer-events-none"
-            style={{ left: `${n.x}%`, top: `${n.y}%`, background: "rgb(var(--color-brand-500))", color: "#fff", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+            style={{ left: `${n.x}%`, top: `${n.y}%`, background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
             {i + 1}
           </div>
         ))}
@@ -1882,7 +1882,7 @@ function FieldDiaryField({
       />
       <button onClick={addEntry} disabled={!draft.trim()}
         className="self-start flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-        style={{ background: "rgb(var(--color-brand-500))", color: "#fff" }}>
+        style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))" }}>
         <i className="ti ti-plus" /> Adicionar registro
       </button>
       <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
@@ -2133,7 +2133,7 @@ export function RespondentClient({
 
         <button onClick={() => { setSubmitted(false); setSubmittedOffline(false); setStep(0); setAnswers({}); setErrors({}); }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={{ background: "rgb(var(--color-brand-500))", color: "#fff" }}>
+          style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))" }}>
           <i className="ti ti-refresh" />
           {isPreview ? "Reiniciar prévia" : "Enviar outra resposta"}
         </button>
@@ -2144,8 +2144,8 @@ export function RespondentClient({
           </p>
         )}
 
-        <div className="mt-6 text-xs" style={{ color: "rgb(var(--color-ink-600))" }}>
-          Powered by <span style={{ color: "rgb(var(--color-brand-500))", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
+        <div className="mt-6 text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
+          Construído com <span style={{ color: "rgb(var(--color-brand-500))", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
         </div>
       </div>
     </div>
@@ -2155,7 +2155,7 @@ export function RespondentClient({
   if (!form || totalSteps === 0) return (
     <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "rgb(var(--color-ink-950))" }}>
       <div className="text-center max-w-sm">
-        <i className="ti ti-forms text-4xl block mb-3" style={{ color: "rgb(var(--color-ink-600))" }} />
+        <i className="ti ti-forms text-4xl block mb-3" style={{ color: "rgb(var(--color-ink-500))" }} />
         <h1 className="text-xl font-bold mb-2" style={{ color: "rgb(var(--color-ink-50))", fontFamily: "var(--font-serif), Georgia, serif" }}>
           Formulário em construção
         </h1>
@@ -2259,7 +2259,7 @@ export function RespondentClient({
 
             <button onClick={next} disabled={submitting}
               className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-              style={{ background: "rgb(var(--color-brand-500))", color: "#fff" }}>
+              style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))" }}>
               {submitting ? (
                 <><i className="ti ti-loader-2 animate-spin" /> Enviando...</>
               ) : step === totalSteps - 1 ? (
@@ -2278,8 +2278,8 @@ export function RespondentClient({
           )}
 
           {/* Rodapé */}
-          <p className="text-center text-xs mt-6" style={{ color: "rgb(var(--color-ink-600))" }}>
-            Powered by <span style={{ color: "rgb(var(--color-brand-500))", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
+          <p className="text-center text-xs mt-6" style={{ color: "rgb(var(--color-ink-500))" }}>
+            Construído com <span style={{ color: "rgb(var(--color-brand-500))", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
             {research.allowAnonymous && " · Respostas anônimas"}
           </p>
         </div>

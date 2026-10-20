@@ -257,7 +257,7 @@ function DividerView({ config }: { config: Record<string, unknown> }) {
 function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: string; decimals?: number }) {
   return (
     <div className="h-full flex flex-col justify-center">
-      <p className="font-serif font-semibold leading-none tabular text-brand-400" style={{ fontSize: "clamp(1.75rem, 4.2cqw + 1rem, 3.25rem)", letterSpacing: "-0.02em" }}>
+      <p className="font-serif font-semibold leading-none tabular text-brand-400" style={{ fontSize: "clamp(2rem, 13cqw, 3.75rem)", letterSpacing: "-0.025em" }}>
         {formatNumber(value, decimals)}
         {suffix && <span className="ml-1.5 text-[0.45em] font-sans font-medium text-ink-500 tracking-normal">{suffix}</span>}
       </p>
@@ -314,10 +314,12 @@ function PieChartView({ data, donut, colors, displayMode, totalResponses }: Choi
   const fmt = (v: number) => percent ? `${formatNumber(toPercent(v, totalResponses), 1)}%` : formatNumber(v);
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex-1 min-h-0">
+      {/* A legenda abaixo carrega rótulo e valor de cada fatia em texto — o
+          desenho em si fica fora da árvore de acessibilidade. */}
+      <div className="flex-1 min-h-0" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}>
+          <PieChart accessibilityLayer={false}>
+            <Pie rootTabIndex={-1} data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}>
               {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} stroke="rgb(var(--color-ink-900))" strokeWidth={1.5} />)}
             </Pie>
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
@@ -416,8 +418,8 @@ function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, 
   const legendMax = valueMode === "count" ? maxCount : 100;
 
   return (
-    <div className="h-full flex flex-col gap-1.5">
-    <div className="flex-1 min-h-0 overflow-auto">
+    <div className="h-full flex flex-col gap-3">
+    <div className="min-h-0 overflow-auto">
       <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>

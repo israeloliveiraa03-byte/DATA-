@@ -86,7 +86,31 @@ const DECORATIVE_PRESETS: { variant: "text" | "divider" | "block" | "icon"; labe
 
 // Modelos de início — só tipo/posição/tamanho, sem campo vinculado (isso
 // varia por pesquisa) — o pesquisador liga os dados depois de aplicar.
+// Os ids também são usados pela escolha de "tipo de painel" na lista de
+// painéis (?modelo=<id> na URL do editor aplica o modelo ao abrir).
 const TEMPLATES: { id: string; label: string; description: string; icon: string; widgets: Omit<WidgetDraft, "id">[] }[] = [
+  {
+    id: "primary", label: "Coleta primária", icon: "ti-clipboard-data", description: "Indicadores, mapa por UF, distribuição e ritmo da coleta",
+    widgets: [
+      { type: "number_card", title: "Respostas recebidas", x: 0,  y: 0,   w: 25, h: 140, config: { aggregation: "count" } },
+      { type: "number_card", title: "Respostas completas", x: 25, y: 0,   w: 25, h: 140, config: { aggregation: "count_completed" } },
+      { type: "number_card", title: "Indicador 3",         x: 50, y: 0,   w: 25, h: 140, config: { aggregation: "count" } },
+      { type: "number_card", title: "Indicador 4",         x: 75, y: 0,   w: 25, h: 140, config: { aggregation: "count" } },
+      { type: "heatmap",     title: "Respostas por unidade da federação", x: 0, y: 140, w: 58, h: 440, config: { indicators: [{ key: "count", label: "Volume de respostas", mode: "count" }] } },
+      { type: "bar_chart",   title: "Distribuição", x: 58, y: 140, w: 42, h: 440, config: { orientation: "horizontal", displayMode: "percent" } },
+      { type: "line_chart",  title: "Respostas ao longo do tempo", x: 0, y: 580, w: 100, h: 260, config: {} },
+    ],
+  },
+  {
+    id: "compare", label: "Cruzamentos", icon: "ti-arrows-cross", description: "Categoria × categoria em tabela e barras agrupadas",
+    widgets: [
+      { type: "text",      title: "", x: 0,  y: 0,   w: 100, h: 64,  config: { content: "Comparação entre grupos", variant: "text", textStyle: { fontSize: 24, fontWeight: "bold", fontFamily: "serif" } } },
+      { type: "bar_chart", title: "Comparação por grupo", x: 0, y: 64, w: 55, h: 380, config: {} },
+      { type: "crosstab",  title: "Tabela cruzada (% da linha)", x: 55, y: 64, w: 45, h: 380, config: { valueMode: "row_percent" } },
+      { type: "donut_chart", title: "Composição geral", x: 0, y: 444, w: 40, h: 300, config: { displayMode: "percent" } },
+      { type: "table",     title: "Registros", x: 40, y: 444, w: 60, h: 300, config: { fieldIds: [] } },
+    ],
+  },
   {
     id: "kpi", label: "Painel de indicadores", icon: "ti-dashboard", description: "3 números + 1 gráfico de barras",
     widgets: [
@@ -97,7 +121,7 @@ const TEMPLATES: { id: string; label: string; description: string; icon: string;
     ],
   },
   {
-    id: "map", label: "Mapa + resumo", icon: "ti-map", description: "Mapa de calor com números e tabela ao lado",
+    id: "map", label: "Território em foco", icon: "ti-map-2", description: "Mapa coroplético com números e tabela ao lado",
     widgets: [
       { type: "heatmap",     title: "Mapa de calor", x: 0,  y: 0,   w: 60, h: 320, config: { indicators: [{ key: "count", label: "Volume de respostas", mode: "count" }] } },
       { type: "number_card", title: "Total",         x: 60, y: 0,   w: 40, h: 100, config: { aggregation: "count" } },
@@ -105,9 +129,9 @@ const TEMPLATES: { id: string; label: string; description: string; icon: string;
     ],
   },
   {
-    id: "report", label: "Relatório narrativo", icon: "ti-file-text", description: "Título, texto e um gráfico",
+    id: "report", label: "Relatório narrativo", icon: "ti-article", description: "Texto editorial intercalado com gráficos",
     widgets: [
-      { type: "text",        title: "", x: 0, y: 0,   w: 100, h: 56,  config: { content: "Título do relatório", variant: "text", textStyle: { fontSize: 24, fontWeight: "bold" } } },
+      { type: "text",        title: "", x: 0, y: 0,   w: 100, h: 56,  config: { content: "Título do relatório", variant: "text", textStyle: { fontSize: 26, fontWeight: "bold", fontFamily: "serif" } } },
       { type: "text",        title: "", x: 0, y: 56,  w: 100, h: 72,  config: { content: "Escreva aqui um resumo da pesquisa...", variant: "text" } },
       { type: "donut_chart", title: "Distribuição", x: 0,  y: 128, w: 50, h: 220, config: {} },
       { type: "table",       title: "Detalhamento", x: 50, y: 128, w: 50, h: 220, config: { fieldIds: [] } },
@@ -176,7 +200,7 @@ function FilterConditionRow({
               <button key={o.id} type="button"
                 onClick={() => onChange({ ...condition, optionIds: checked ? condition.optionIds.filter(id => id !== o.id) : [...condition.optionIds, o.id] })}
                 className="text-2xs rounded-full px-2 py-0.5 font-medium"
-                style={{ border: BRD, background: checked ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: checked ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                style={{ border: BRD, background: checked ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: checked ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                 {o.label}
               </button>
             );
@@ -556,6 +580,20 @@ export function DashboardBuilderClient({
     setSelectedIds(new Set());
   }, [pushHistory]);
 
+  // Tipo de painel escolhido na criação (?modelo=<id>): aplica o modelo uma
+  // vez, só se o painel ainda estiver vazio, e limpa o parâmetro da URL.
+  const templateApplied = useRef(false);
+  useEffect(() => {
+    if (!loaded || templateApplied.current) return;
+    templateApplied.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const modelo = params.get("modelo");
+    if (!modelo) return;
+    const t = TEMPLATES.find(t => t.id === modelo);
+    if (t && widgets.length === 0) applyTemplate(t);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [loaded, widgets.length, applyTemplate]);
+
   const updateWidget = useCallback((id: string, patch: Partial<WidgetDraft>) => {
     setWidgets(prev => prev.map(w => w.id === id ? { ...w, ...patch } : w));
   }, []);
@@ -694,7 +732,7 @@ export function DashboardBuilderClient({
           </button>
           <button onClick={save} disabled={saving}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md disabled:opacity-50"
-            style={{ background: "rgb(var(--color-brand-500))", color: "#fff", border: "1.5px solid rgb(var(--color-amber-600))" }}>
+            style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", border: "1.5px solid rgb(var(--color-amber-600))" }}>
             <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-device-floppy"} />
             {saving ? "Salvando..." : "Salvar"}
           </button>
@@ -740,7 +778,7 @@ export function DashboardBuilderClient({
                 {[{ v: "light", l: "Claro" }, { v: "dark", l: "Escuro" }].map(t => (
                   <button key={t.v} onClick={() => setTheme(t.v)}
                     className="flex-1 py-1.5 text-2xs font-semibold"
-                    style={{ background: dashboardTheme === t.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: dashboardTheme === t.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                    style={{ background: dashboardTheme === t.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: dashboardTheme === t.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                     {t.l}
                   </button>
                 ))}
@@ -851,11 +889,11 @@ export function DashboardBuilderClient({
           ) : widgets.length === 0 ? (
             <div className="max-w-2xl mx-auto py-10">
               <div className="text-center mb-6">
-                <i className="ti ti-layout-grid text-3xl block mb-2" style={{ color: "rgb(var(--color-ink-600))" }} />
+                <i className="ti ti-layout-grid text-3xl block mb-2" style={{ color: "rgb(var(--color-ink-500))" }} />
                 <p className="text-sm font-semibold mb-1" style={{ color: "rgb(var(--color-ink-100))" }}>Comece com um modelo, ou monte do zero</p>
                 <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Um modelo só define tipo e posição — você liga os campos da sua pesquisa depois</p>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {TEMPLATES.map(t => (
                   <button key={t.id} onClick={() => applyTemplate(t)}
                     className="p-4 rounded-xl text-left transition-all"
@@ -1034,7 +1072,7 @@ function GridWidget({
       {selected && (
         <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(); }}
           className="absolute -top-2.5 -right-2.5 w-5 h-5 flex items-center justify-center rounded-full z-20"
-          style={{ background: "rgb(var(--color-coral-500))", color: "#fff" }} aria-label="Remover widget">
+          style={{ background: "rgb(var(--color-coral-500))", color: "rgb(var(--color-on-accent))" }} aria-label="Remover widget">
           <i className="ti ti-x text-xs" />
         </button>
       )}
@@ -1187,7 +1225,7 @@ function WidgetInspector({
               {[{ v: "count", l: "Número" }, { v: "percent", l: "Percentual" }].map(o => (
                 <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                   className="flex-1 py-1.5 text-2xs font-semibold"
-                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                   {o.l}
                 </button>
               ))}
@@ -1210,7 +1248,7 @@ function WidgetInspector({
                   {[{ v: "vertical", l: "Vertical" }, { v: "horizontal", l: "Horizontal" }].map(o => (
                     <button key={o.v} onClick={() => onUpdateConfig({ orientation: o.v === "vertical" ? undefined : o.v })}
                       className="flex-1 py-1.5 text-2xs font-semibold"
-                      style={{ background: ((widget.config.orientation as string) ?? "vertical") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.orientation as string) ?? "vertical") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                      style={{ background: ((widget.config.orientation as string) ?? "vertical") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.orientation as string) ?? "vertical") === o.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                       {o.l}
                     </button>
                   ))}
@@ -1298,7 +1336,7 @@ function WidgetInspector({
                 {[{ v: "count", l: "Número" }, { v: "percent", l: "100% empilhado" }].map(o => (
                   <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                     className="flex-1 py-1.5 text-2xs font-semibold"
-                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                     {o.l}
                   </button>
                 ))}
@@ -1450,7 +1488,7 @@ function WidgetInspector({
               {[{ v: "count", l: "Número" }, { v: "percent", l: "Percentual" }].map(o => (
                 <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                   className="flex-1 py-1.5 text-2xs font-semibold"
-                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                   {o.l}
                 </button>
               ))}
@@ -1512,7 +1550,7 @@ function WidgetInspector({
               {[{ v: "count", l: "Número" }, { v: "percent", l: "% do período" }].map(o => (
                 <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                   className="flex-1 py-1.5 text-2xs font-semibold"
-                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                   {o.l}
                 </button>
               ))}
@@ -1799,7 +1837,7 @@ function WidgetInspector({
                 {[{ v: "count", l: "Nº de respostas" }, { v: "percent", l: "% do total" }].map(o => (
                   <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                     className="flex-1 py-1.5 text-2xs font-semibold"
-                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                     {o.l}
                   </button>
                 ))}
@@ -1930,7 +1968,7 @@ function WidgetInspector({
                   {[{ v: "count", l: "Nº de respostas" }, { v: "percent", l: "% do total" }].map(o => (
                     <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                       className="flex-1 py-1.5 text-2xs font-semibold"
-                      style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
+                      style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
                       {o.l}
                     </button>
                   ))}
@@ -2005,7 +2043,7 @@ function ImageWidgetFields({
   const tabBtn = (t: typeof tab, label: string) => (
     <button onClick={() => setTab(t)}
       className="flex-1 py-1.5 text-2xs font-semibold"
-      style={{ background: tab === t ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: tab === t ? "#fff" : "rgb(var(--color-ink-100))" }}>
+      style={{ background: tab === t ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: tab === t ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
       {label}
     </button>
   );

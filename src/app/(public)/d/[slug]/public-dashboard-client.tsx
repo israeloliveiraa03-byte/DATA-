@@ -5,6 +5,7 @@ import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { DataLogo } from "@/components/layout/data-logo";
 import { cn } from "@/lib/utils";
 import type { FilterCondition, PublicFilterField, SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
+import { downloadWidgetCsv, widgetRows } from "@/lib/dashboard/export";
 
 interface PublicWidget {
   id: string; type: SupportedWidgetType; title: string | null;
@@ -107,6 +108,70 @@ function isFramed(w: PublicWidget) {
   return true;
 }
 
+// Texto curto em destaque (título de bloco) vira âncora de seção — é assim
+// que o pesquisador já organiza o painel no editor, sem configuração nova.
+function sectionTitle(w: PublicWidget): string | null {
+  if (w.type !== "text" || w.data.kind !== "text") return null;
+  const variant = (w.config.variant as string | undefined) ?? "text";
+  if (variant !== "text") return null;
+  const content = (w.data.content ?? "").trim();
+  if (!content || content.length > 80 || content.includes("\n")) return null;
+  const ts = (w.config.textStyle ?? {}) as { fontSize?: number; fontWeight?: string };
+  return (ts.fontSize ?? 14) >= 18 || ts.fontWeight === "bold" ? content : null;
+}
+
+// Ações de cada indicador: ampliar e baixar os dados agregados (CSV).
+function WidgetActions({ w, onExpand }: { w: PublicWidget; onExpand: () => void }) {
+  const canDownload = !!widgetRows(w.data);
+  const btn = "h-7 w-7 rounded-md flex items-center justify-center bg-ink-900/90 border border-ink-700 text-ink-300 hover:text-ink-50 hover:border-ink-600 shadow-xs backdrop-blur";
+  return (
+    <div className="absolute top-2.5 right-2.5 z-[2] flex gap-1 opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      {canDownload && (
+        <button type="button" className={btn} title="Baixar dados (CSV)" aria-label={`Baixar dados de ${w.title ?? "indicador"} em CSV`}
+          onClick={() => downloadWidgetCsv(w.data, w.title || "indicador")}>
+          <i className="ti ti-download text-sm" aria-hidden="true" />
+        </button>
+      )}
+      <button type="button" className={btn} title="Ampliar" aria-label={`Ampliar ${w.title ?? "indicador"}`} onClick={onExpand}>
+        <i className="ti ti-arrows-maximize text-sm" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+function ExpandedWidget({ w, palette, onClose }: { w: PublicWidget; palette?: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+  const canDownload = !!widgetRows(w.data);
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-8" role="dialog" aria-modal="true" aria-label={w.title ?? "Indicador ampliado"}>
+      <button className="absolute inset-0 bg-black/45 backdrop-blur-sm animate-fade-in" onClick={onClose} aria-label="Fechar" tabIndex={-1} />
+      <div className="relative w-full max-w-6xl h-[88dvh] flex flex-col rounded-2xl border border-ink-700 bg-ink-900 shadow-xl overflow-hidden animate-fade-in">
+        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-b border-ink-700 bg-ink-800/50">
+          {canDownload && (
+            <button type="button" onClick={() => downloadWidgetCsv(w.data, w.title || "indicador")}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-ink-700 bg-ink-900 px-3 text-xs font-semibold text-ink-100 hover:border-ink-600">
+              <i className="ti ti-download text-sm" aria-hidden="true" /> Baixar dados (CSV)
+            </button>
+          )}
+          <button type="button" onClick={onClose} autoFocus aria-label="Fechar"
+            className="h-8 w-8 rounded-md flex items-center justify-center text-ink-500 hover:bg-ink-800 hover:text-ink-50">
+            <i className="ti ti-x text-lg" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 p-2 sm:p-4">
+          <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={palette} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PublicDashboardClient({ slug }: { slug: string }) {
   const [dashboard, setDashboard] = useState<PublicDashboard | null>(null);
   const [error,     setError]     = useState("");
@@ -119,6 +184,8 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
   const [refetching, setRefetching] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showTop, setShowTop] = useState(false);
+  const [expanded, setExpanded] = useState<PublicWidget | null>(null);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const desktop = useIsDesktop();
 
   const conditionsKey = JSON.stringify(conditions);
@@ -159,6 +226,22 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
     () => [...(dashboard?.widgets ?? [])].sort((a, b) => (a.y - b.y) || (a.x - b.x)),
     [dashboard?.widgets],
   );
+  const sections = useMemo(
+    () => stacked.map(w => ({ id: w.id, title: sectionTitle(w) })).filter((x): x is { id: string; title: string } => !!x.title),
+    [stacked],
+  );
+
+  // Destaca a seção visível na barra de seções (scroll-spy)
+  useEffect(() => {
+    if (sections.length < 2) return;
+    const els = sections.map(s => document.getElementById(`secao-${s.id}`)).filter(Boolean) as HTMLElement[];
+    const obs = new IntersectionObserver(entries => {
+      const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) setActiveSection(visible[0].target.id.replace("secao-", ""));
+    }, { rootMargin: "-90px 0px -60% 0px" });
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, [sections, desktop]);
 
   if (error) {
     return (
@@ -217,8 +300,9 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
     setConditions(prev => prev.filter((_, i) => i !== index));
   }
 
+  // [&>div>p:first-child]:pr-16 = espaço para os botões de ação ao lado do título
   const frame = (w: PublicWidget) => isFramed(w)
-    ? "rounded-xl border border-ink-700 bg-ink-900 shadow-xs overflow-hidden"
+    ? "rounded-xl border border-ink-700 bg-ink-900 shadow-xs overflow-hidden transition-shadow hover:shadow-md [&>div>p:first-child]:pr-16"
     : "overflow-hidden";
 
   return (
@@ -295,6 +379,20 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
               </span>
             </div>
 
+            {sections.length >= 2 && (
+              <nav aria-label="Seções do painel" className="mt-2 -mx-1 flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+                {sections.map(sec => (
+                  <a key={sec.id} href={`#secao-${sec.id}`} aria-current={activeSection === sec.id ? "true" : undefined}
+                    className={cn(
+                      "flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                      activeSection === sec.id ? "border-brand-500 bg-brand-500 text-on-accent" : "border-ink-700 bg-ink-900 text-ink-300 hover:border-ink-600 hover:text-ink-50",
+                    )}>
+                    {sec.title}
+                  </a>
+                ))}
+              </nav>
+            )}
+
             {filtersOpen && (
               <div className="mt-2.5 rounded-lg border border-ink-700 bg-ink-900 p-3 space-y-2.5 animate-fade-in">
                 {conditions.length === 0 && <p className="text-xs text-ink-500">Combine condições sobre as perguntas do instrumento. O recorte vale para todos os gráficos e mapas.</p>}
@@ -340,9 +438,11 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
               borderRadius: dashboard.canvasColor ? 16 : undefined,
             }}>
             {dashboard.widgets.map(w => (
-              <section key={w.id} aria-label={w.title ?? undefined} className={cn("absolute", frame(w))}
+              <section key={w.id} id={sectionTitle(w) ? `secao-${w.id}` : undefined} aria-label={w.title ?? undefined}
+                className={cn("absolute group scroll-mt-28", frame(w))}
                 style={{ left: `calc(${w.x}% + 6px)`, top: w.y + 6, width: `calc(${w.w}% - 12px)`, height: w.h - 12 }}>
                 <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} />
+                {isFramed(w) && <WidgetActions w={w} onExpand={() => setExpanded(w)} />}
               </section>
             ))}
           </div>
@@ -354,8 +454,10 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
               const isNumber = w.type === "number_card";
               const h = isNumber ? 132 : isMap ? Math.max(360, Math.min(w.h, 480)) : w.type === "text" ? undefined : Math.max(200, Math.min(w.h, 420));
               return (
-                <section key={w.id} aria-label={w.title ?? undefined} className={cn(frame(w), isNumber ? "col-span-1" : "col-span-2")} style={{ height: h, minHeight: w.type === "text" ? 40 : undefined }}>
+                <section key={w.id} id={sectionTitle(w) ? `secao-${w.id}` : undefined} aria-label={w.title ?? undefined}
+                  className={cn("relative group scroll-mt-28", frame(w), isNumber ? "col-span-1" : "col-span-2")} style={{ height: h, minHeight: w.type === "text" ? 40 : undefined }}>
                   <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} />
+                  {isFramed(w) && !isNumber && <WidgetActions w={w} onExpand={() => setExpanded(w)} />}
                 </section>
               );
             })}
@@ -388,6 +490,8 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
           </div>
         </div>
       </footer>
+
+      {expanded && <ExpandedWidget w={expanded} palette={dashboard.colorPalette ?? undefined} onClose={() => setExpanded(null)} />}
 
       <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Voltar ao topo"
         className={cn(
