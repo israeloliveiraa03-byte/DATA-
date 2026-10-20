@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MapContainer, GeoJSON, useMap } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, GeoJSON, useMap, CircleMarker, Tooltip as LTooltip } from "react-leaflet";
+import { centroid } from "@turf/turf";
 import L, { type Layer, type PathOptions } from "leaflet";
 import type { Feature, FeatureCollection } from "geojson";
 import type { ColorPalette, HeatmapResult } from "@/lib/dashboard/types";
 import { COLOR_PALETTES } from "@/lib/dashboard/types";
 import { CODAREA_TO_SIGLA } from "@/lib/geo/uf";
 import { resolveMunicipioName } from "@/lib/geo/municipios";
-import { BasemapLayers, ScrollZoomOnFocus } from "./map-common";
+import { BasemapLayers, ScrollZoomOnFocus, mapContainerClass } from "./map-common";
 
 const NO_DATA_STYLE: PathOptions = { fillColor: "rgb(var(--color-ink-600))", weight: 0.8, color: "rgb(var(--color-ink-900))", fillOpacity: 0.35 };
 
@@ -17,10 +18,24 @@ const NO_DATA_STYLE: PathOptions = { fillColor: "rgb(var(--color-ink-600))", wei
 // painéis CONAQ e de atlas como o do IBGE.
 const CLASS_OPACITY = [0.2, 0.38, 0.56, 0.74, 0.92];
 
-function classIndex(value: number, max: number): number {
-  if (max <= 0) return 0;
-  const i = Math.floor((value / max) * CLASS_OPACITY.length);
-  return Math.min(CLASS_OPACITY.length - 1, Math.max(0, i));
+/**
+ * Limites superiores das 5 classes. "equal": intervalos iguais de 0 ao
+ * máximo (bom quando os valores se espalham). "quantile": cada classe com
+ * ~a mesma quantidade de lugares (bom quando poucos lugares concentram
+ * quase tudo — em intervalos iguais o resto do mapa ficaria todo claro).
+ */
+export function classBreaks(values: number[], max: number, method: "equal" | "quantile"): number[] {
+  const n = CLASS_OPACITY.length;
+  if (method === "quantile" && values.length >= n) {
+    const sorted = [...values].sort((a, b) => a - b);
+    return Array.from({ length: n }, (_, i) => i === n - 1 ? max : sorted[Math.min(sorted.length - 1, Math.floor(((i + 1) / n) * sorted.length) - 1)]);
+  }
+  return Array.from({ length: n }, (_, i) => (max / n) * (i + 1));
+}
+
+function classIndex(value: number, breaks: number[]): number {
+  const i = breaks.findIndex(b => value <= b);
+  return i < 0 ? breaks.length - 1 : i;
 }
 
 // Caixa do território brasileiro (com folga) — impede o mapa de "fugir"
@@ -35,6 +50,12 @@ interface HeatmapWidgetProps {
   // troca pra fatia percentual do total do país nesse indicador.
   // "choice_percent" já é percentual por natureza, sem efeito nele.
   displayMode?: "count" | "percent";
+  /** Método das classes de cor. */
+  classMethod?: "equal" | "quantile";
+  /** "fill" pinta a área; "bubbles" desenha círculos proporcionais no centro. */
+  symbol?: "fill" | "bubbles";
+  /** Escreve a sigla e o valor sobre cada estado. */
+  showLabels?: boolean;
 }
 
 // Ajusta o mapa pro contorno do Brasil sempre que o container montar ou
@@ -65,7 +86,7 @@ function FitToBrazil({ geo }: { geo: FeatureCollection }) {
   return null;
 }
 
-export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWidgetProps) {
+export function HeatmapWidget({ data, palette, basemap, displayMode, classMethod = "equal", symbol = "fill", showLabels = false }: HeatmapWidgetProps) {
   const ACCENT = (palette ?? COLOR_PALETTES.terracota).accent;
   const isCity = data.granularity === "city";
   const [estados, setEstados] = useState<FeatureCollection | null>(null);
@@ -135,6 +156,21 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
   // Percentual só quando o indicador é percentual de fato (antes, qualquer
   // contagem com máximo ≤ 100 aparecia com "%" — 37 respostas viravam "37%").
   const isPercentLike = asPercent || activeIndicator?.mode === "choice_percent";
+  const breaks = classBreaks(Object.values(byState).map(v => v.value), max, classMethod);
+  const bubbles = symbol === "bubbles";
+  const labelKeys = new Set(Object.entries(byState).sort((a, b) => b[1].value - a[1].value).slice(0, 12).map(([k]) => k));
+
+  // Centro de cada área (para bolhas e rótulos) — calculado uma vez por malha.
+  const centers = useMemo(() => {
+    const out = new Map<string, [number, number]>();
+    if (!estados || (!bubbles && !showLabels)) return out;
+    for (const f of estados.features) {
+      const code = f.properties?.codarea as string | undefined;
+      if (!code) continue;
+      try { const c = centroid(f as Feature).geometry.coordinates; out.set(code, [c[1], c[0]]); } catch { /* geometria inválida */ }
+    }
+    return out;
+  }, [estados, bubbles, showLabels]);
 
   // Estado: codarea (2 dígitos) precisa virar sigla pra bater com byState.
   // Município: codarea (7 dígitos) já É a chave usada em byState direto.
@@ -151,8 +187,9 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
     const codarea = feature?.properties?.codarea as string | undefined;
     const groupKey = groupKeyFor(codarea);
     const stateData = groupKey ? byState[groupKey] : undefined;
+    if (bubbles) return { ...NO_DATA_STYLE, fillOpacity: 0.12 };
     if (!stateData || max === 0) return NO_DATA_STYLE;
-    const intensity = CLASS_OPACITY[classIndex(stateData.value, max)];
+    const intensity = CLASS_OPACITY[classIndex(stateData.value, breaks)];
     return { fillColor: `rgb(${ACCENT})`, weight: isCity ? 0.3 : 0.9, color: "rgb(var(--color-ink-900))", opacity: isCity ? 0.6 : 1, fillOpacity: intensity };
   }
 
@@ -201,14 +238,41 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
           {data.indicators.map(ind => <option key={ind.key} value={ind.key}>{ind.label}</option>)}
         </select>
       )}
-      <div className={`flex-1 min-h-0 rounded-md overflow-hidden ${!basemap || basemap === "light" ? "map-editorial" : ""}`}>
+      <div className={`flex-1 min-h-0 rounded-md overflow-hidden ${mapContainerClass(basemap)}`}>
         {/* scrollWheelZoom liga só depois do primeiro clique/toque no mapa
             (ScrollZoomOnFocus) — os botões +/- ficam sempre disponíveis. */}
         <MapContainer center={[-14.235, -51.9253]} zoom={3} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} preferCanvas={isCity}
           maxBounds={BRAZIL_BOUNDS} maxBoundsViscosity={0.9} zoomSnap={0.25} attributionControl>
           <BasemapLayers defaultBasemap={basemap} />
           <ScrollZoomOnFocus />
-          <GeoJSON key={isCity + activeKey + JSON.stringify(byState)} data={estados} style={styleFeature} onEachFeature={onEachFeature} />
+          <GeoJSON key={isCity + activeKey + JSON.stringify(byState) + symbol + classMethod} data={estados} style={styleFeature} onEachFeature={onEachFeature} />
+          {/* Símbolos proporcionais: área do círculo ∝ valor (raio ∝ √valor). */}
+          {bubbles && max > 0 && Array.from(centers.entries()).map(([code, latlng]) => {
+            const key = groupKeyFor(code);
+            const d = key ? byState[key] : undefined;
+            if (!d || d.value <= 0) return null;
+            const radius = Math.max(3, Math.sqrt(d.value / max) * (isCity ? 14 : 26));
+            return (
+              <CircleMarker key={code} center={latlng} radius={radius}
+                pathOptions={{ color: "rgb(var(--color-ink-900))", weight: 1, fillColor: `rgb(${ACCENT})`, fillOpacity: 0.7 }}>
+                <LTooltip direction="top">{labelFor(code, key)}: {isPercentLike ? `${d.value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : d.count.toLocaleString("pt-BR")}</LTooltip>
+              </CircleMarker>
+            );
+          })}
+          {showLabels && !isCity && Array.from(centers.entries()).map(([code, latlng]) => {
+            const key = groupKeyFor(code);
+            const d = key ? byState[key] : undefined;
+            // Só os 12 maiores valores ganham rótulo fixo — no Nordeste os
+            // estados são pequenos e os rótulos se atropelariam.
+            if (!d || !key || !labelKeys.has(key)) return null;
+            return (
+              <CircleMarker key={`l-${code}`} center={latlng} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
+                <LTooltip permanent direction="center" className="map-value-label">
+                  {key} {isPercentLike ? `${Math.round(d.value)}%` : d.count.toLocaleString("pt-BR")}
+                </LTooltip>
+              </CircleMarker>
+            );
+          })}
           <FitToBrazil geo={estados} />
         </MapContainer>
       </div>
@@ -216,9 +280,9 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-shrink-0 px-0.5 text-2xs text-ink-500">
         <span className="font-semibold uppercase tracking-[0.08em]">{activeIndicator?.label ?? "Respostas"}{isPercentLike ? " (%)" : ""}</span>
         <div className="flex items-center gap-2 flex-wrap">
-          {CLASS_OPACITY.map((op, i) => {
-            const lo = (max / CLASS_OPACITY.length) * i;
-            const hi = (max / CLASS_OPACITY.length) * (i + 1);
+          {!bubbles && CLASS_OPACITY.map((op, i) => {
+            const lo = i === 0 ? 0 : breaks[i - 1];
+            const hi = breaks[i];
             const fmt = (n: number) => isPercentLike ? `${Math.round(n)}%` : n >= 10 ? Math.round(n).toLocaleString("pt-BR") : n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
             return (
               <span key={i} className="inline-flex items-center gap-1 tabular">
@@ -227,6 +291,14 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
               </span>
             );
           })}
+          {bubbles && (
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-end gap-1">
+                {[0.25, 0.6, 1].map(f => <span key={f} className="inline-block rounded-full" style={{ width: 6 + f * 14, height: 6 + f * 14, background: `rgba(${ACCENT}, 0.7)` }} />)}
+              </span>
+              círculo proporcional ao valor (máx. {isPercentLike ? `${Math.round(max)}%` : Math.round(max).toLocaleString("pt-BR")})
+            </span>
+          )}
           <span className="inline-flex items-center gap-1">
             <span className="inline-block w-3.5 h-2.5 rounded-[2px]" style={{ background: "rgb(var(--color-ink-600) / 0.35)" }} />
             sem dados

@@ -13,6 +13,11 @@ import {
   type SupportedWidgetType, type HeatmapIndicatorConfig, type DashboardFilter, type FilterCondition, type FilterFieldKind,
 } from "@/lib/dashboard/types";
 import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/lib/types";
+import { resizeImageKeepAlpha } from "@/lib/images";
+import { brandCssVars, DENSITY_GAP, isHex, type DashboardBrand } from "@/lib/dashboard/brand";
+import { cardClasses, useBrandFonts } from "@/components/dashboard/brand-kit";
+import { BrandPanel } from "./brand-panel";
+import { buildAutoDashboard } from "@/lib/dashboard/auto-layout";
 
 // react-moveable manipula o DOM direto (tamanho/posição via window/document)
 // — igual ao Leaflet, quebra a renderização no servidor se importado direto.
@@ -388,7 +393,16 @@ export function DashboardBuilderClient({
     const layout = (dashboard.layout ?? {}) as Record<string, unknown>;
     return typeof layout.canvasColor === "string" ? layout.canvasColor : undefined;
   });
-  const [appearanceOpen,    setAppearanceOpen]     = useState(false);
+  // Identidade visual (dashboards.layout.brand) — editada no painel lateral,
+  // aplicada ao vivo no canvas e salva sozinha (com uma pequena espera).
+  const [brand, setBrandState] = useState<DashboardBrand | null>(() => {
+    const layout = (dashboard.layout ?? {}) as Record<string, unknown>;
+    return (layout.brand && typeof layout.brand === "object") ? layout.brand as DashboardBrand : null;
+  });
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [brandSaving, setBrandSaving] = useState(false);
+  const brandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useBrandFonts(brand);
   // Catálogo de gráficos estendidos — fechado por padrão (15 itens, a
   // paleta básica já tem 12; expandir só quando o pesquisador quiser algo
   // mais específico que barra/pizza/linha).
@@ -453,24 +467,7 @@ export function DashboardBuilderClient({
     });
   }, []);
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      const tag = (document.activeElement as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        if (e.shiftKey) redo(); else undo();
-        return;
-      }
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedIds.size > 0) {
-        e.preventDefault();
-        deleteSelected();
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIds, undo, redo]);
+
 
   const saveAppearance = useCallback(async (patch: { theme?: string; coverUrl?: string | null; colorPalette?: string; canvasColor?: string | null }) => {
     await fetch(`/api/dashboards/${dashboard.id}`, {
@@ -509,6 +506,30 @@ export function DashboardBuilderClient({
   function setCanvasColor(color: string | undefined) {
     setCanvasColorState(color);
     saveAppearance({ canvasColor: color ?? null });
+  }
+
+  function updateBrand(next: DashboardBrand | null) {
+    setBrandState(next);
+    if (brandTimer.current) clearTimeout(brandTimer.current);
+    brandTimer.current = setTimeout(async () => {
+      setBrandSaving(true);
+      try {
+        // Links incompletos ficam só na tela até serem preenchidos.
+        const clean = next && {
+          ...next,
+          links: (next.links ?? []).filter(l => l.label.trim() && /^https?:\/\/.+\..+/.test(l.url)),
+          palette: (next.palette ?? []).filter(isHex),
+        };
+        const res = await fetch(`/api/dashboards/${dashboard.id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brand: clean }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          toast.error("Identidade não salva: " + (json?.error ?? res.status));
+        }
+      } finally { setBrandSaving(false); }
+    }, 600);
   }
 
   // Carrega os widgets salvos ao montar
@@ -572,6 +593,89 @@ export function DashboardBuilderClient({
     }]);
     setSelectedIds(new Set([id]));
   }, [widgets, pushHistory]);
+
+  // Gera (ou acrescenta ao fim) um painel completo a partir das perguntas.
+  const generateFromInstrument = useCallback(() => {
+    const startY = widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) + (widgets.length ? 16 : 0);
+    const generated = buildAutoDashboard(fields, startY);
+    if (generated.length <= 3) { toast.error("O instrumento ainda não tem perguntas que virem gráfico."); return; }
+    pushHistory();
+    setWidgets(prev => [...prev, ...generated.map(w => ({ ...w, id: crypto.randomUUID() }))]);
+    setSelectedIds(new Set());
+    toast.success(`${generated.length} blocos criados a partir do instrumento — revise e salve.`);
+  }, [widgets, fields, pushHistory]);
+
+  // Duplicar (Ctrl/Cmd+D) — a cópia aparece logo abaixo do original.
+  const duplicateSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    pushHistory();
+    const copies = widgetsRef.current.filter(w => selectedIds.has(w.id)).map(w => ({
+      ...w, id: crypto.randomUUID(), y: w.y + 24, config: JSON.parse(JSON.stringify(w.config)) as Record<string, unknown>,
+    }));
+    setWidgets(prev => [...prev, ...copies]);
+    setSelectedIds(new Set(copies.map(c => c.id)));
+  }, [selectedIds, pushHistory]);
+
+  // Mover com as setas: 1% / 8px por toque (Shift = 5×).
+  const nudgeSelected = useCallback((dx: number, dy: number) => {
+    setWidgets(prev => prev.map(w => selectedIds.has(w.id)
+      ? { ...w, x: clamp(w.x + dx, 0, 100 - w.w), y: Math.max(0, w.y + dy) }
+      : w));
+  }, [selectedIds]);
+
+  // Alinhar/igualar vários widgets selecionados.
+  const alignSelected = useCallback((mode: "left" | "top" | "right" | "bottom" | "width" | "height" | "distribute") => {
+    const sel = widgetsRef.current.filter(w => selectedIds.has(w.id));
+    if (sel.length < 2) return;
+    pushHistory();
+    const ref = sel[0];
+    let patch: Map<string, Partial<WidgetDraft>> = new Map();
+    if (mode === "left")   { const x = Math.min(...sel.map(w => w.x)); sel.forEach(w => patch.set(w.id, { x })); }
+    if (mode === "top")    { const y = Math.min(...sel.map(w => w.y)); sel.forEach(w => patch.set(w.id, { y })); }
+    if (mode === "right")  { const r = Math.max(...sel.map(w => w.x + w.w)); sel.forEach(w => patch.set(w.id, { x: r - w.w })); }
+    if (mode === "bottom") { const b = Math.max(...sel.map(w => w.y + w.h)); sel.forEach(w => patch.set(w.id, { y: b - w.h })); }
+    if (mode === "width")  sel.forEach(w => patch.set(w.id, { w: ref.w }));
+    if (mode === "height") sel.forEach(w => patch.set(w.id, { h: ref.h }));
+    if (mode === "distribute") {
+      // Mesma largura e lado a lado, ocupando a linha toda, alinhados pelo topo.
+      const ordered = [...sel].sort((a, b) => a.x - b.x);
+      const w = 100 / ordered.length;
+      const y = Math.min(...ordered.map(o => o.y));
+      patch = new Map(ordered.map((o, i) => [o.id, { x: i * w, w, y }]));
+    }
+    setWidgets(prev => prev.map(w => patch.has(w.id) ? { ...w, ...patch.get(w.id)! } : w));
+  }, [selectedIds, pushHistory]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (document.activeElement as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedIds.size > 0) {
+        e.preventDefault();
+        deleteSelected();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && selectedIds.size > 0) {
+        e.preventDefault();
+        duplicateSelected();
+        return;
+      }
+      if (e.key.startsWith("Arrow") && selectedIds.size > 0) {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        if (!e.repeat) pushHistory();
+        nudgeSelected(e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -8 * step : e.key === "ArrowDown" ? 8 * step : 0);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds, undo, redo, duplicateSelected, nudgeSelected, pushHistory]);
 
   const applyTemplate = useCallback((template: typeof TEMPLATES[number]) => {
     pushHistory();
@@ -712,6 +816,9 @@ export function DashboardBuilderClient({
               <i className="ti ti-arrow-forward-up text-sm" aria-hidden="true" />
             </button>
           </div>
+          <Button variant={brandOpen ? "secondary" : "ghost"} size="sm" onClick={() => setBrandOpen(o => !o)} aria-pressed={brandOpen} aria-label="Identidade visual" title="Identidade visual">
+            <i className="ti ti-brush" aria-hidden="true" /> <span className="hidden md:inline">Identidade visual</span>
+          </Button>
           {isPublic && publicSlug && (
             <a href={`/d/${publicSlug}`} target="_blank" rel="noopener noreferrer" className={buttonClasses("ghost", "sm", "hidden lg:inline-flex")}>
               <i className="ti ti-external-link" aria-hidden="true" /> Ver página
@@ -731,76 +838,33 @@ export function DashboardBuilderClient({
         </>}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
 
         {/* Painel esquerdo — paleta de widgets */}
         <aside className="w-48 flex-shrink-0 overflow-y-auto py-3 px-2.5" style={{ background: "rgb(var(--color-ink-950))", borderRight: BRD }}>
 
-          {/* Aparência da página publicada — a página é do pesquisador, não
-              chrome do Dataº: fundo e tom ficam com ele escolher. */}
-          <button onClick={() => setAppearanceOpen(v => !v)}
-            className="w-full flex items-center justify-between px-1 mb-1.5">
-            <span className="font-bold uppercase tracking-widest" style={TS}>Aparência publicada</span>
-            <i className={`ti ${appearanceOpen ? "ti-chevron-up" : "ti-chevron-down"} text-xs`} style={{ color: "rgb(var(--color-brand-500))" }} />
+          {/* Identidade visual — cores, fontes, logo, cabeçalho, cartões e
+              gráficos ficam no painel lateral (botão também no topo). */}
+          <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
+          <button onClick={() => setBrandOpen(true)}
+            className="w-full mb-3 rounded-lg p-2.5 text-left transition-colors"
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
+            <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "rgb(var(--color-ink-50))" }}>
+              <i className="ti ti-brush" style={{ color: "rgb(var(--color-brand-500))" }} aria-hidden="true" /> Identidade visual
+            </span>
+            <span className="mt-1.5 flex h-2.5 overflow-hidden rounded-sm" aria-hidden="true">
+              {(brand?.palette && brand.palette.length >= 2 ? brand.palette : COLOR_PALETTES[dashboardPalette]?.chartColors ?? []).slice(0, 6).map((c, i) => <span key={i} className="flex-1" style={{ background: c }} />)}
+            </span>
+            <span className="block mt-1.5 text-2xs leading-snug" style={{ color: "rgb(var(--color-ink-500))" }}>Cores, fontes, logo, cabeçalho e estilo dos gráficos</span>
           </button>
-          {appearanceOpen && (
-            <div className="mb-3 p-2 rounded-md" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
-              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Imagem de fundo</p>
-              <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
-              {dashboardCoverUrl && (
-                <div className="relative h-16 rounded-md overflow-hidden mb-1.5" style={{ border: BRD }}>
-                  <img src={dashboardCoverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="flex gap-1.5 mb-3">
-                <button onClick={() => coverInputRef.current?.click()} disabled={coverUploading}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-2xs font-semibold disabled:opacity-50"
-                  style={{ border: BRD, background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-100))" }}>
-                  <i className={`ti ${coverUploading ? "ti-loader-2 animate-spin" : "ti-photo"}`} />
-                  {dashboardCoverUrl ? "Trocar" : "Adicionar"}
-                </button>
-                {dashboardCoverUrl && (
-                  <button onClick={removeCover} className="px-2 py-1.5 rounded-md text-2xs font-semibold" style={{ border: BRD, color: "rgb(var(--color-coral-500))" }}>
-                    <i className="ti ti-x" />
-                  </button>
-                )}
-              </div>
-              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Tom</p>
-              <div className="flex rounded-md overflow-hidden mb-3" style={{ border: BRD }}>
-                {[{ v: "light", l: "Claro" }, { v: "dark", l: "Escuro" }].map(t => (
-                  <button key={t.v} onClick={() => setTheme(t.v)}
-                    className="flex-1 py-1.5 text-2xs font-semibold"
-                    style={{ background: dashboardTheme === t.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: dashboardTheme === t.v ? "rgb(var(--color-on-accent))" : "rgb(var(--color-ink-100))" }}>
-                    {t.l}
-                  </button>
-                ))}
-              </div>
-              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Paleta de cores</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {Object.entries(COLOR_PALETTES).map(([key, p]) => (
-                  <button key={key} onClick={() => setPalette(key)}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left"
-                    style={{ border: dashboardPalette === key ? "2px solid rgb(var(--color-brand-500))" : BRD, background: "rgb(var(--color-ink-900))" }}>
-                    <span className="flex flex-shrink-0" style={{ width: 18, height: 18, borderRadius: 4, overflow: "hidden" }}>
-                      {p.chartColors.slice(0, 3).map((c, i) => <span key={i} className="flex-1 h-full" style={{ background: c }} />)}
-                    </span>
-                    <span className="text-2xs font-medium truncate" style={{ color: "rgb(var(--color-ink-100))" }}>{p.label}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-2xs font-bold uppercase mb-1.5 mt-3" style={{ color: "rgb(var(--color-ink-500))" }}>Fundo do canvas</p>
-              <div className="flex items-center gap-2">
-                <input type="color" className="w-10 h-8 rounded-md flex-shrink-0" style={{ border: BRD }}
-                  value={canvasColor ?? "#ffffff"} onChange={e => setCanvasColor(e.target.value)} />
-                {canvasColor && (
-                  <button onClick={() => setCanvasColor(undefined)} className="text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-500))" }}>
-                    Restaurar branco
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
 
+          {widgets.length > 0 && fields.length > 0 && (
+            <button onClick={generateFromInstrument} title="Acrescenta ao fim do painel um gráfico para cada pergunta"
+              className="w-full mb-3 flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold"
+              style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
+              <i className="ti ti-wand" style={{ color: "rgb(var(--color-brand-500))" }} aria-hidden="true" /> Gerar do instrumento
+            </button>
+          )}
           <p className="px-1 mb-1.5 font-bold uppercase tracking-widest" style={TS}>Widgets</p>
           {SUPPORTED_WIDGET_TYPES.map(item => (
             <button key={item.value} onClick={() => addWidget(item.value)}
@@ -880,9 +944,21 @@ export function DashboardBuilderClient({
             <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Carregando...</p>
           ) : widgets.length === 0 ? (
             <div className="max-w-2xl mx-auto py-10">
+              <button onClick={generateFromInstrument} disabled={fields.length === 0}
+                className="w-full mb-6 flex items-center gap-4 rounded-2xl p-5 text-left transition-colors disabled:opacity-50"
+                style={{ border: "1px solid rgb(var(--color-brand-500) / 0.5)", background: "rgb(var(--color-brand-50))" }}>
+                <span className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))" }}>
+                  <i className="ti ti-wand text-2xl" aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold" style={{ color: "rgb(var(--color-ink-50))" }}>Gerar painel a partir do instrumento</span>
+                  <span className="block text-xs mt-0.5 leading-relaxed" style={{ color: "rgb(var(--color-ink-300))" }}>
+                    O Dataº escolhe um gráfico adequado para cada pergunta ({fields.filter(f => f.type !== "section" && f.type !== "instruction").length} no instrumento), cria mapas, um cruzamento e organiza tudo em seções — já ligado aos dados.
+                  </span>
+                </span>
+              </button>
               <div className="text-center mb-6">
-                <i className="ti ti-layout-grid text-3xl block mb-2" style={{ color: "rgb(var(--color-ink-500))" }} />
-                <p className="text-sm font-semibold mb-1" style={{ color: "rgb(var(--color-ink-100))" }}>Comece com um modelo, ou monte do zero</p>
+                <p className="text-sm font-semibold mb-1" style={{ color: "rgb(var(--color-ink-100))" }}>Ou comece com um modelo vazio</p>
                 <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Um modelo só define tipo e posição — você liga os campos da sua pesquisa depois</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -903,8 +979,10 @@ export function DashboardBuilderClient({
               </p>
             </div>
           ) : (
+            /* O canvas mostra o painel no tom e na identidade da página publicada. */
+            <div data-theme={dashboardTheme === "dark" ? "dark" : "light"} className="font-sans rounded-xl" style={brandCssVars(brand, dashboardTheme === "dark")}>
             <div ref={canvasRef} className="relative rounded-xl" style={{
-              height: totalHeightPx, background: canvasColor ?? "rgb(var(--color-ink-900))", border: BRD,
+              height: totalHeightPx, background: canvasColor ?? "rgb(var(--color-ink-950))", border: BRD,
               // Grade sutil de fundo — só referência visual solta agora, não
               // trava mais o posicionamento (isso é livre, com guias via
               // react-moveable abaixo).
@@ -918,6 +996,7 @@ export function DashboardBuilderClient({
                   selected={selectedIds.has(w.id)}
                   data={computeWidgetData({ type: w.type, config: w.config }, fields, filteredResponses)}
                   palette={dashboardPalette}
+                  brand={brand}
                   registerRef={registerWidgetRef(w.id)}
                   onSelect={additive => selectWidget(w.id, additive)}
                   onDelete={() => deleteWidget(w.id)}
@@ -997,6 +1076,7 @@ export function DashboardBuilderClient({
                 />
               )}
             </div>
+            </div>
           )}
         </main>
 
@@ -1011,6 +1091,23 @@ export function DashboardBuilderClient({
               <div className="flex flex-col gap-3">
                 <p className="text-xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{selectedIdsArray.length} widgets selecionados</p>
                 <p className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>Shift+clique adiciona ou remove da seleção. Arraste/redimensione juntos.</p>
+                <div>
+                  <p className="text-2xs font-semibold uppercase tracking-[0.1em] mb-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Alinhar</p>
+                  <div className="grid grid-cols-4 gap-1">
+                    {([["left", "ti-layout-align-left", "Alinhar à esquerda"], ["right", "ti-layout-align-right", "Alinhar à direita"], ["top", "ti-layout-align-top", "Alinhar pelo topo"], ["bottom", "ti-layout-align-bottom", "Alinhar pela base"],
+                       ["width", "ti-arrows-horizontal", "Mesma largura do primeiro"], ["height", "ti-arrows-vertical", "Mesma altura do primeiro"], ["distribute", "ti-layout-columns", "Lado a lado, mesma largura"]] as const).map(([m, icon, l]) => (
+                      <button key={m} onClick={() => alignSelected(m)} title={l} aria-label={l}
+                        className="h-8 rounded-md flex items-center justify-center text-ink-300 hover:text-ink-50 hover:bg-ink-800" style={{ border: BRD }}>
+                        <i className={`ti ${icon}`} aria-hidden="true" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={duplicateSelected}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold"
+                  style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
+                  <i className="ti ti-copy" aria-hidden="true" /> Duplicar (Ctrl+D)
+                </button>
                 <button onClick={deleteSelected}
                   className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold"
                   style={{ border: "1px solid rgb(var(--color-coral-500) / 0.4)", background: "rgb(var(--color-coral-50))", color: "rgb(var(--color-coral-500))" }}>
@@ -1024,12 +1121,25 @@ export function DashboardBuilderClient({
                 onUpdate={patch => updateWidget(selectedWidget.id, patch)}
                 onUpdateConfig={patch => updateConfig(selectedWidget.id, patch)}
                 onDelete={() => deleteWidget(selectedWidget.id)}
+                onDuplicate={duplicateSelected}
               />
             ) : (
               <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Selecione um widget no canvas pra editar. Shift+clique seleciona vários.</p>
             )}
           </div>
         </aside>
+        {brandOpen && (
+          <BrandPanel
+            brand={brand ?? {}}
+            onChange={updateBrand}
+            onClose={() => setBrandOpen(false)}
+            theme={dashboardTheme} onTheme={setTheme}
+            paletteKey={dashboardPalette} onPaletteKey={setPalette}
+            coverUrl={dashboardCoverUrl} onCoverPick={() => coverInputRef.current?.click()} onCoverRemove={removeCover} coverBusy={coverUploading}
+            canvasColor={canvasColor} onCanvasColor={setCanvasColor}
+            saving={brandSaving}
+          />
+        )}
       </div>
     </div>
   );
@@ -1041,12 +1151,15 @@ export function DashboardBuilderClient({
 // componente só se posiciona a partir de x/y/w/h e expõe seu ref.
 
 function GridWidget({
-  widget, selected, data, palette, registerRef, onSelect, onDelete,
+  widget, selected, data, palette, brand, registerRef, onSelect, onDelete,
 }: {
-  widget: WidgetDraft; selected: boolean; data: ReturnType<typeof computeWidgetData>; palette: string;
+  widget: WidgetDraft; selected: boolean; data: ReturnType<typeof computeWidgetData>; palette: string; brand: DashboardBrand | null;
   registerRef: (el: HTMLDivElement | null) => void;
   onSelect: (additive: boolean) => void; onDelete: () => void;
 }) {
+  const radius = typeof brand?.radius === "number" ? brand.radius : 12;
+  // Mesmo respiro entre cartões da página publicada (densidade da identidade).
+  const gap = DENSITY_GAP[brand?.density ?? "normal"];
   const style: React.CSSProperties = {
     position: "absolute",
     left:   `${widget.x}%`,
@@ -1054,23 +1167,29 @@ function GridWidget({
     width:  `${widget.w}%`,
     height: widget.h,
     zIndex: selected ? 10 : 1,
-    border: selected ? "2px solid rgb(var(--color-brand-500))" : BRD,
-    boxShadow: selected ? "0 0 0 3px rgba(196,138,66,0.1)" : "none",
-    background: "rgb(var(--color-ink-900))",
   };
+  // Texto e imagem não têm moldura na página publicada; no editor ganham só
+  // um tracejado leve para poderem ser achados e arrastados.
+  const framed = widget.type !== "text" && widget.type !== "image";
 
   return (
-    <div ref={registerRef} style={style} className="rounded-lg" onClick={e => { e.stopPropagation(); onSelect(e.shiftKey); }}>
+    <div ref={registerRef} style={style} data-widget-id={widget.id} onClick={e => { e.stopPropagation(); onSelect(e.shiftKey); }}>
+      <div className={`absolute overflow-hidden ${framed ? cardClasses(brand?.card) : "border border-dashed border-ink-600/70"}`}
+        style={{
+          inset: gap, borderRadius: radius,
+          // Seleção como anel por fora — não muda a moldura escolhida na identidade.
+          outline: selected ? "2px solid rgb(var(--color-brand-500))" : undefined,
+          outlineOffset: selected ? 2 : undefined,
+        }}>
+        <WidgetRenderer type={widget.type} title={widget.title} data={data} config={widget.config} palette={palette} brand={brand} />
+      </div>
       {selected && (
         <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(); }}
-          className="absolute -top-2.5 -right-2.5 w-5 h-5 flex items-center justify-center rounded-full z-20"
+          className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full z-20"
           style={{ background: "rgb(var(--color-coral-500))", color: "rgb(var(--color-on-accent))" }} aria-label="Remover widget">
           <i className="ti ti-x text-xs" />
         </button>
       )}
-      <div className="absolute inset-0">
-        <WidgetRenderer type={widget.type} title={widget.title} data={data} config={widget.config} palette={palette} />
-      </div>
     </div>
   );
 }
@@ -1081,9 +1200,11 @@ function GridWidget({
 // widget (sobrepõe a paleta do dashboard só aqui — vazio = herdar) e
 // mapa-base padrão ("relevo"). O leitor ainda pode trocar o mapa-base no
 // controle de camadas do próprio mapa; isto define só o inicial.
-function MapAppearanceFields({ config, onUpdateConfig }: {
+function MapAppearanceFields({ config, onUpdateConfig, choropleth = false }: {
   config: Record<string, unknown>;
   onUpdateConfig: (patch: Record<string, unknown>) => void;
+  /** Mapa de calor: mostra também classes, símbolo e rótulos. */
+  choropleth?: boolean;
 }) {
   const label = { className: "text-xs font-semibold mb-1 block", style: { color: "rgb(var(--color-ink-100))" } };
   const input = "w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none";
@@ -1104,19 +1225,114 @@ function MapAppearanceFields({ config, onUpdateConfig }: {
           onChange={e => onUpdateConfig({ basemap: e.target.value === "light" ? undefined : e.target.value })}>
           {BASEMAP_OPTIONS.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
         </select>
-        <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Quem visualiza ainda pode trocar pelo controle de camadas no canto do mapa.</p>
+        <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Quem visualiza ainda pode trocar pelo controle de camadas no canto do mapa. &ldquo;Sem mapa-base&rdquo; deixa ver a imagem de fundo do widget (seção Aparência).</p>
       </div>
+      {choropleth && (
+        <>
+          <div>
+            <label {...label}>Desenho</label>
+            <select className={input} style={inputStyle} value={(config.symbol as string) ?? "fill"}
+              onChange={e => onUpdateConfig({ symbol: e.target.value === "fill" ? undefined : e.target.value })}>
+              <option value="fill">Pintar a área (coroplético)</option>
+              <option value="bubbles">Círculos proporcionais</option>
+            </select>
+            <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Círculos funcionam melhor para contagens: estados grandes não parecem mais importantes só pelo tamanho.</p>
+          </div>
+          {(config.symbol ?? "fill") === "fill" && (
+            <div>
+              <label {...label}>Classes de cor</label>
+              <select className={input} style={inputStyle} value={(config.classMethod as string) ?? "equal"}
+                onChange={e => onUpdateConfig({ classMethod: e.target.value === "equal" ? undefined : e.target.value })}>
+                <option value="equal">Intervalos iguais</option>
+                <option value="quantile">Quantis (mesmo nº de lugares por classe)</option>
+              </select>
+              <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Use quantis quando poucos lugares concentram quase todas as respostas.</p>
+            </div>
+          )}
+          <label className="flex items-center gap-2 text-xs" style={{ color: "rgb(var(--color-ink-100))" }}>
+            <input type="checkbox" checked={config.showLabels === true} onChange={e => onUpdateConfig({ showLabels: e.target.checked || undefined })} />
+            Escrever sigla e valor sobre cada estado
+          </label>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Fundo em imagem do widget (PNG com transparência, JPG, WebP).
+function BackgroundImageFields({ appearance, onChange }: {
+  appearance: { backgroundImage?: string; backgroundOpacity?: number; backgroundFit?: string };
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const label = { className: "text-xs font-semibold mb-1 block", style: { color: "rgb(var(--color-ink-100))" } };
+  const input = "w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none";
+  const inputStyle = { border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" };
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    resizeImageKeepAlpha(file, 1400)
+      .then(url => onChange({ backgroundImage: url }))
+      .catch(() => toast.error("Não foi possível ler a imagem."))
+      .finally(() => setBusy(false));
+  }
+  return (
+    <div className="mt-3">
+      <label {...label}>Imagem de fundo</label>
+      <input ref={ref} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={onFile} />
+      {appearance.backgroundImage && (
+        <div className="h-16 rounded-md mb-1.5 bg-center bg-no-repeat" style={{
+          border: BRD, backgroundImage: `url(${appearance.backgroundImage}), repeating-conic-gradient(rgb(var(--color-ink-800)) 0% 25%, transparent 0% 50%)`,
+          backgroundSize: "contain, 12px 12px",
+        }} />
+      )}
+      <div className="flex gap-1.5">
+        <button type="button" onClick={() => ref.current?.click()} disabled={busy}
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-2xs font-semibold disabled:opacity-50"
+          style={{ border: BRD, background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-100))" }}>
+          <i className={`ti ${busy ? "ti-loader-2 animate-spin" : "ti-photo-plus"}`} aria-hidden="true" />
+          {appearance.backgroundImage ? "Trocar imagem" : "Enviar PNG/JPG"}
+        </button>
+        {appearance.backgroundImage && (
+          <button type="button" onClick={() => onChange({ backgroundImage: undefined })} aria-label="Remover imagem de fundo"
+            className="px-2 py-1.5 rounded-md text-2xs font-semibold" style={{ border: BRD, color: "rgb(var(--color-coral-500))" }}>
+            <i className="ti ti-x" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      {appearance.backgroundImage && (
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <div>
+            <label {...label}>Opacidade</label>
+            <input type="range" min={5} max={100} className="w-full" aria-label="Opacidade da imagem de fundo"
+              value={Math.round((appearance.backgroundOpacity ?? 0.35) * 100)} onChange={e => onChange({ backgroundOpacity: Number(e.target.value) / 100 })} />
+          </div>
+          <div>
+            <label {...label}>Encaixe</label>
+            <select className={input} style={inputStyle} value={appearance.backgroundFit ?? "cover"} onChange={e => onChange({ backgroundFit: e.target.value })}>
+              <option value="cover">Cobrir</option>
+              <option value="contain">Conter</option>
+              <option value="repeat">Repetir</option>
+            </select>
+          </div>
+        </div>
+      )}
+      <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>PNG com fundo transparente funciona: vale para gráficos e mapas (no mapa, escolha &ldquo;Sem mapa-base&rdquo;).</p>
     </div>
   );
 }
 
 function WidgetInspector({
-  widget, fields, onUpdate, onUpdateConfig, onDelete,
+  widget, fields, onUpdate, onUpdateConfig, onDelete, onDuplicate,
 }: {
   widget: WidgetDraft; fields: FormField[];
   onUpdate: (patch: Partial<WidgetDraft>) => void;
   onUpdateConfig: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
+  onDuplicate: () => void;
 }) {
   const label = { className: "text-xs font-semibold mb-1 block", style: { color: "rgb(var(--color-ink-100))" } };
   const input = "w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none";
@@ -1223,6 +1439,25 @@ function WidgetInspector({
               ))}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label {...label}>Valores escritos</label>
+              <select className={input} style={inputStyle}
+                value={widget.config.showValues === true ? "yes" : widget.config.showValues === false ? "no" : "inherit"}
+                onChange={e => onUpdateConfig({ showValues: e.target.value === "yes" ? true : e.target.value === "no" ? false : undefined })}>
+                <option value="inherit">Como na identidade</option>
+                <option value="yes">Mostrar</option>
+                <option value="no">Esconder</option>
+              </select>
+            </div>
+            <div>
+              <label {...label}>Máx. de opções</label>
+              <input type="number" min={2} max={30} placeholder="todas" className={input} style={inputStyle}
+                value={(widget.config.topN as number | undefined) ?? ""}
+                onChange={e => onUpdateConfig({ topN: e.target.value ? Math.max(2, Number(e.target.value)) : undefined })} />
+            </div>
+          </div>
+          <p className="text-2xs -mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Com um máximo, as opções menos marcadas se juntam em &ldquo;Outras&rdquo;.</p>
           {widget.type === "bar_chart" && (
             <>
               <div>
@@ -1717,7 +1952,7 @@ function WidgetInspector({
 
       {/* Aparência — fundo/borda, vale pra qualquer tipo de widget */}
       {(() => {
-        const appearance = (widget.config.style ?? {}) as { backgroundColor?: string; borderRadius?: number };
+        const appearance = (widget.config.style ?? {}) as { backgroundColor?: string; borderRadius?: number; backgroundImage?: string; backgroundOpacity?: number; backgroundFit?: string };
         const updateAppearance = (patch: Record<string, unknown>) => onUpdateConfig({ style: { ...appearance, ...patch } });
         const isBlock = widget.type === "text" && widget.config.variant === "block";
         return (
@@ -1737,6 +1972,7 @@ function WidgetInspector({
                 <label {...label}>Borda arredondada</label>
                 <input type="range" min={0} max={32} className="w-full"
                   value={appearance.borderRadius ?? 8} onChange={e => updateAppearance({ borderRadius: Number(e.target.value) })} />
+                {widget.type !== "text" && widget.type !== "image" && <BackgroundImageFields appearance={appearance} onChange={updateAppearance} />}
               </>
             )}
           </div>
@@ -1887,7 +2123,7 @@ function WidgetInspector({
               <i className="ti ti-plus" /> Adicionar indicador
             </button>
             </div>
-            <MapAppearanceFields config={widget.config} onUpdateConfig={onUpdateConfig} />
+            <MapAppearanceFields config={widget.config} onUpdateConfig={onUpdateConfig} choropleth />
           </>
         );
       })()}
@@ -1918,8 +2154,16 @@ function WidgetInspector({
               <option value="count">Contagem</option>
               <option value="row_percent">% da linha</option>
               <option value="col_percent">% da coluna</option>
+              <option value="residual">Acima/abaixo do esperado</option>
             </select>
+            {widget.config.valueMode === "residual" && (
+              <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Destaca as combinações que aparecem bem mais (▲) ou bem menos (▼) do que apareceriam se as duas perguntas não tivessem relação.</p>
+            )}
           </div>
+          <label className="flex items-start gap-2 text-xs" style={{ color: "rgb(var(--color-ink-100))" }}>
+            <input type="checkbox" className="mt-0.5" checked={widget.config.showStats !== false} onChange={e => onUpdateConfig({ showStats: e.target.checked ? undefined : false })} />
+            <span>Mostrar teste de associação <span style={{ color: "rgb(var(--color-ink-500))" }}>(qui-quadrado e V de Cramér, em linguagem simples)</span></span>
+          </label>
         </>
       )}
 
@@ -1967,12 +2211,36 @@ function WidgetInspector({
                 </div>
               </div>
             )}
+            <div className="pt-2 flex flex-col gap-2" style={{ borderTop: BRD }}>
+              <label className="flex items-start gap-2 text-xs" style={{ color: "rgb(var(--color-ink-100))" }}>
+                <input type="checkbox" className="mt-0.5"
+                  checked={mode === "heatmap" ? widget.config.globeExtrude !== false : widget.config.globeColumns !== false}
+                  onChange={e => onUpdateConfig(mode === "heatmap" ? { globeExtrude: e.target.checked ? undefined : false } : { globeColumns: e.target.checked ? undefined : false })} />
+                <span>Leitura 3D <span style={{ color: "rgb(var(--color-ink-500))" }}>{mode === "heatmap" ? "(estados levantados em altura pelo valor)" : "(colunas de densidade; com categorias, ficam os pontos coloridos)"}</span></span>
+              </label>
+              <div>
+                <label {...label}>Fundo do globo</label>
+                <select className={input} style={inputStyle}
+                  value={!widget.config.globeSky ? "stars" : widget.config.globeSky === "none" ? "none" : "image"}
+                  onChange={e => onUpdateConfig({ globeSky: e.target.value === "stars" ? undefined : e.target.value === "none" ? "none" : ((widget.config.style as { backgroundImage?: string } | undefined)?.backgroundImage ?? "none") })}>
+                  <option value="stars">Céu estrelado</option>
+                  <option value="none">Transparente (mostra o fundo do widget)</option>
+                  <option value="image">Imagem de fundo do widget</option>
+                </select>
+                <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Para usar uma imagem, envie-a em Aparência → Imagem de fundo e escolha esta opção.</p>
+              </div>
+            </div>
           </>
         );
       })()}
 
-      <button onClick={onDelete}
+      <button onClick={onDuplicate}
         className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold mt-2"
+        style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
+        <i className="ti ti-copy" aria-hidden="true" /> Duplicar (Ctrl+D)
+      </button>
+      <button onClick={onDelete}
+        className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold"
         style={{ border: "1px solid rgb(var(--color-coral-500) / 0.4)", background: "rgb(var(--color-coral-50))", color: "rgb(var(--color-coral-500))" }}>
         <i className="ti ti-trash" /> Remover widget
       </button>

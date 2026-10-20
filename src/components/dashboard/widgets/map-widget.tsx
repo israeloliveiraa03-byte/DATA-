@@ -5,7 +5,7 @@ import { MapContainer, CircleMarker, Marker, Tooltip, useMap } from "react-leafl
 import L from "leaflet";
 import type { ColorPalette, MapResult } from "@/lib/dashboard/types";
 import { COLOR_PALETTES } from "@/lib/dashboard/types";
-import { BasemapLayers, ScrollZoomOnFocus } from "./map-common";
+import { BasemapLayers, ScrollZoomOnFocus, mapContainerClass } from "./map-common";
 
 const BRAZIL_CENTER: [number, number] = [-14.235, -51.9253];
 
@@ -91,7 +91,7 @@ export function MapWidget({ data, palette, basemap }: MapWidgetProps) {
 
   return (
     <div className="w-full h-full flex flex-col gap-2">
-      <div className={`flex-1 min-h-0 rounded-md overflow-hidden ${!basemap || basemap === "light" ? "map-editorial" : ""}`}>
+      <div className={`flex-1 min-h-0 rounded-md overflow-hidden ${mapContainerClass(basemap)}`}>
         {/* scrollWheelZoom nasce desligado e é ligado pelo ScrollZoomOnFocus
             no primeiro clique/toque — os botões +/- do Leaflet ficam sempre
             visíveis (zoomControl é o padrão, dentro do próprio container do

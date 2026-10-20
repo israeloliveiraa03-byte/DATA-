@@ -11,6 +11,39 @@ export const createDashboardSchema = z.object({
   title: z.string().min(2, "Mínimo 2 caracteres").max(500),
 });
 
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Cor inválida");
+
+// Identidade visual do painel (ver src/lib/dashboard/brand.ts). Guardada
+// dentro do jsonb `layout` — o PATCH substitui `layout.brand` inteiro.
+export const brandSchema = z.object({
+  preset:       z.string().max(40).optional(),
+  accent:       hex.optional(),
+  secondary:    hex.optional(),
+  palette:      z.array(hex).max(10).optional(),
+  background:   hex.optional(),
+  headingFont:  z.string().max(40).optional(),
+  bodyFont:     z.string().max(40).optional(),
+  // Logo redimensionada no navegador (máx. 480px) — limite folgado.
+  logoUrl:      z.string().max(700000).regex(/^data:image\/(png|jpeg|webp|svg\+xml);base64,/, "Logo inválida").optional(),
+  organization: z.string().max(120).optional(),
+  showBand:     z.boolean().optional(),
+  header:       z.enum(["editorial", "banner", "centered", "minimal"]).optional(),
+  pattern:      z.enum(["roots", "contour", "dots", "grid", "none"]).optional(),
+  card:         z.enum(["bordered", "elevated", "flat", "outline", "accent-top"]).optional(),
+  radius:       z.number().min(0).max(28).optional(),
+  density:      z.enum(["compact", "normal", "airy"]).optional(),
+  widgetTitle:  z.enum(["default", "kicker", "serif"]).optional(),
+  sourceNote:   z.string().max(200).optional(),
+  footerNote:   z.string().max(300).optional(),
+  showFooterInfo: z.boolean().optional(),
+  links:        z.array(z.object({ label: z.string().min(1).max(60), url: z.string().url().max(400).regex(/^https?:\/\//) })).max(4).optional(),
+  chart:        z.object({
+    gridlines:  z.boolean().optional(),
+    dataLabels: z.boolean().optional(),
+    barRadius:  z.number().min(0).max(16).optional(),
+  }).optional(),
+});
+
 export const updateDashboardSchema = z.object({
   title:       z.string().min(2).max(500).optional(),
   description: z.string().max(2000).optional(),
@@ -24,6 +57,8 @@ export const updateDashboardSchema = z.object({
   // Cor de fundo do canvas de widgets — guardada dentro do jsonb `layout`
   // (nenhuma coluna nova). O PATCH mescla no layout existente; null remove.
   canvasColor: z.string().max(50).nullable().optional(),
+  // null remove a identidade (volta ao visual padrão do Dataº).
+  brand: brandSchema.nullable().optional(),
 });
 
 // Grade livre (não mais célula de 12 colunas): x/w em % da largura do

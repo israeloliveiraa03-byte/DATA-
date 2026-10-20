@@ -72,6 +72,7 @@ export async function GET(
     coverUrl:      dashboard.coverUrl,
     colorPalette:  dashboard.colorPalette,
     canvasColor:   ((dashboard.layout ?? {}) as Record<string, unknown>).canvasColor ?? null,
+    brand:         ((dashboard.layout ?? {}) as Record<string, unknown>).brand ?? null,
     researchTitle: research.title,
     showAds:      owner?.plan === "free" || !owner,
     widgets:      widgetsWithData,

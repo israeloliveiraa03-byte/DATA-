@@ -45,17 +45,33 @@ export function EmptyState({ message, icon }: { message?: string; icon?: string 
 // sempre na cor de texto, nunca na cor da série — a identidade é do chip).
 // Regra: legenda sempre presente pra 2+ séries/categorias; pra 1 série só,
 // o título do widget já nomeia o dado — não renderiza chip nenhum.
-export function ChartLegend({ data, colors, values }: { data: { label: string }[]; colors: string[]; values?: string[] }) {
+export function ChartLegend({ data, colors, values, onSelect, pressed }: {
+  data: { label: string }[]; colors: string[]; values?: string[];
+  /** Torna cada item um botão (filtro por clique). */
+  onSelect?: (index: number) => void;
+  pressed?: boolean[];
+}) {
   if (data.length < 2) return null;
   return (
     <div className="flex flex-wrap gap-1 justify-center px-1 pt-1 flex-shrink-0">
-      {data.map((d, i) => (
-        <span key={i} className="flex items-center gap-1.5 text-2xs px-1.5 py-0.5 text-ink-300">
-          <span className="inline-block w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: colors[i % colors.length] }} />
-          {d.label}
-          {values?.[i] !== undefined && <span className="font-semibold text-ink-100 tabular">{values[i]}</span>}
-        </span>
-      ))}
+      {data.map((d, i) => {
+        const inner = (
+          <>
+            <span className="inline-block w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: colors[i % colors.length] }} />
+            {d.label}
+            {values?.[i] !== undefined && <span className="font-semibold text-ink-100 tabular">{values[i]}</span>}
+          </>
+        );
+        if (!onSelect) return <span key={i} className="flex items-center gap-1.5 text-2xs px-1.5 py-0.5 text-ink-300">{inner}</span>;
+        const isOn = pressed?.[i];
+        return (
+          <button key={i} type="button" onClick={() => onSelect(i)} aria-pressed={!!isOn}
+            title={isOn ? "Remover do filtro" : "Filtrar o painel por esta opção"}
+            className={`flex items-center gap-1.5 text-2xs px-1.5 py-0.5 rounded-md transition-colors hover:bg-ink-800 ${isOn ? "bg-brand-50 text-ink-50 ring-1 ring-brand-500/40" : pressed ? "text-ink-500" : "text-ink-300"}`}>
+            {inner}
+          </button>
+        );
+      })}
     </div>
   );
 }

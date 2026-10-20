@@ -21,15 +21,25 @@ const STARFIELD = "https://unpkg.com/three-globe/example/img/night-sky.png";
 // vista — para assim que o usuário interage (arrasta/dá zoom) e não volta
 // sozinho, pra não brigar com quem tá tentando olhar um ponto específico.
 function useAutoRotate(globeRef: RefObject<GlobeMethods | undefined>, ready: boolean) {
+  const [rotating, setRotating] = useState(true);
   useEffect(() => {
     if (!ready || !globeRef.current) return;
     const controls = globeRef.current.controls();
-    controls.autoRotate = true;
+    controls.autoRotate = rotating;
     controls.autoRotateSpeed = 0.6;
-    const stop = () => { controls.autoRotate = false; };
+    const stop = () => { controls.autoRotate = false; setRotating(false); };
     controls.addEventListener("start", stop);
     return () => controls.removeEventListener("start", stop);
-  }, [ready, globeRef]);
+  }, [ready, globeRef, rotating]);
+  return { rotating, toggleRotate: () => setRotating(r => !r) };
+}
+
+// Céu do globo: estrelas (padrão), transparente ("none" — aparece o fundo do
+// widget, ex.: um PNG da identidade) ou uma imagem própria.
+function skyProps(skyImage: string | undefined) {
+  if (skyImage === "none") return { backgroundColor: "rgba(0,0,0,0)", backgroundImageUrl: undefined, containerBg: "transparent" };
+  if (skyImage) return { backgroundColor: "#0b1220", backgroundImageUrl: skyImage, containerBg: "#0b1220" };
+  return { backgroundColor: "#0b1220", backgroundImageUrl: STARFIELD, containerBg: "#0b1220" };
 }
 
 // Zoom explícito (+/-/recentrar) — não depender só do gesto de scroll.
@@ -56,7 +66,11 @@ function useZoomControls(globeRef: RefObject<GlobeMethods | undefined>) {
 // Botões flutuantes no canto do globo — mesmo papel dos +/- do Leaflet
 // (sempre visíveis, nunca só o gesto). Fundo translúcido escuro porque o
 // globo tem céu estrelado atrás, diferente do mapa 2D claro.
-function ZoomControls({ onZoomIn, onZoomOut, onReset }: { onZoomIn: () => void; onZoomOut: () => void; onReset: () => void }) {
+function ZoomControls({ onZoomIn, onZoomOut, onReset, rotating, onToggleRotate, extruded, onToggleExtrude, extrudeLabel }: {
+  onZoomIn: () => void; onZoomOut: () => void; onReset: () => void;
+  rotating?: boolean; onToggleRotate?: () => void;
+  extruded?: boolean; onToggleExtrude?: () => void; extrudeLabel?: [string, string];
+}) {
   const btn = "w-7 h-7 flex items-center justify-center rounded-md text-sm transition-colors";
   const style = { background: "rgba(20,20,15,0.72)", color: "#f0e4cf", border: "1px solid rgba(232,216,190,0.25)" };
   return (
@@ -64,6 +78,16 @@ function ZoomControls({ onZoomIn, onZoomOut, onReset }: { onZoomIn: () => void; 
       <button onClick={onZoomIn} title="Aproximar" aria-label="Aproximar" className={btn} style={style}><i className="ti ti-zoom-in" /></button>
       <button onClick={onZoomOut} title="Afastar" aria-label="Afastar" className={btn} style={style}><i className="ti ti-zoom-out" /></button>
       <button onClick={onReset} title="Recentralizar no Brasil" aria-label="Recentralizar no Brasil" className={btn} style={style}><i className="ti ti-focus-centered" /></button>
+      {onToggleRotate && (
+        <button onClick={onToggleRotate} aria-pressed={!!rotating} title={rotating ? "Parar rotação" : "Girar o globo"} aria-label={rotating ? "Parar rotação" : "Girar o globo"} className={btn} style={style}>
+          <i className={`ti ${rotating ? "ti-player-pause" : "ti-rotate-360"}`} />
+        </button>
+      )}
+      {onToggleExtrude && (
+        <button onClick={onToggleExtrude} aria-pressed={!!extruded} title={extruded ? extrudeLabel?.[1] : extrudeLabel?.[0]} aria-label={extruded ? extrudeLabel?.[1] : extrudeLabel?.[0]} className={btn} style={style}>
+          <i className={`ti ${extruded ? "ti-square" : "ti-box"}`} />
+        </button>
+      )}
     </div>
   );
 }
@@ -89,9 +113,12 @@ function useContainerSize() {
 interface GlobePointsProps {
   data: MapResult;
   palette?: ColorPalette;
+  skyImage?: string;
+  /** Colunas 3D de densidade (hexágonos) em vez de pontos — só sem categorias. */
+  extrude?: boolean;
 }
 
-export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
+export function GlobePointsWidget({ data, palette, skyImage, extrude = true }: GlobePointsProps) {
   const colors = (palette ?? COLOR_PALETTES.terracota).chartColors;
   const { ref, size } = useContainerSize();
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
@@ -101,7 +128,14 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
   useEffect(() => {
     globeRef.current?.pointOfView(BRAZIL_VIEW, 0);
   }, []);
-  useAutoRotate(globeRef, size.width > 0);
+  const { rotating, toggleRotate } = useAutoRotate(globeRef, size.width > 0);
+  // Colunas de densidade fazem sentido quando não há categoria (todas as
+  // respostas são a mesma "coisa"); com categorias, os pontos coloridos dizem mais.
+  const [columns, setColumns] = useState(extrude && !hasCategories);
+  useEffect(() => { setColumns(extrude && !hasCategories); }, [extrude, hasCategories]);
+  const sky = skyProps(skyImage);
+  const accentRgb = (palette ?? COLOR_PALETTES.terracota).accent;
+  const maxHex = Math.max(1, data.points.length / 8);
 
   function colorFor(categoryValue: string | undefined) {
     if (!categoryValue || !data.categories) return colors[0];
@@ -111,7 +145,7 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
 
   return (
     <div className="w-full h-full flex flex-col gap-1.5">
-      <div ref={ref} className="relative flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: "#0b1220" }}>
+      <div ref={ref} className="relative flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: sky.containerBg }}>
         {size.width > 0 && (
           <Globe
             ref={globeRef}
@@ -119,11 +153,22 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
             height={size.height}
             globeImageUrl={EARTH_TEXTURE}
             bumpImageUrl={EARTH_BUMP}
-            backgroundImageUrl={STARFIELD}
+            backgroundImageUrl={sky.backgroundImageUrl}
+            backgroundColor={sky.backgroundColor}
             showAtmosphere
-            atmosphereColor="#8fb37a"
+            atmosphereColor={`rgb(${accentRgb})`}
             atmosphereAltitude={0.18}
-            pointsData={data.points}
+            hexBinPointsData={columns ? data.points : []}
+            hexBinPointLat="lat"
+            hexBinPointLng="lng"
+            hexBinResolution={4}
+            hexMargin={0.15}
+            hexAltitude={(d: object) => Math.min(0.5, 0.02 + ((d as { sumWeight: number }).sumWeight / maxHex) * 0.12)}
+            hexTopColor={() => `rgba(${accentRgb}, 0.95)`}
+            hexSideColor={() => `rgba(${accentRgb}, 0.55)`}
+            hexLabel={(d: object) => `<b>${(d as { sumWeight: number }).sumWeight}</b> resposta${(d as { sumWeight: number }).sumWeight === 1 ? "" : "s"} nesta área`}
+            hexTransitionDuration={600}
+            pointsData={columns ? [] : data.points}
             pointLat="lat"
             pointLng="lng"
             pointAltitude={0.02}
@@ -132,7 +177,11 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
             pointLabel={(p: object) => (p as MapResult["points"][number]).label}
           />
         )}
-        {size.width > 0 && <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} />}
+        {size.width > 0 && (
+          <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} rotating={rotating} onToggleRotate={toggleRotate}
+            extruded={columns} onToggleExtrude={hasCategories ? undefined : () => setColumns(c => !c)}
+            extrudeLabel={["Mostrar colunas 3D de densidade", "Mostrar pontos"]} />
+        )}
       </div>
       {hasCategories && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center px-1 flex-shrink-0">
@@ -152,9 +201,12 @@ interface GlobeHeatmapProps {
   data: HeatmapResult;
   palette?: ColorPalette;
   displayMode?: "count" | "percent";
+  skyImage?: string;
+  /** Estados "levantados" do globo em altura proporcional ao valor (leitura 3D). */
+  extrude?: boolean;
 }
 
-export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapProps) {
+export function GlobeHeatmapWidget({ data, palette, displayMode, skyImage, extrude = true }: GlobeHeatmapProps) {
   const ACCENT = (palette ?? COLOR_PALETTES.terracota).accent;
   const { ref, size } = useContainerSize();
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
@@ -171,7 +223,10 @@ export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapP
   useEffect(() => {
     globeRef.current?.pointOfView(BRAZIL_VIEW, 0);
   }, [estados]);
-  useAutoRotate(globeRef, size.width > 0 && !!estados);
+  const { rotating, toggleRotate } = useAutoRotate(globeRef, size.width > 0 && !!estados);
+  const [raised, setRaised] = useState(extrude);
+  useEffect(() => { setRaised(extrude); }, [extrude]);
+  const sky = skyProps(skyImage);
 
   useEffect(() => {
     if (!data.indicators.some(i => i.key === indicatorKey)) setIndicatorKey(data.indicators[0]?.key);
@@ -200,6 +255,17 @@ export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapP
     return `rgba(${ACCENT}, ${intensity.toFixed(2)})`;
   }
 
+  // Altura proporcional ao valor: o Brasil vira um "relevo de dados" — dá
+  // pra comparar estados pela altura além da cor.
+  function altitudeFor(feature: object) {
+    if (!raised) return 0.01;
+    const codarea = (feature as Feature).properties?.codarea as string | undefined;
+    const sigla = codarea ? CODAREA_TO_SIGLA[codarea] : undefined;
+    const stateData = sigla ? byState[sigla] : undefined;
+    if (!stateData || max === 0) return 0.006;
+    return 0.012 + (stateData.value / max) * 0.14;
+  }
+
   function labelFor(feature: object) {
     const codarea = (feature as Feature).properties?.codarea as string | undefined;
     const sigla = codarea ? CODAREA_TO_SIGLA[codarea] : undefined;
@@ -216,7 +282,7 @@ export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapP
           {data.indicators.map(ind => <option key={ind.key} value={ind.key}>{ind.label}</option>)}
         </select>
       )}
-      <div ref={ref} className="relative flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: "#0b1220" }}>
+      <div ref={ref} className="relative flex-1 min-h-0 rounded-md overflow-hidden" style={{ background: sky.containerBg }}>
         {size.width > 0 && estados && (
           <Globe
             ref={globeRef}
@@ -224,19 +290,24 @@ export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapP
             height={size.height}
             globeImageUrl={EARTH_TEXTURE}
             bumpImageUrl={EARTH_BUMP}
-            backgroundImageUrl={STARFIELD}
+            backgroundImageUrl={sky.backgroundImageUrl}
+            backgroundColor={sky.backgroundColor}
             showAtmosphere
-            atmosphereColor="#8fb37a"
+            atmosphereColor={`rgb(${ACCENT})`}
             atmosphereAltitude={0.18}
             polygonsData={estados.features}
             polygonCapColor={capColor}
-            polygonSideColor={() => "rgba(48, 46, 34, 0.25)"}
+            polygonSideColor={() => raised ? `rgba(${ACCENT}, 0.45)` : "rgba(48, 46, 34, 0.25)"}
             polygonStrokeColor={() => "#f5f3ec"}
-            polygonAltitude={0.01}
+            polygonAltitude={altitudeFor}
+            polygonsTransitionDuration={700}
             polygonLabel={labelFor}
           />
         )}
-        {size.width > 0 && estados && <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} />}
+        {size.width > 0 && estados && (
+          <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} rotating={rotating} onToggleRotate={toggleRotate}
+            extruded={raised} onToggleExtrude={() => setRaised(r => !r)} extrudeLabel={["Levantar estados em 3D pelo valor", "Ver globo plano"]} />
+        )}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
         <span className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>0{isPercentLike ? "%" : ""}</span>

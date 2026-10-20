@@ -57,7 +57,7 @@ export async function PATCH(
   const parsed = updateDashboardSchema.safeParse(body);
   if (!parsed.success) return apiError(parsed.error.issues[0].message, 422);
 
-  const { canvasColor, ...rest } = parsed.data;
+  const { canvasColor, brand, ...rest } = parsed.data;
   const changes: typeof rest & { publicSlug?: string; layout?: unknown } = { ...rest };
 
   // canvasColor mora dentro do jsonb `layout` (sem coluna nova) — mescla com
@@ -70,6 +70,19 @@ export async function PATCH(
       changes.layout = restLayout;
     } else {
       changes.layout = { ...currentLayout, canvasColor };
+    }
+  }
+
+  // Identidade visual também mora no `layout` — substitui a chave inteira
+  // (o editor sempre manda o objeto completo), preservando as demais.
+  if (brand !== undefined) {
+    const currentLayout = (changes.layout ?? dashboard.layout ?? {}) as Record<string, unknown>;
+    if (brand === null) {
+      const { brand: _removed, ...restLayout } = currentLayout;
+      void _removed;
+      changes.layout = restLayout;
+    } else {
+      changes.layout = { ...currentLayout, brand };
     }
   }
 

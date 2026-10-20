@@ -1,10 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, LabelList } from "recharts";
 import { COLOR_PALETTES, resolveChartKind, type ColorPalette, type DisplayMode, type SupportedWidgetType, type TimeSeriesResult, type WidgetData } from "@/lib/dashboard/types";
 import { ChartLegend, EmptyState, formatNumber, mixHex, TOOLTIP_STYLE, toPercent } from "@/components/dashboard/widgets/chart-common";
 import { useEffect, useRef, useState } from "react";
+import { brandChartPalette, type DashboardBrand } from "@/lib/dashboard/brand";
+import { crosstabStats, describeStats } from "@/lib/dashboard/stats";
 import {
   AreaChartView, HistogramView, RadarChartView, ScatterView, StackedBarView, TreemapView,
 } from "@/components/dashboard/widgets/extra-charts";
@@ -27,6 +29,38 @@ interface WidgetRendererProps {
   data:    WidgetData;
   config:  Record<string, unknown>;
   palette?: string; // chave de COLOR_PALETTES — nível do dashboard, não do widget
+  /** Identidade visual do painel (cores próprias, estilo dos gráficos e títulos). */
+  brand?: DashboardBrand | null;
+  /** Filtro por clique: chamado com o id da opção clicada (barras, pizza, legenda). */
+  onSelectCategory?: (optionId: string) => void;
+  /** Opções atualmente filtradas — as demais ficam esmaecidas. */
+  activeOptionIds?: string[];
+}
+
+/** Estilo dos gráficos vindo da identidade (com valor por widget quando houver). */
+export interface ChartStyle {
+  gridlines: boolean;
+  dataLabels: boolean;
+  barRadius: number;
+}
+
+function resolveChartStyle(brand: DashboardBrand | null | undefined, config: Record<string, unknown>): ChartStyle {
+  const c = brand?.chart ?? {};
+  return {
+    gridlines: c.gridlines ?? true,
+    // Por widget vence a identidade: config.showValues true/false.
+    dataLabels: typeof config.showValues === "boolean" ? config.showValues : (c.dataLabels ?? false),
+    barRadius: typeof c.barRadius === "number" ? c.barRadius : 4,
+  };
+}
+
+/** Agrupa as opções além das N mais frequentes em "Outras" (config.topN). */
+function applyTopN<T extends { optionId: string; label: string; count: number }>(buckets: T[], topN: unknown): T[] {
+  const n = typeof topN === "number" && topN >= 2 ? Math.floor(topN) : 0;
+  if (!n || buckets.length <= n) return buckets;
+  const sorted = [...buckets].sort((a, b) => b.count - a.count);
+  const rest = sorted.slice(n);
+  return [...sorted.slice(0, n), { ...rest[0], optionId: "__outras", label: `Outras (${rest.length})`, count: rest.reduce((a, b) => a + b.count, 0) }];
 }
 
 // Tema efetivo do bloco onde o widget está (o painel público pode ter tema
@@ -53,37 +87,55 @@ function forDark(p: ColorPalette): ColorPalette {
   return { ...p, chartColors: p.chartColors.map(lift), accent: acc };
 }
 
-export function WidgetRenderer({ type, title, data, config, palette }: WidgetRendererProps) {
+export function WidgetRenderer({ type, title, data, config, palette, brand, onSelectCategory, activeOptionIds }: WidgetRendererProps) {
   const [rootRef, isDark] = useIsDarkHere<HTMLDivElement>();
   // Aparência genérica (fundo/borda) — qualquer tipo de widget aceita.
   // Decorativos (divisória/bloco de cor) não têm padding: a cor precisa
   // preencher a caixa inteira, não uma caixa branca com um retângulo dentro.
-  const appearance = (config.style ?? {}) as { backgroundColor?: string; borderRadius?: number };
+  const appearance = (config.style ?? {}) as { backgroundColor?: string; borderRadius?: number; backgroundImage?: string; backgroundOpacity?: number; backgroundFit?: "cover" | "contain" | "repeat" };
+  const bgImage = typeof appearance.backgroundImage === "string" && appearance.backgroundImage ? appearance.backgroundImage : undefined;
   const variant = config.variant as string | undefined;
   const isDecorative = type === "text" && (variant === "divider" || variant === "block" || variant === "icon");
   // Tonalidade por widget (config.colorPalette, hoje configurável nos mapas)
   // vence a paleta do dashboard; sem ela, herda o comportamento de sempre.
   const widgetPalette = typeof config.colorPalette === "string" ? COLOR_PALETTES[config.colorPalette] : undefined;
-  const basePalette = widgetPalette ?? COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota;
+  const basePalette = widgetPalette ?? brandChartPalette(brand, COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota);
   const resolvedPalette = isDark ? forDark(basePalette) : basePalette;
 
   return (
-    <div ref={rootRef} className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-4 overflow-hidden"}
+    <div ref={rootRef} className={`relative isolate w-full h-full flex flex-col overflow-hidden ${isDecorative ? "" : type === "text" ? "px-4 py-2 justify-center" : "p-4"}`}
       style={{
         backgroundColor: appearance.backgroundColor,
         borderRadius: appearance.borderRadius,
       }}>
+      {/* Fundo em imagem (PNG/JPG/WebP) atrás do gráfico ou mapa. Num mapa,
+          escolha "Sem mapa-base" para a imagem aparecer no lugar dos tiles. */}
+      {bgImage && (
+        <div aria-hidden="true" className="absolute inset-0 -z-10 pointer-events-none" style={{
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: appearance.backgroundFit === "repeat" ? "auto" : appearance.backgroundFit ?? "cover",
+          backgroundRepeat: appearance.backgroundFit === "repeat" ? "repeat" : "no-repeat",
+          backgroundPosition: "center",
+          opacity: typeof appearance.backgroundOpacity === "number" ? appearance.backgroundOpacity : 0.35,
+          borderRadius: appearance.borderRadius,
+        }} />
+      )}
       {title && !isDecorative && (
-        <p className="text-sm font-semibold leading-snug mb-2.5 flex-shrink-0 text-ink-50 line-clamp-2" title={title}>{title}</p>
+        <p className={
+          brand?.widgetTitle === "kicker" ? "text-2xs font-semibold uppercase tracking-[0.12em] leading-snug mb-2.5 flex-shrink-0 text-gold line-clamp-2"
+          : brand?.widgetTitle === "serif" ? "font-serif text-base font-semibold leading-snug mb-2.5 flex-shrink-0 text-ink-50 line-clamp-2"
+          : "text-sm font-semibold leading-snug mb-2.5 flex-shrink-0 text-ink-50 line-clamp-2"
+        } title={title}>{title}</p>
       )}
       <div className="flex-1 min-h-0" style={{ containerType: "inline-size" }}>
-        <WidgetBody type={type} data={data} config={config} palette={resolvedPalette} />
+        <WidgetBody type={type} data={data} config={config} palette={resolvedPalette}
+          chartStyle={resolveChartStyle(brand, config)} onSelectCategory={onSelectCategory} activeOptionIds={activeOptionIds} />
       </div>
     </div>
   );
 }
 
-function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "title" | "palette"> & { palette: ColorPalette }) {
+function WidgetBody({ type, data, config, palette, chartStyle, onSelectCategory, activeOptionIds }: Omit<WidgetRendererProps, "title" | "palette" | "brand"> & { palette: ColorPalette; chartStyle: ChartStyle }) {
   // Widget ainda não ligado a uma pergunta (ex.: recém-criado por um modelo
   // de painel) — diz o que falta, em vez de parecer falta de respostas.
   const REQUIRED_FIELD: Partial<Record<SupportedWidgetType, string>> = {
@@ -100,12 +152,12 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
   if (type === "globe") {
     if (data.kind === "map") {
       if (data.points.length === 0) return <EmptyState />;
-      return <GlobePointsWidget data={data} palette={palette} />;
+      return <GlobePointsWidget data={data} palette={palette} skyImage={config.globeSky as string | undefined} extrude={config.globeColumns !== false} />;
     }
     if (data.kind === "heatmap") {
       const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
       if (!hasAnyData) return <EmptyState />;
-      return <GlobeHeatmapWidget data={data} palette={palette} displayMode={config.displayMode === "percent" ? "percent" : "count"} />;
+      return <GlobeHeatmapWidget data={data} palette={palette} displayMode={config.displayMode === "percent" ? "percent" : "count"} skyImage={config.globeSky as string | undefined} extrude={config.globeExtrude !== false} />;
     }
     return <EmptyState />;
   }
@@ -205,16 +257,18 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
   if (data.kind === "choice") {
     if (data.buckets.length === 0) return <EmptyState />;
     const displayMode: DisplayMode = config.displayMode === "percent" ? "percent" : "count";
+    const buckets = applyTopN(data.buckets, config.topN);
+    const interaction = { onSelect: onSelectCategory, active: activeOptionIds };
     if (type === "bar_chart") {
       const orientation = config.orientation === "horizontal" ? "horizontal" : "vertical";
-      return <BarChartView data={data.buckets} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} orientation={orientation} />;
+      return <BarChartView data={buckets} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} orientation={orientation} chartStyle={chartStyle} {...interaction} />;
     }
-    return <PieChartView data={data.buckets} donut={type === "donut_chart"} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} />;
+    return <PieChartView data={buckets} donut={type === "donut_chart"} colors={palette.chartColors} displayMode={displayMode} totalResponses={data.totalResponses} chartStyle={chartStyle} {...interaction} />;
   }
 
   if (data.kind === "timeseries") {
     if (data.points.length === 0) return <EmptyState />;
-    return <LineChartView data={data} colors={palette.chartColors} />;
+    return <LineChartView data={data} colors={palette.chartColors} chartStyle={chartStyle} />;
   }
 
   if (data.kind === "table") {
@@ -230,7 +284,7 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
     const textStyle = (config.textStyle ?? {}) as { fontSize?: number; fontWeight?: "normal" | "bold"; fontFamily?: "sans" | "serif"; color?: string; align?: "left" | "center" | "right" };
     return (
       <p className="whitespace-pre-wrap h-full" style={{
-        color: textStyle.color ?? "#111",
+        color: textStyle.color ?? "rgb(var(--color-ink-50))",
         fontSize: textStyle.fontSize ? `${textStyle.fontSize}px` : "14px",
         fontWeight: textStyle.fontWeight ?? "normal",
         fontFamily: textStyle.fontFamily === "serif" ? "var(--font-serif), Georgia, serif" : "var(--font-sans), Inter, sans-serif",
@@ -255,7 +309,8 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
   if (data.kind === "heatmap") {
     const hasAnyData = data.indicators.length > 0 && Object.keys(data.byIndicator[data.indicators[0].key] ?? {}).length > 0;
     if (!hasAnyData) return <EmptyState />;
-    return <HeatmapWidget data={data} palette={palette} basemap={config.basemap as string | undefined} displayMode={config.displayMode === "percent" ? "percent" : "count"} />;
+    return <HeatmapWidget data={data} palette={palette} basemap={config.basemap as string | undefined} displayMode={config.displayMode === "percent" ? "percent" : "count"}
+      classMethod={config.classMethod === "quantile" ? "quantile" : "equal"} symbol={config.symbol === "bubbles" ? "bubbles" : "fill"} showLabels={config.showLabels === true} />;
   }
 
   if (data.kind === "crosstab") {
@@ -264,9 +319,9 @@ function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "
     // resultado de cruzamento e desenha barras agrupadas (categoria A no
     // eixo, uma barra por opção da categoria B, cor fixa por opção).
     if (type === "bar_chart") {
-      return <GroupedBarView data={data} colors={palette.chartColors} displayMode={config.displayMode === "percent" ? "percent" : "count"} />;
+      return <GroupedBarView data={data} colors={palette.chartColors} displayMode={config.displayMode === "percent" ? "percent" : "count"} chartStyle={chartStyle} />;
     }
-    return <CrosstabView data={data} valueMode={(config.valueMode as string) ?? "count"} palette={palette} />;
+    return <CrosstabView data={data} valueMode={(config.valueMode as string) ?? "count"} palette={palette} showStats={config.showStats !== false} />;
   }
 
   return null;
@@ -307,46 +362,66 @@ interface ChoiceViewProps {
   colors: string[];
   displayMode: DisplayMode;
   totalResponses: number;
+  chartStyle: ChartStyle;
+  onSelect?: (optionId: string) => void;
+  active?: string[];
 }
 
-function BarChartView({ data, colors, displayMode, totalResponses, orientation }: ChoiceViewProps & { orientation?: "vertical" | "horizontal" }) {
+// Com filtro por clique ativo, as opções fora do recorte ficam esmaecidas.
+function dimmed(active: string[] | undefined, optionId: string): boolean {
+  return !!active && active.length > 0 && !active.includes(optionId);
+}
+const selectable = (onSelect: ((id: string) => void) | undefined, optionId: string) =>
+  !!onSelect && optionId !== "__outras";
+
+function BarChartView({ data, colors, displayMode, totalResponses, orientation, chartStyle, onSelect, active }: ChoiceViewProps & { orientation?: "vertical" | "horizontal" }) {
   const percent = displayMode === "percent";
   const chartData = percent ? data.map(d => ({ ...d, count: toPercent(d.count, totalResponses) })) : data;
   const fmt = (v: number) => percent ? `${formatNumber(v, 1)}%` : formatNumber(v);
   const horizontal = orientation === "horizontal";
+  const r = chartStyle.barRadius;
+  const handleClick = (entry: unknown) => {
+    const id = (entry as { optionId?: string; payload?: { optionId?: string } })?.optionId ?? (entry as { payload?: { optionId?: string } })?.payload?.optionId;
+    if (id && selectable(onSelect, id)) onSelect!(id);
+  };
+  const labelStyle = { fontSize: 11, fontWeight: 600, fill: "rgb(var(--color-ink-100))" };
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           {horizontal ? (
-            <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-              <CartesianGrid horizontal={false} stroke="rgb(var(--color-ink-800))" />
+            <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: chartStyle.dataLabels ? 58 : 16, left: 8, bottom: 4 }}>
+              {chartStyle.gridlines && <CartesianGrid horizontal={false} stroke="rgb(var(--color-ink-800))" />}
               <XAxis type="number" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
               <YAxis type="category" dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-300))" }} axisLine={false} tickLine={false} width={112} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
-              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+              <Bar dataKey="count" radius={[0, r, r, 0]} onClick={handleClick} style={{ cursor: onSelect ? "pointer" : undefined }}>
+                {chartData.map((d, i) => <Cell key={i} fill={colors[i % colors.length]} fillOpacity={dimmed(active, d.optionId) ? 0.25 : 1} />)}
+                {chartStyle.dataLabels && <LabelList dataKey="count" position="right" formatter={(v: unknown) => fmt(Number(v))} style={labelStyle} />}
               </Bar>
             </BarChart>
           ) : (
-            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+            <BarChart data={chartData} margin={{ top: chartStyle.dataLabels ? 18 : 4, right: 8, left: 0, bottom: 4 }}>
+              {chartStyle.gridlines && <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />}
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+              <Bar dataKey="count" radius={[r, r, 0, 0]} onClick={handleClick} style={{ cursor: onSelect ? "pointer" : undefined }}>
+                {chartData.map((d, i) => <Cell key={i} fill={colors[i % colors.length]} fillOpacity={dimmed(active, d.optionId) ? 0.25 : 1} />)}
+                {chartStyle.dataLabels && <LabelList dataKey="count" position="top" formatter={(v: unknown) => fmt(Number(v))} style={labelStyle} />}
               </Bar>
             </BarChart>
           )}
         </ResponsiveContainer>
       </div>
-      <ChartLegend data={data} colors={colors} values={data.map(d => percent ? `${formatNumber(toPercent(d.count, totalResponses), 0)}%` : formatNumber(d.count))} />
+      <ChartLegend data={data} colors={colors} values={data.map(d => percent ? `${formatNumber(toPercent(d.count, totalResponses), 0)}%` : formatNumber(d.count))}
+        onSelect={onSelect ? (i => selectable(onSelect, data[i].optionId) && onSelect(data[i].optionId)) : undefined}
+        pressed={active && active.length > 0 ? data.map(d => active.includes(d.optionId)) : undefined} />
     </div>
   );
 }
 
-function PieChartView({ data, donut, colors, displayMode, totalResponses }: ChoiceViewProps & { donut: boolean }) {
+function PieChartView({ data, donut, colors, displayMode, totalResponses, chartStyle, onSelect, active }: ChoiceViewProps & { donut: boolean }) {
   const percent = displayMode === "percent";
   const fmt = (v: number) => percent ? `${formatNumber(toPercent(v, totalResponses), 1)}%` : formatNumber(v);
   return (
@@ -356,14 +431,22 @@ function PieChartView({ data, donut, colors, displayMode, totalResponses }: Choi
       <div className="flex-1 min-h-0" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart accessibilityLayer={false}>
-            <Pie rootTabIndex={-1} data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}>
-              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} stroke="rgb(var(--color-ink-900))" strokeWidth={1.5} />)}
+            <Pie rootTabIndex={-1} data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}
+              onClick={(entry: unknown) => { const id = (entry as { optionId?: string })?.optionId; if (id && selectable(onSelect, id)) onSelect!(id); }}
+              style={{ cursor: onSelect ? "pointer" : undefined }}
+              label={chartStyle.dataLabels ? ((p: { x?: number; y?: number; value?: number; textAnchor?: string }) => (
+                <text x={p.x} y={p.y} textAnchor={p.textAnchor as "start" | "middle" | "end" | undefined} dominantBaseline="central" fontSize={11} fontWeight={600} fill="rgb(var(--color-ink-100))">{fmt(Number(p.value ?? 0))}</text>
+              )) : undefined}
+              labelLine={chartStyle.dataLabels ? { stroke: "rgb(var(--color-ink-500))" } : false}>
+              {data.map((d, i) => <Cell key={i} fill={colors[i % colors.length]} fillOpacity={dimmed(active, d.optionId) ? 0.25 : 1} stroke="rgb(var(--color-ink-900))" strokeWidth={1.5} />)}
             </Pie>
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <ChartLegend data={data} colors={colors} values={data.map(d => fmt(d.count))} />
+      <ChartLegend data={data} colors={colors} values={data.map(d => fmt(d.count))}
+        onSelect={onSelect ? (i => selectable(onSelect, data[i].optionId) && onSelect(data[i].optionId)) : undefined}
+        pressed={active && active.length > 0 ? data.map(d => active.includes(d.optionId)) : undefined} />
     </div>
   );
 }
@@ -375,15 +458,15 @@ function formatBucketDate(dateKey: string, interval: "day" | "week" | "month"): 
   return interval === "month" ? `${m}/${y.slice(2)}` : `${d}/${m}`;
 }
 
-function LineChartView({ data, colors }: { data: TimeSeriesResult; colors: string[] }) {
+function LineChartView({ data, colors, chartStyle }: { data: TimeSeriesResult; colors: string[]; chartStyle: ChartStyle }) {
   const chartData = data.points.map(p => ({ date: formatBucketDate(p.date, data.interval), ...p.values }));
   const multi = data.series.length >= 2;
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 6, right: 12, left: 0, bottom: 4 }}>
-            <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+          <LineChart data={chartData} margin={{ top: chartStyle.dataLabels ? 18 : 6, right: 12, left: 0, bottom: 4 }}>
+            {chartStyle.gridlines && <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />}
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} minTickGap={18} />
             <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} width={34} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [formatNumber(Number(v)), String(name)]} />
@@ -391,7 +474,11 @@ function LineChartView({ data, colors }: { data: TimeSeriesResult; colors: strin
               <Line key={s.key} type="monotone" dataKey={s.key} name={s.label}
                 stroke={colors[i % colors.length]} strokeWidth={2}
                 dot={chartData.length <= 40 ? { r: 2.5, strokeWidth: 0, fill: colors[i % colors.length] } : false}
-                activeDot={{ r: 4 }} isAnimationActive={false} />
+                activeDot={{ r: 4 }} isAnimationActive={false}>
+                {chartStyle.dataLabels && !multi && chartData.length <= 24 && (
+                  <LabelList dataKey={s.key} position="top" style={{ fontSize: 10, fontWeight: 600, fill: "rgb(var(--color-ink-300))" }} />
+                )}
+              </Line>
             ))}
           </LineChart>
         </ResponsiveContainer>
@@ -405,7 +492,7 @@ function LineChartView({ data, colors }: { data: TimeSeriesResult; colors: strin
 // opção da categoria B (fixa, ordem das opções, nunca por valor); a legenda
 // nomeia as barras de cada grupo. "percent" = % dentro de cada grupo da
 // categoria A (as barras de um grupo somam 100%).
-function GroupedBarView({ data, colors, displayMode }: { data: Extract<WidgetData, { kind: "crosstab" }>; colors: string[]; displayMode: DisplayMode }) {
+function GroupedBarView({ data, colors, displayMode, chartStyle }: { data: Extract<WidgetData, { kind: "crosstab" }>; colors: string[]; displayMode: DisplayMode; chartStyle: ChartStyle }) {
   const percent = displayMode === "percent";
   const chartData = data.rows.map((r, ri) => {
     const entry: Record<string, string | number> = { label: r.label };
@@ -420,13 +507,15 @@ function GroupedBarView({ data, colors, displayMode }: { data: Extract<WidgetDat
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barGap={2}>
-            <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+          <BarChart data={chartData} margin={{ top: chartStyle.dataLabels ? 18 : 4, right: 8, left: 0, bottom: 4 }} barGap={2}>
+            {chartStyle.gridlines && <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />}
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
             <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
             {data.cols.map((c, i) => (
-              <Bar key={c.id} dataKey={c.id} name={c.label} fill={colors[i % colors.length]} radius={[4, 4, 0, 0]} maxBarSize={36} />
+              <Bar key={c.id} dataKey={c.id} name={c.label} fill={colors[i % colors.length]} radius={[chartStyle.barRadius, chartStyle.barRadius, 0, 0]} maxBarSize={36}>
+                {chartStyle.dataLabels && <LabelList dataKey={c.id} position="top" formatter={(v: unknown) => fmt(Number(v))} style={{ fontSize: 10, fontWeight: 600, fill: "rgb(var(--color-ink-300))" }} />}
+              </Bar>
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -436,8 +525,14 @@ function GroupedBarView({ data, colors, displayMode }: { data: Extract<WidgetDat
   );
 }
 
-function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, { kind: "crosstab" }>; valueMode: string; palette: ColorPalette }) {
+// Cruzamento — tabela de contingência com calor nas células. Quatro leituras:
+// contagem, % da linha, % da coluna e "acima/abaixo do esperado" (resíduo
+// padronizado ajustado: verde-azulado = mais que o esperado se não houvesse
+// relação, terracota = menos). Embaixo, o teste qui-quadrado em linguagem simples.
+function CrosstabView({ data, valueMode, palette, showStats }: { data: Extract<WidgetData, { kind: "crosstab" }>; valueMode: string; palette: ColorPalette; showStats: boolean }) {
   const accent = palette.accent;
+  const stats = crosstabStats(data.cells);
+  const residualMode = valueMode === "residual" && !!stats;
   function cellValue(ri: number, ci: number): number {
     const raw = data.cells[ri][ci];
     if (valueMode === "row_percent") return data.rowTotals[ri] > 0 ? (raw / data.rowTotals[ri]) * 100 : 0;
@@ -446,17 +541,24 @@ function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, 
   }
   const maxCount = Math.max(1, ...data.cells.flat());
   function intensity(ri: number, ci: number): number {
-    if (valueMode === "count") return data.cells[ri][ci] / maxCount;
+    if (valueMode === "count" || valueMode === "residual") return data.cells[ri][ci] / maxCount;
     return cellValue(ri, ci) / 100;
   }
   function formatCell(v: number): string {
-    return valueMode === "count" ? formatNumber(v) : `${formatNumber(v, 1)}%`;
+    return valueMode === "count" || valueMode === "residual" ? formatNumber(v) : `${formatNumber(v, 1)}%`;
+  }
+  // Resíduo → cor divergente (mesmo par seguro para daltonismo dos gráficos divergentes).
+  function residualBg(ri: number, ci: number): string {
+    const r = stats!.residuals[ri][ci];
+    const t = Math.min(1, Math.abs(r) / 4);
+    if (Math.abs(r) < 1.96) return `rgba(181, 170, 148, ${(0.06 + t * 0.15).toFixed(2)})`;
+    return r > 0 ? `rgba(42, 118, 128, ${(0.2 + t * 0.55).toFixed(2)})` : `rgba(168, 86, 48, ${(0.2 + t * 0.55).toFixed(2)})`;
   }
   const legendMax = valueMode === "count" ? maxCount : 100;
 
   return (
-    <div className="h-full flex flex-col gap-3">
-    <div className="min-h-0 overflow-auto">
+    <div className="h-full flex flex-col gap-2.5">
+    <div className="min-h-0 overflow-auto rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" tabIndex={0} role="region" aria-label="Tabela cruzada">
       <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -471,11 +573,17 @@ function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, 
           {data.rows.map((r, ri) => (
             <tr key={r.id}>
               <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "rgb(var(--color-ink-100))", background: "rgb(var(--color-ink-900))", borderRight: "1px solid rgb(var(--color-ink-700))" }}>{r.label}</td>
-              {data.cols.map((c, ci) => (
-                <td key={c.id} className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "rgb(var(--color-ink-50))", background: `rgba(${accent}, ${(0.08 + intensity(ri, ci) * 0.55).toFixed(2)})` }}>
-                  {formatCell(cellValue(ri, ci))}
-                </td>
-              ))}
+              {data.cols.map((c, ci) => {
+                const res = stats?.residuals[ri][ci] ?? 0;
+                return (
+                  <td key={c.id} className="px-2 py-1 text-center whitespace-nowrap tabular"
+                    title={stats ? `${r.label} × ${c.label}: ${formatNumber(data.cells[ri][ci])} respostas · ${res > 1.96 ? "acima" : res < -1.96 ? "abaixo" : "dentro"} do esperado (resíduo ${formatNumber(res, 1)})` : undefined}
+                    style={{ color: "rgb(var(--color-ink-50))", background: residualMode ? residualBg(ri, ci) : `rgba(${accent}, ${(0.08 + intensity(ri, ci) * 0.55).toFixed(2)})` }}>
+                    {formatCell(cellValue(ri, ci))}
+                    {residualMode && Math.abs(res) >= 1.96 && <span className="ml-0.5 text-[0.85em]" aria-label={res > 0 ? "acima do esperado" : "abaixo do esperado"}>{res > 0 ? "▲" : "▼"}</span>}
+                  </td>
+                );
+              })}
               <td className="px-2 py-1 text-center font-semibold whitespace-nowrap" style={{ color: "rgb(var(--color-ink-500))" }}>{formatNumber(data.rowTotals[ri])}</td>
             </tr>
           ))}
@@ -489,11 +597,29 @@ function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, 
         </tbody>
       </table>
     </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0 px-1 max-w-xs">
-        <span className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>0</span>
-        <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${accent},0.08), rgba(${accent},0.63))` }} />
-        <span className="text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{valueMode === "count" ? formatNumber(legendMax) : `${formatNumber(legendMax, 0)}%`}</span>
-      </div>
+      {residualMode ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-shrink-0 px-1 text-2xs text-ink-500">
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-2.5 rounded-[2px]" style={{ background: "rgba(42,118,128,0.6)" }} />▲ acima do esperado</span>
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-2.5 rounded-[2px]" style={{ background: "rgba(168,86,48,0.6)" }} />▼ abaixo do esperado</span>
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-2.5 rounded-[2px]" style={{ background: "rgba(181,170,148,0.2)" }} />dentro do esperado</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 flex-shrink-0 px-1 max-w-xs">
+          <span className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>0</span>
+          <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${accent},0.08), rgba(${accent},0.63))` }} />
+          <span className="text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{valueMode === "count" ? formatNumber(legendMax) : `${formatNumber(legendMax, 0)}%`}</span>
+        </div>
+      )}
+      {showStats && stats && (
+        <p className="flex-shrink-0 flex gap-1.5 items-start rounded-md px-2 py-1.5 text-2xs leading-relaxed"
+          style={{ background: stats.significant ? "rgb(var(--color-teal-50))" : "rgb(var(--color-ink-800))", color: "rgb(var(--color-ink-100))" }}>
+          <i className={`ti ${stats.significant ? "ti-chart-arrows-vertical" : "ti-equal"} text-sm flex-shrink-0`} aria-hidden="true" style={{ color: stats.significant ? "rgb(var(--color-teal-500))" : "rgb(var(--color-ink-500))" }} />
+          <span>
+            {describeStats(stats)}
+            {stats.lowExpected && <span className="text-ink-500"> Atenção: poucas respostas em várias combinações — leia com cautela.</span>}
+          </span>
+        </p>
+      )}
     </div>
   );
 }

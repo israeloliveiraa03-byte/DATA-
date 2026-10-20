@@ -231,6 +231,11 @@ export interface TableConfig {
 export interface WidgetAppearance {
   backgroundColor?: string;
   borderRadius?: number;
+  // Imagem de fundo do widget (PNG com transparência, JPG, WebP) — vale
+  // para gráficos e mapas. Fica atrás do conteúdo, com opacidade própria.
+  backgroundImage?: string;
+  backgroundOpacity?: number; // 0–1, padrão 0.35
+  backgroundFit?: "cover" | "contain" | "repeat";
 }
 
 // "text" também cobre os elementos decorativos (sem fonte de dado, igual
@@ -282,13 +287,14 @@ export const DECORATIVE_ICON_OPTIONS: { name: string; label: string }[] = [
 // rótulo, usados no inspetor do builder); as URLs de tile ficam em
 // map-common.tsx, junto do resto do código Leaflet (que nunca entra em SSR).
 // Todos os provedores são XYZ gratuitos, sem chave de API.
-export type BasemapKey = "light" | "dark" | "satellite" | "topo";
+export type BasemapKey = "light" | "dark" | "satellite" | "topo" | "none";
 
 export const BASEMAP_OPTIONS: { key: BasemapKey; label: string }[] = [
   { key: "light",     label: "Claro (padrão)" },
   { key: "dark",      label: "Escuro" },
   { key: "satellite", label: "Satélite" },
   { key: "topo",      label: "Relevo (topográfico)" },
+  { key: "none",      label: "Sem mapa-base (mostra o fundo do widget)" },
 ];
 
 // Mapa de pontos — um marcador por resposta que tenha respondido um campo
