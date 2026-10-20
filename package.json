@@ -16,6 +16,7 @@
     "@auth/drizzle-adapter": "^1.4.2",
     "@hookform/resolvers": "^3.9.0",
     "@neondatabase/serverless": "^0.10.0",
+    "@tabler/icons-webfont": "^3.49.0",
     "@turf/turf": "^7.3.5",
     "@types/ws": "^8.5.13",
     "@uploadthing/react": "^7.1.0",

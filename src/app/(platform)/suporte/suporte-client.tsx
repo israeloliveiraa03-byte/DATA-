@@ -48,14 +48,14 @@ export function SuporteClient({ tickets }: { tickets: Ticket[] }) {
     <div className="min-h-full bg-ink-950">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold font-condensed text-ink-100">Suporte</h1>
+          <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">Suporte</h1>
           <p className="text-sm font-medium mt-0.5 text-ink-300">
             Abra um chamado e acompanhe a resposta da equipe por aqui mesmo.
           </p>
         </div>
 
         <div className="rounded-lg p-4 mb-6 border border-ink-700 bg-ink-900">
-          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Novo chamado</p>
+          <p className="kicker mb-3">Novo chamado</p>
           <label htmlFor="suporte-assunto" className="text-xs font-semibold mb-1 block text-ink-100">Assunto</label>
           <input id="suporte-assunto" value={subject} onChange={e => setSubject(e.target.value)}
             placeholder="Ex.: dúvida sobre coleta offline"
@@ -71,7 +71,7 @@ export function SuporteClient({ tickets }: { tickets: Ticket[] }) {
           </button>
         </div>
 
-        <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Seus chamados</p>
+        <p className="kicker mb-3">Seus chamados</p>
         {list.length === 0 && (
           <div className="text-center py-10 rounded-lg border-2 border-dashed border-ink-700 bg-ink-900">
             <i className="ti ti-message-circle text-3xl block mb-2 text-ink-500" aria-hidden="true" />

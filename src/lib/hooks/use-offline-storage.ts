@@ -20,16 +20,25 @@ async function getDB(): Promise<IDBPDatabase> {
   });
 }
 
+// IndexedDB não aceita booleano como chave: IDBKeyRange.only(false) lança
+// "parameter is not a valid key" e o índice "synced" nunca contém nenhum
+// registro. Por isso a contagem e a sincronização liam sempre zero/erro e as
+// respostas guardadas offline no site não subiam sozinhas. A fila é pequena
+// (dezenas de itens por aparelho), então ler tudo e filtrar em JS é seguro.
+async function getPending(db: IDBPDatabase): Promise<OfflineResponse[]> {
+  const all = (await db.getAll(STORE_NAME)) as OfflineResponse[];
+  return all.filter(e => !e.synced);
+}
+
 export function useOfflineStorage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing,   setIsSyncing]    = useState(false);
 
   const refreshCount = useCallback(async () => {
     try {
-      const db    = await getDB();
-      const index = db.transaction(STORE_NAME).store.index("synced");
-      const count = await index.count(IDBKeyRange.only(false));
-      setPendingCount(count);
+      const db = await getDB();
+      const pending = await getPending(db);
+      setPendingCount(pending.filter(e => !e.error).length);
     } catch { /* SSR */ }
   }, []);
 
@@ -50,11 +59,11 @@ export function useOfflineStorage() {
     setIsSyncing(true);
     try {
       const db = await getDB();
-      // Leitura e escrita cada uma na sua própria transação curta (db.getAllFromIndex/db.put)
+      // Leitura e escrita cada uma na sua própria transação curta (db.getAll/db.put)
       // em vez de uma transação só segurada por todo o loop — uma transação de IndexedDB
       // fecha sozinha assim que um await "de verdade" (rede) demora, e o fetch aqui dentro
       // é exatamente isso.
-      const pending = await db.getAllFromIndex(STORE_NAME, "synced", IDBKeyRange.only(false));
+      const pending = await getPending(db);
       for (const entry of pending) {
         if (entry.error) continue; // erro permanente já classificado — não repete sozinho
         try {

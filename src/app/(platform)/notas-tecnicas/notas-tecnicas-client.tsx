@@ -57,8 +57,8 @@ export function NotasTecnicasClient({ notes: initialNotes, isLoggedIn }: Props) 
     <div className="flex-1 overflow-auto bg-ink-950">
       <div className="p-6 max-w-5xl mx-auto">
         <div className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-1">Rede</p>
-          <h1 className="text-2xl font-bold font-condensed text-ink-100">Notas técnicas</h1>
+          <p className="kicker mb-1">Rede</p>
+          <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">Notas técnicas</h1>
           <p className="text-sm text-ink-300 mt-0.5">
             Orientações metodológicas compartilhadas por pesquisadores — {notes.length} {notes.length === 1 ? "nota pública" : "notas públicas"}.
           </p>

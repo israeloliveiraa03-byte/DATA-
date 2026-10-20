@@ -29,8 +29,8 @@ export function EntidadesClient({ entities }: { entities: Entity[] }) {
       <div className="p-6 max-w-5xl mx-auto">
         <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-1">Catálogo Global</p>
-            <h1 className="text-2xl font-bold font-condensed text-ink-100">Entidades</h1>
+            <p className="kicker mb-1">Catálogo Global</p>
+            <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">Entidades</h1>
             <p className="text-sm text-ink-300 mt-0.5">
               {entities.length} {entities.length === 1 ? "entidade cadastrada" : "entidades cadastradas"}
             </p>

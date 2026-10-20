@@ -40,7 +40,7 @@ export default function GeoMapField({ mode, value, onChange }: {
   const [drawKind, setDrawKind] = useState<"point" | "area">(
     mode === "area" || answer?.kind === "area" ? "area" : "point"
   );
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
 
   function handleClick(p: LatLng) {
     const point = { lat: +p.lat.toFixed(6), lng: +p.lng.toFixed(6) };
@@ -66,9 +66,9 @@ export default function GeoMapField({ mode, value, onChange }: {
               onClick={() => { setDrawKind(b.k); onChange(null); }}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
               style={{
-                border: drawKind === b.k ? "2px solid #c48a42" : BRD,
-                background: drawKind === b.k ? "#fbf3e7" : "#fff",
-                color: drawKind === b.k ? "#7a5218" : "#5c3f13",
+                border: drawKind === b.k ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                background: drawKind === b.k ? "rgb(var(--color-ink-950))" : "#fff",
+                color: drawKind === b.k ? "rgb(var(--color-amber-600))" : "rgb(var(--color-ink-100))",
               }}>
               <i className={`ti ${b.icon}`} /> {b.label}
             </button>
@@ -86,21 +86,21 @@ export default function GeoMapField({ mode, value, onChange }: {
           {answer?.kind === "point" && <Marker position={[answer.lat, answer.lng]} />}
           {areaPoints.length >= 3 && (
             <Polygon positions={areaPoints.map(p => [p.lat, p.lng] as [number, number])}
-              pathOptions={{ color: "#c48a42", fillColor: "#c48a42", fillOpacity: 0.2 }} />
+              pathOptions={{ color: "rgb(var(--color-brand-500))", fillColor: "rgb(var(--color-brand-500))", fillOpacity: 0.2 }} />
           )}
           {areaPoints.length > 0 && areaPoints.length < 3 && (
             <Polyline positions={areaPoints.map(p => [p.lat, p.lng] as [number, number])}
-              pathOptions={{ color: "#c48a42" }} />
+              pathOptions={{ color: "rgb(var(--color-brand-500))" }} />
           )}
           {areaPoints.map((p, i) => (
             <CircleMarker key={i} center={[p.lat, p.lng]} radius={5}
-              pathOptions={{ color: "#7a5218", fillColor: "#c48a42", fillOpacity: 1 }} />
+              pathOptions={{ color: "rgb(var(--color-amber-600))", fillColor: "rgb(var(--color-brand-500))", fillOpacity: 1 }} />
           ))}
         </MapContainer>
       </div>
 
       <div className="flex items-center justify-between mt-2">
-        <p className="text-xs" style={{ color: "#a06d28" }}>
+        <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
           {drawKind === "point"
             ? answer?.kind === "point"
               ? `Ponto marcado: ${answer.lat}, ${answer.lng}`
@@ -111,7 +111,7 @@ export default function GeoMapField({ mode, value, onChange }: {
         </p>
         {answer && (
           <button type="button" onClick={() => onChange(null)}
-            className="text-xs font-semibold" style={{ color: "#c0392b" }}>
+            className="text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>
             Limpar
           </button>
         )}

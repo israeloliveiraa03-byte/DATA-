@@ -20,8 +20,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-full bg-ink-950">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-1">Área interna Dataº</p>
-        <h1 className="text-xl font-bold font-condensed text-ink-100 mb-4">Administração</h1>
+        <p className="kicker mb-1">Área interna Dataº</p>
+        <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight mb-4">Administração</h1>
 
         <AdminNav items={NAV} />
 

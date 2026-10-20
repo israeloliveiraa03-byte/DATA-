@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
 import { DataLogo } from "@/components/layout/data-logo";
+import { cn } from "@/lib/utils";
 import type { FilterCondition, PublicFilterField, SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
 
 interface PublicWidget {
@@ -20,6 +21,9 @@ interface PublicDashboard {
   filterFields: PublicFilterField[];
 }
 
+const fieldCls =
+  "h-8 rounded-md border border-ink-700 bg-ink-900 px-2.5 text-xs text-ink-100 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20";
+
 function emptyPublicCondition(field: PublicFilterField): FilterCondition {
   if (field.kind === "choice") return { kind: "choice", fieldId: field.id, optionIds: [] };
   if (field.kind === "numeric") return { kind: "numeric", fieldId: field.id };
@@ -28,19 +32,13 @@ function emptyPublicCondition(field: PublicFilterField): FilterCondition {
 }
 
 // Uma condição de filtro — mesmo leque de campos filtráveis do editor
-// (escolha/numérico/geo/data), temado claro/escuro (a página é do
-// pesquisador, segue o tema que ele escolheu pro dashboard publicado).
-function PublicFilterConditionRow({
-  condition, field, cardBorder, inputBg, textPrimary, onChange, onRemove,
-}: {
+// (escolha/numérico/geo/data).
+function PublicFilterConditionRow({ condition, field, onChange, onRemove }: {
   condition: FilterCondition;
   field: PublicFilterField | undefined;
-  cardBorder: string; inputBg: string; textPrimary: string;
   onChange: (c: FilterCondition) => void;
   onRemove: () => void;
 }) {
-  const inputStyle = { border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary };
-  const small = "text-xs rounded px-2 py-1";
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {condition.kind === "choice" && (
@@ -48,10 +46,12 @@ function PublicFilterConditionRow({
           {(field?.options ?? []).map(o => {
             const checked = condition.optionIds.includes(o.id);
             return (
-              <button key={o.id} type="button"
+              <button key={o.id} type="button" aria-pressed={checked}
                 onClick={() => onChange({ ...condition, optionIds: checked ? condition.optionIds.filter(id => id !== o.id) : [...condition.optionIds, o.id] })}
-                className="text-xs rounded-full px-2 py-0.5 font-medium"
-                style={{ border: `1px solid ${cardBorder}`, background: checked ? "#c48a42" : inputBg, color: checked ? "#fff" : textPrimary }}>
+                className={cn(
+                  "h-7 rounded-full border px-2.5 text-xs font-medium transition-colors",
+                  checked ? "border-brand-500 bg-brand-500 text-on-accent" : "border-ink-700 bg-ink-900 text-ink-300 hover:border-ink-600",
+                )}>
                 {o.label}
               </button>
             );
@@ -60,48 +60,66 @@ function PublicFilterConditionRow({
       )}
       {condition.kind === "numeric" && (
         <>
-          <input type="number" placeholder="mín" className={`${small} w-20`} style={inputStyle}
+          <input type="number" placeholder="mín" aria-label="Mínimo" className={cn(fieldCls, "w-20")}
             value={condition.min ?? ""} onChange={e => onChange({ ...condition, min: e.target.value === "" ? undefined : Number(e.target.value) })} />
-          <span className="text-xs" style={{ color: textPrimary }}>a</span>
-          <input type="number" placeholder="máx" className={`${small} w-20`} style={inputStyle}
+          <span className="text-xs text-ink-500">a</span>
+          <input type="number" placeholder="máx" aria-label="Máximo" className={cn(fieldCls, "w-20")}
             value={condition.max ?? ""} onChange={e => onChange({ ...condition, max: e.target.value === "" ? undefined : Number(e.target.value) })} />
         </>
       )}
       {condition.kind === "geo" && (
-        <select className={small} style={inputStyle}
-          value={condition.value} onChange={e => onChange({ ...condition, value: e.target.value })}>
+        <select className={fieldCls} aria-label="Local" value={condition.value} onChange={e => onChange({ ...condition, value: e.target.value })}>
           <option value="">Selecione...</option>
           {(field?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
         </select>
       )}
       {condition.kind === "date" && (
         <>
-          <input type="date" className={small} style={inputStyle}
-            value={condition.from ?? ""} onChange={e => onChange({ ...condition, from: e.target.value || undefined })} />
-          <span className="text-xs" style={{ color: textPrimary }}>a</span>
-          <input type="date" className={small} style={inputStyle}
-            value={condition.to ?? ""} onChange={e => onChange({ ...condition, to: e.target.value || undefined })} />
+          <input type="date" aria-label="De" className={fieldCls} value={condition.from ?? ""} onChange={e => onChange({ ...condition, from: e.target.value || undefined })} />
+          <span className="text-xs text-ink-500">a</span>
+          <input type="date" aria-label="Até" className={fieldCls} value={condition.to ?? ""} onChange={e => onChange({ ...condition, to: e.target.value || undefined })} />
         </>
       )}
-      <button onClick={onRemove} style={{ color: "#c0392b" }} aria-label="Remover condição">
-        <i className="ti ti-x text-xs" />
+      <button onClick={onRemove} aria-label="Remover condição"
+        className="h-7 w-7 rounded-md flex items-center justify-center text-ink-500 hover:text-coral-500 hover:bg-coral-50">
+        <i className="ti ti-x text-sm" aria-hidden="true" />
       </button>
     </div>
   );
 }
 
+function useIsDesktop() {
+  const [desktop, setDesktop] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 900px)");
+    const update = () => setDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return desktop;
+}
+
+// Widgets "de página" (títulos, divisórias, blocos, ícones, imagens) não
+// ganham moldura de cartão — eles compõem o layout, não são indicadores.
+function isFramed(w: PublicWidget) {
+  if (w.type === "text" || w.type === "image") return false;
+  return true;
+}
+
 export function PublicDashboardClient({ slug }: { slug: string }) {
   const [dashboard, setDashboard] = useState<PublicDashboard | null>(null);
   const [error,     setError]     = useState("");
-  // Filtro geral — uma linha só, acima de todos os widgets, nunca por
-  // widget (ver anti-padrão "per-chart filters" evitado aqui de propósito).
-  // O servidor já recorta as respostas ANTES de agregar (rota pública nunca
-  // expõe resposta crua pro navegador de qualquer jeito). from/to = data de
-  // ENVIO; conditions = qualquer pergunta filtrável do formulário.
+  // Filtro geral — uma linha só, acima de todos os widgets. O servidor já
+  // recorta as respostas ANTES de agregar (rota pública nunca expõe
+  // resposta crua). from/to = data de ENVIO; conditions = perguntas.
   const [from, setFrom] = useState("");
   const [to,   setTo]   = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [refetching, setRefetching] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showTop, setShowTop] = useState(false);
+  const desktop = useIsDesktop();
 
   const conditionsKey = JSON.stringify(conditions);
 
@@ -119,10 +137,10 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
         const res = await fetch(`/api/public/dashboards/${slug}${qs ? `?${qs}` : ""}`);
         const json = await res.json();
         if (cancel) return;
-        if (!res.ok) { setError(json.error ?? "Dashboard não encontrado"); return; }
+        if (!res.ok) { setError(json.error ?? "Painel não encontrado"); return; }
         setDashboard(json.data);
       } catch {
-        if (!cancel) setError("Erro de conexão");
+        if (!cancel) setError("Não foi possível carregar o painel. Verifique sua conexão.");
       } finally {
         if (!cancel) setRefetching(false);
       }
@@ -131,42 +149,61 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, from, to, conditionsKey]);
 
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 600);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const stacked = useMemo(
+    () => [...(dashboard?.widgets ?? [])].sort((a, b) => (a.y - b.y) || (a.x - b.x)),
+    [dashboard?.widgets],
+  );
+
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#fbf3e7" }}>
-        <p className="text-sm" style={{ color: "#c0392b" }}>{error}</p>
+      <div data-theme="light" className="min-h-dvh flex items-center justify-center bg-ink-950 px-6">
+        <div className="text-center max-w-sm">
+          <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-coral-50 text-coral-500 flex items-center justify-center">
+            <i className="ti ti-map-off text-2xl" aria-hidden="true" />
+          </div>
+          <p className="font-serif text-xl font-semibold text-ink-50">Painel indisponível</p>
+          <p className="mt-1 text-sm text-ink-300">{error}</p>
+        </div>
       </div>
     );
   }
 
   if (!dashboard) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#fbf3e7" }}>
-        <p className="text-sm" style={{ color: "#a06d28" }}>Carregando...</p>
+      <div data-theme="light" className="min-h-dvh bg-ink-950">
+        <div className="h-9 bg-brand-700" />
+        <div className="max-w-page mx-auto px-4 sm:px-8 pt-12">
+          <div className="h-3 w-40 rounded bg-ink-700 animate-pulse" />
+          <div className="mt-4 h-10 w-2/3 rounded bg-ink-700 animate-pulse" />
+          <div className="mt-3 h-4 w-1/2 rounded bg-ink-800 animate-pulse" />
+          <div className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map(i => <div key={i} className="h-28 rounded-xl bg-ink-800 animate-pulse" />)}
+          </div>
+          <div className="mt-4 h-80 rounded-xl bg-ink-800 animate-pulse" />
+        </div>
+        <span className="sr-only" role="status">Carregando painel</span>
       </div>
     );
   }
 
   const dark = dashboard.theme === "dark";
-  const totalHeightPx = Math.max(300, dashboard.widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) + 32);
-
-  // A página é do pesquisador, não uma extensão do chrome do Dataº — o fundo
-  // e o tom seguem o que ele escolheu (imagem de capa + claro/escuro),
-  // nossa marca fica só no crédito discreto no canto.
-  const pageBg = dark ? "#14140f" : "#f5f0e6";
-  const textPrimary = dark ? "#e8e4d9" : "#1c1917";
-  const textMuted = dark ? "#9c9884" : "#6b6350";
-  const cardBg = dark ? "#1e1d17" : "#ffffff";
-  const cardBorder = dark ? "#302e22" : "#ddd3bb";
-  const inputBg = dark ? "#14140f" : "#fff";
-  const canvasBg = dashboard.canvasColor ?? cardBg;
+  const totalHeightPx = Math.max(300, dashboard.widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) + 16);
   const hasFilter = !!(from || to || conditions.length > 0);
+  const activeCount = (from ? 1 : 0) + (to ? 1 : 0) + conditions.length;
   const filterFields = dashboard.filterFields ?? [];
+  const indicatorCount = dashboard.widgets.filter(isFramed).length;
 
   function addCondition() {
     const firstField = filterFields[0];
     if (!firstField) return;
     setConditions(prev => [...prev, emptyPublicCondition(firstField)]);
+    setFiltersOpen(true);
   }
   function updateConditionField(index: number, fieldId: string) {
     const field = filterFields.find(f => f.id === fieldId);
@@ -180,110 +217,185 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
     setConditions(prev => prev.filter((_, i) => i !== index));
   }
 
+  const frame = (w: PublicWidget) => isFramed(w)
+    ? "rounded-xl border border-ink-700 bg-ink-900 shadow-xs overflow-hidden"
+    : "overflow-hidden";
+
   return (
-    <div className="min-h-screen relative" style={{ background: pageBg }}>
-      {dashboard.coverUrl && (
-        <>
-          <div className="absolute inset-x-0 top-0 h-72 bg-cover bg-center" style={{ backgroundImage: `url(${dashboard.coverUrl})` }} />
-          <div className="absolute inset-x-0 top-0 h-72" style={{ background: `linear-gradient(to bottom, transparent 40%, ${pageBg})` }} />
-        </>
+    <div data-theme={dark ? "dark" : "light"} className="min-h-dvh bg-ink-950 text-ink-100">
+      {/* Faixa institucional */}
+      <div className="bg-brand-700 text-white/85 text-xs">
+        <div className="max-w-page mx-auto px-4 sm:px-8 h-9 flex items-center justify-between gap-4">
+          <span className="truncate"><strong className="font-semibold text-white">Painel de pesquisa</strong> · {dashboard.researchTitle}</span>
+          <span className="hidden sm:inline-flex items-center gap-1.5 flex-shrink-0">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-white/60 animate-pulse-soft" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
+            Atualizado a cada nova resposta
+          </span>
+        </div>
+      </div>
+
+      {/* Cabeçalho editorial */}
+      <header className="relative overflow-hidden border-b border-ink-700 bg-ink-900">
+        {dashboard.coverUrl ? (
+          <>
+            <div className="absolute inset-0 bg-cover bg-center opacity-90" style={{ backgroundImage: `url(${dashboard.coverUrl})` }} />
+            <div className="absolute inset-0 bg-gradient-to-r from-ink-900 via-ink-900/90 to-ink-900/40" />
+          </>
+        ) : (
+          <svg className="motif-roots absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 1000 260" preserveAspectRatio="none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M940,260 C910,190 960,150 910,90 C880,50 910,10 860,-10" />
+            <path d="M940,260 C900,210 870,205 850,150 C835,115 790,110 780,60" />
+            <path d="M940,260 C960,200 930,170 960,120 C980,90 960,60 985,20" />
+            <path d="M850,150 C820,140 805,110 770,105" />
+            <path d="M910,90 C940,75 945,50 980,45" />
+            <path d="M720,260 C740,200 700,175 720,120 C735,85 710,55 730,10" />
+          </svg>
+        )}
+        <div className="relative max-w-page mx-auto px-4 sm:px-8 pt-10 sm:pt-14 pb-8 sm:pb-10">
+          <div className="border-l-4 border-gold pl-5 sm:pl-6 max-w-3xl">
+            <p className="kicker mb-3">{dashboard.researchTitle}</p>
+            <h1 className="font-serif text-4xl sm:text-5xl font-semibold leading-[1.05] text-ink-50">{dashboard.title}</h1>
+            {dashboard.description && <p className="mt-4 font-serif text-lg text-ink-300 leading-relaxed">{dashboard.description}</p>}
+          </div>
+          <div className="mt-7 pt-5 border-t border-ink-700 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink-500">
+            <span><strong className="font-semibold text-ink-100">Fonte:</strong> dados primários da pesquisa</span>
+            <span><strong className="font-semibold text-ink-100">Indicadores:</strong> {indicatorCount}</span>
+            <span><strong className="font-semibold text-ink-100">Atualização:</strong> contínua, a cada resposta recebida</span>
+          </div>
+        </div>
+      </header>
+
+      {dashboard.widgets.length > 0 && (
+        /* Filtro geral — fixo no topo ao rolar, igual à "faixa de recorte" do Raizame */
+        <div className="sticky top-0 z-30 border-b border-ink-700 bg-ink-950/90 backdrop-blur supports-[backdrop-filter]:bg-ink-950/75">
+          <div className="max-w-page mx-auto px-4 sm:px-8 py-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => setFiltersOpen(o => !o)} aria-expanded={filtersOpen}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-ink-700 bg-ink-900 px-3 text-xs font-semibold text-ink-100 hover:border-ink-600">
+                <i className="ti ti-adjustments-horizontal text-sm" aria-hidden="true" /> Filtros
+                {activeCount > 0 && <span className="rounded-full bg-brand-500 px-1.5 text-2xs text-on-accent tabular">{activeCount}</span>}
+              </button>
+              <label className="flex items-center gap-1.5 text-xs text-ink-500">
+                De <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={fieldCls} />
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-ink-500">
+                até <input type="date" value={to} onChange={e => setTo(e.target.value)} className={fieldCls} />
+              </label>
+              {hasFilter && (
+                <button onClick={() => { setFrom(""); setTo(""); setConditions([]); }}
+                  className="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold text-coral-500 hover:bg-coral-50">
+                  <i className="ti ti-filter-off text-sm" aria-hidden="true" /> Limpar
+                </button>
+              )}
+              <span className="ml-auto text-xs text-ink-500 flex items-center gap-1.5" aria-live="polite">
+                {refetching ? <><i className="ti ti-loader-2 animate-spin" aria-hidden="true" /> Recalculando…</> : hasFilter ? "Recorte aplicado a todo o painel" : "Mostrando todas as respostas"}
+              </span>
+            </div>
+
+            {filtersOpen && (
+              <div className="mt-2.5 rounded-lg border border-ink-700 bg-ink-900 p-3 space-y-2.5 animate-fade-in">
+                {conditions.length === 0 && <p className="text-xs text-ink-500">Combine condições sobre as perguntas do instrumento. O recorte vale para todos os gráficos e mapas.</p>}
+                {conditions.map((cond, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2 border-l-2 border-gold/60 pl-3">
+                    <select className={cn(fieldCls, "max-w-[16rem]")} aria-label="Pergunta" value={cond.fieldId} onChange={e => updateConditionField(i, e.target.value)}>
+                      {filterFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                    </select>
+                    <PublicFilterConditionRow condition={cond} field={filterFields.find(f => f.id === cond.fieldId)}
+                      onChange={c => updateCondition(i, c)} onRemove={() => removeCondition(i)} />
+                  </div>
+                ))}
+                {filterFields.length > 0 && (
+                  <button onClick={addCondition} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-400 hover:underline underline-offset-4">
+                    <i className="ti ti-plus text-sm" aria-hidden="true" /> Adicionar condição
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      <div className="relative max-w-[1400px] mx-auto px-6 pt-10 pb-20">
-        {/* Título com mais presença visual — a marca d'água do pesquisador
-            nesta página, não um rótulo pequeno entre outros elementos. */}
-        <p className="text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "#c48a42" }}>
-          <span className="inline-block w-6 h-px" style={{ background: "#c48a42" }} />
-          {dashboard.researchTitle}
-        </p>
-        <h1 className="text-4xl sm:text-5xl font-bold mb-2 leading-tight" style={{ color: textPrimary, fontFamily: "var(--font-serif), Georgia, serif" }}>
-          {dashboard.title}
-        </h1>
-        {dashboard.description && <p className="text-sm mb-6 max-w-2xl" style={{ color: textMuted }}>{dashboard.description}</p>}
-
+      <main className="max-w-page mx-auto px-4 sm:px-8 py-8 sm:py-10">
         {dashboard.showAds && (
-          <div className="rounded-lg p-3 mb-6 text-center text-xs" style={{ border: `1px dashed ${cardBorder}`, background: cardBg, color: textMuted }}>
-            Espaço publicitário — reservado pelo pesquisador para manter este dashboard gratuito
-          </div>
+          <aside aria-label="Publicidade" className="mb-8 rounded-lg border border-dashed border-ink-600 bg-ink-900/60 px-4 py-5 text-center">
+            <p className="text-2xs font-semibold uppercase tracking-[0.14em] text-ink-500">Publicidade</p>
+            <p className="mt-1 text-xs text-ink-500">Espaço que mantém este painel gratuito e público</p>
+          </aside>
         )}
 
         {dashboard.widgets.length === 0 ? (
-          <p className="text-sm py-16 text-center" style={{ color: textMuted }}>Este dashboard ainda não tem widgets.</p>
+          <div className="py-20 text-center">
+            <i className="ti ti-layout-dashboard text-3xl text-ink-600" aria-hidden="true" />
+            <p className="mt-3 font-serif text-lg text-ink-300">Este painel ainda não tem indicadores publicados.</p>
+          </div>
+        ) : desktop ? (
+          <div className="relative transition-opacity duration-200"
+            style={{
+              height: totalHeightPx,
+              opacity: refetching ? 0.55 : 1,
+              background: dashboard.canvasColor ?? undefined,
+              borderRadius: dashboard.canvasColor ? 16 : undefined,
+            }}>
+            {dashboard.widgets.map(w => (
+              <section key={w.id} aria-label={w.title ?? undefined} className={cn("absolute", frame(w))}
+                style={{ left: `calc(${w.x}% + 6px)`, top: w.y + 6, width: `calc(${w.w}% - 12px)`, height: w.h - 12 }}>
+                <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} />
+              </section>
+            ))}
+          </div>
         ) : (
-          <>
-            {/* Filtro geral — uma linha só, acima de tudo que ela afeta.
-                Convive com o seletor de indicador que já existe dentro do
-                mapa de calor (esse é específico de um widget só; este aqui
-                é o filtro padrão, o mesmo recorte pra todo mundo). */}
-            <div className="flex flex-col gap-2 mb-4 px-3 py-2 rounded-lg" style={{ border: `1px solid ${cardBorder}`, background: cardBg }}>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: textMuted }}>
-                  <i className="ti ti-filter" /> Filtrar
-                </span>
-                <label className="text-xs flex items-center gap-1.5" style={{ color: textPrimary }}>
-                  De
-                  <input type="date" value={from} onChange={e => setFrom(e.target.value)}
-                    className="text-xs rounded px-2 py-1"
-                    style={{ border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary }} />
-                </label>
-                <label className="text-xs flex items-center gap-1.5" style={{ color: textPrimary }}>
-                  Até
-                  <input type="date" value={to} onChange={e => setTo(e.target.value)}
-                    className="text-xs rounded px-2 py-1"
-                    style={{ border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary }} />
-                </label>
-                {hasFilter && (
-                  <button onClick={() => { setFrom(""); setTo(""); setConditions([]); }} className="text-xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "#c0392b" }}>
-                    <i className="ti ti-x" /> Limpar tudo
-                  </button>
-                )}
-                {refetching && <i className="ti ti-loader-2 animate-spin text-xs ml-auto flex-shrink-0" style={{ color: textMuted }} />}
-              </div>
-
-              {conditions.map((cond, i) => (
-                <div key={i} className="flex flex-wrap items-center gap-1.5 pl-1" style={{ borderLeft: `2px solid ${cardBorder}` }}>
-                  <select className="text-xs rounded px-2 py-1 flex-shrink-0" style={{ border: `1px solid ${cardBorder}`, background: inputBg, color: textPrimary }}
-                    value={cond.fieldId} onChange={e => updateConditionField(i, e.target.value)}>
-                    {filterFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                  </select>
-                  <PublicFilterConditionRow condition={cond} field={filterFields.find(f => f.id === cond.fieldId)}
-                    cardBorder={cardBorder} inputBg={inputBg} textPrimary={textPrimary}
-                    onChange={c => updateCondition(i, c)} onRemove={() => removeCondition(i)} />
-                </div>
-              ))}
-
-              {filterFields.length > 0 && (
-                <button onClick={addCondition} className="self-start flex items-center gap-1 text-xs font-semibold" style={{ color: textPrimary }}>
-                  <i className="ti ti-plus" /> Adicionar condição
-                </button>
-              )}
-            </div>
-
-            {/* Sem "esqueleto" de recarregamento: enquanto refiltra, o
-                dashboard anterior fica visível em opacidade reduzida — nunca
-                pisca ou salta de layout (mesma regra da skill de dataviz). */}
-            <div className="relative rounded-xl transition-opacity duration-200" style={{ height: totalHeightPx, background: canvasBg, border: `1px solid ${cardBorder}`, opacity: refetching ? 0.6 : 1 }}>
-              {dashboard.widgets.map(w => (
-                <div key={w.id} className="absolute rounded-lg"
-                  style={{
-                    left: `${w.x}%`, top: w.y,
-                    width: `${w.w}%`, height: w.h,
-                    border: `1px solid ${cardBorder}`,
-                  }}>
+          /* Celular/tablet: empilha na ordem de leitura (de cima pra baixo, da esquerda pra direita) */
+          <div className="grid grid-cols-2 gap-3 transition-opacity duration-200" style={{ opacity: refetching ? 0.55 : 1 }}>
+            {stacked.map(w => {
+              const isMap = w.type === "map" || w.type === "heatmap" || w.type === "globe";
+              const isNumber = w.type === "number_card";
+              const h = isNumber ? 132 : isMap ? Math.max(360, Math.min(w.h, 480)) : w.type === "text" ? undefined : Math.max(200, Math.min(w.h, 420));
+              return (
+                <section key={w.id} aria-label={w.title ?? undefined} className={cn(frame(w), isNumber ? "col-span-1" : "col-span-2")} style={{ height: h, minHeight: w.type === "text" ? 40 : undefined }}>
                   <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} />
-                </div>
-              ))}
-            </div>
-          </>
+                </section>
+              );
+            })}
+          </div>
         )}
-      </div>
+      </main>
 
-      {/* Crédito discreto — a página é do pesquisador, não chrome do Dataº */}
-      <a href="https://datazero.vercel.app" target="_blank" rel="noopener noreferrer"
-        className="fixed bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-2xs font-medium shadow-sm transition-opacity hover:opacity-100"
-        style={{ background: dark ? "rgba(30,29,23,0.92)" : "rgba(255,255,255,0.92)", color: textMuted, border: `1px solid ${cardBorder}`, opacity: 0.85, backdropFilter: "blur(6px)" }}>
-        Powered by <DataLogo className="text-xs" animated={false} />
-      </a>
+      {/* Rodapé institucional */}
+      <footer className="mt-6 bg-brand-700 text-white/75">
+        <div className="max-w-page mx-auto px-4 sm:px-8 py-10 grid gap-8 sm:grid-cols-3 text-sm">
+          <div>
+            <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Sobre este painel</p>
+            <p className="leading-relaxed">Indicadores calculados a partir das respostas do instrumento da pesquisa <em>{dashboard.researchTitle}</em>. Os números mudam à medida que novas respostas chegam.</p>
+          </div>
+          <div>
+            <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Como ler</p>
+            <p className="leading-relaxed">Passe o cursor (ou toque) sobre gráficos e mapas para ver valores e bases. Use os filtros para recortar todo o painel ao mesmo tempo.</p>
+          </div>
+          <div>
+            <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Proteção de dados</p>
+            <p className="leading-relaxed">Este painel exibe apenas dados agregados. Respostas individuais não são publicadas (LGPD, Lei nº 13.709/2018).</p>
+          </div>
+        </div>
+        <div className="border-t border-white/15">
+          <div className="max-w-page mx-auto px-4 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-3 text-xs text-white/55">
+            <span>Painel publicado pela equipe da pesquisa.</span>
+            <a href="/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-white/80 hover:text-white">
+              Construído com <DataLogo className="text-sm text-white" animated={false} />
+            </a>
+          </div>
+        </div>
+      </footer>
+
+      <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Voltar ao topo"
+        className={cn(
+          "fixed right-4 bottom-4 z-40 h-11 w-11 rounded-full bg-brand-500 text-on-accent shadow-lg flex items-center justify-center transition-all duration-200",
+          showTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none",
+        )}>
+        <i className="ti ti-arrow-up text-lg" aria-hidden="true" />
+      </button>
     </div>
   );
 }

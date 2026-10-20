@@ -34,13 +34,13 @@ export function StackedBarView({ data, colors, displayMode }: { data: CrosstabRe
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-            <CartesianGrid vertical={false} stroke="#f3e4cb" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} domain={percent ? [0, 100] : undefined} />
+            <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
+            <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} domain={percent ? [0, 100] : undefined} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
             {data.cols.map((c, i) => (
               <Bar key={c.id} dataKey={c.id} name={c.label} stackId="stack" fill={colors[i % colors.length]}
-                stroke="#fff" strokeWidth={1.5} maxBarSize={48} isAnimationActive={false} />
+                stroke="rgb(var(--color-ink-900))" strokeWidth={1.5} maxBarSize={48} isAnimationActive={false} />
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -64,9 +64,9 @@ export function AreaChartView({ data, colors }: { data: TimeSeriesResult; colors
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 6, right: 12, left: 0, bottom: 4 }}>
-            <CartesianGrid vertical={false} stroke="#f3e4cb" />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#5c3f13" }} minTickGap={18} />
-            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} width={34} />
+            <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} minTickGap={18} />
+            <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} width={34} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [formatNumber(Number(v)), String(name)]} />
             {data.series.map((s, i) => (
               <Area key={s.key} type="monotone" dataKey={s.key} name={s.label}
@@ -93,16 +93,16 @@ export function HistogramView({ data, colors }: { data: HistogramResult; colors:
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data.bins} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barCategoryGap="4%">
-            <CartesianGrid vertical={false} stroke="#f3e4cb" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={longLabels ? "preserveStartEnd" : 0}
+            <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} interval={longLabels ? "preserveStartEnd" : 0}
               angle={longLabels ? -25 : 0} textAnchor={longLabels ? "end" : "middle"} height={longLabels ? 46 : 24} />
-            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} width={34} />
+            <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} width={34} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [formatNumber(Number(v)), "Respostas"]} />
             <Bar dataKey="count" fill={colors[0]} radius={[3, 3, 0, 0]} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-2xs text-center flex-shrink-0" style={{ color: "#a06d28" }}>{formatNumber(data.total)} respostas</p>
+      <p className="text-2xs text-center flex-shrink-0" style={{ color: "rgb(var(--color-ink-500))" }}>{formatNumber(data.total)} respostas</p>
     </div>
   );
 }
@@ -114,19 +114,19 @@ export function ScatterView({ data, colors, bubble }: { data: ScatterResult; col
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 12, left: 0, bottom: 16 }}>
-            <CartesianGrid stroke="#f3e4cb" />
-            <XAxis type="number" dataKey="x" name={data.xLabel} tick={{ fontSize: 10, fill: "#5c3f13" }}
-              label={{ value: data.xLabel, position: "insideBottom", offset: -10, fontSize: 10, fill: "#a06d28" }} />
-            <YAxis type="number" dataKey="y" name={data.yLabel} tick={{ fontSize: 10, fill: "#5c3f13" }} width={40}
-              label={{ value: data.yLabel, angle: -90, position: "insideLeft", fontSize: 10, fill: "#a06d28" }} />
+            <CartesianGrid stroke="rgb(var(--color-ink-800))" />
+            <XAxis type="number" dataKey="x" name={data.xLabel} tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false}
+              label={{ value: data.xLabel, position: "insideBottom", offset: -10, fontSize: 10, fill: "rgb(var(--color-ink-500))" }} />
+            <YAxis type="number" dataKey="y" name={data.yLabel} tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} width={40}
+              label={{ value: data.yLabel, angle: -90, position: "insideLeft", fontSize: 10, fill: "rgb(var(--color-ink-500))" }} />
             {bubble && <ZAxis type="number" dataKey="z" name={data.zLabel ?? ""} range={[40, 400]} />}
-            <Tooltip {...TOOLTIP_STYLE} cursor={{ strokeDasharray: "3 3", stroke: "#d2a05c" }}
+            <Tooltip {...TOOLTIP_STYLE} cursor={{ strokeDasharray: "3 3", stroke: "rgb(var(--color-gold))" }}
               formatter={(v, name) => [formatNumber(Number(v), 2), String(name)]} />
-            <Scatter data={data.points} fill={colors[0]} fillOpacity={0.75} stroke="#fff" strokeWidth={1} isAnimationActive={false} />
+            <Scatter data={data.points} fill={colors[0]} fillOpacity={0.75} stroke="rgb(var(--color-ink-900))" strokeWidth={1} isAnimationActive={false} />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-2xs text-center flex-shrink-0" style={{ color: "#a06d28" }}>
+      <p className="text-2xs text-center flex-shrink-0" style={{ color: "rgb(var(--color-ink-500))" }}>
         {formatNumber(data.points.length)} respostas{bubble && data.zLabel ? ` · tamanho: ${data.zLabel}` : ""}
       </p>
     </div>
@@ -149,7 +149,7 @@ function TreemapCell(props: TreemapCellProps) {
   return (
     <g>
       <rect x={x} y={y} width={width} height={height} rx={3}
-        fill={colors[index % colors.length]} stroke="#fff" strokeWidth={2} />
+        fill={colors[index % colors.length]} stroke="rgb(var(--color-ink-900))" strokeWidth={2} />
       {fits && (
         <>
           <text x={x + 6} y={y + 14} fontSize={10} fontWeight={600} fill="#fff">
@@ -196,9 +196,9 @@ export function RadarChartView({ data, colors }: { data: RadarResult; colors: st
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={chartData} margin={{ top: 8, right: 24, left: 24, bottom: 8 }}>
-            <PolarGrid stroke="#f3e4cb" />
-            <PolarAngleAxis dataKey="axis" tick={{ fontSize: 9, fill: "#5c3f13" }} />
-            <PolarRadiusAxis tick={{ fontSize: 8, fill: "#a06d28" }} stroke="#e8d8be" />
+            <PolarGrid stroke="rgb(var(--color-ink-800))" />
+            <PolarAngleAxis dataKey="axis" tick={{ fontSize: 9, fill: "rgb(var(--color-ink-100))" }} />
+            <PolarRadiusAxis tick={{ fontSize: 8, fill: "rgb(var(--color-ink-500))" }} stroke="rgb(var(--color-ink-700))" />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [formatNumber(Number(v), 2), String(name)]} />
             {data.series.map((s, i) => (
               <Radar key={s.key} dataKey={s.key} name={s.label}

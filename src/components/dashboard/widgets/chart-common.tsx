@@ -32,7 +32,12 @@ export function mixHex(a: string, b: string, t: number): string {
 }
 
 export function EmptyState() {
-  return <p className="text-xs italic" style={{ color: "#a06d28" }}>Sem dados suficientes ainda</p>;
+  return (
+    <div className="h-full w-full flex flex-col items-center justify-center gap-1.5 text-center px-4">
+      <i className="ti ti-chart-dots-3 text-xl text-ink-600" aria-hidden="true" />
+      <p className="text-xs text-ink-500">Aguardando respostas suficientes para este indicador</p>
+    </div>
+  );
 }
 
 // Legenda temática dos gráficos — chips arredondados com a marca de cor da
@@ -45,11 +50,10 @@ export function ChartLegend({ data, colors, values }: { data: { label: string }[
   return (
     <div className="flex flex-wrap gap-1 justify-center px-1 pt-1 flex-shrink-0">
       {data.map((d, i) => (
-        <span key={i} className="flex items-center gap-1 text-2xs rounded-full px-2 py-0.5"
-          style={{ color: "#5c3f13", border: "1px solid #e8d8be", background: "#fdfaf4" }}>
-          <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[i % colors.length] }} />
+        <span key={i} className="flex items-center gap-1.5 text-2xs px-1.5 py-0.5 text-ink-300">
+          <span className="inline-block w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: colors[i % colors.length] }} />
           {d.label}
-          {values?.[i] !== undefined && <span style={{ color: "#a06d28" }}>{values[i]}</span>}
+          {values?.[i] !== undefined && <span className="font-semibold text-ink-100 tabular">{values[i]}</span>}
         </span>
       ))}
     </div>
@@ -58,9 +62,10 @@ export function ChartLegend({ data, colors, values }: { data: { label: string }[
 
 // Tooltip padrão dos gráficos recharts — mesma moldura terracota do resto.
 export const TOOLTIP_STYLE = {
-  contentStyle: { border: "1px solid #e8d8be", borderRadius: 8, background: "#fff", fontSize: 11, padding: "6px 10px", boxShadow: "0 2px 6px rgba(22,23,26,0.08)" },
-  labelStyle: { color: "#5c3f13", fontWeight: 600 },
-  itemStyle: { color: "#111", padding: 0 },
+  contentStyle: { border: "none", borderRadius: 8, background: "rgb(var(--color-ink-50))", fontSize: 12, padding: "8px 12px", boxShadow: "0 8px 24px rgb(var(--shadow-color) / 0.22)" },
+  labelStyle: { color: "rgb(var(--color-ink-950))", fontWeight: 600, marginBottom: 2 },
+  itemStyle: { color: "rgb(var(--color-ink-950))", padding: 0 },
+  cursor: { fill: "rgb(var(--color-ink-500) / 0.08)" },
 } as const;
 
 // Mede o contêiner dos gráficos SVG próprios (boxplot/violino/divergente) —

@@ -40,7 +40,7 @@ Israel da Silva Oliveira — desenvolvedor e empreendedor por trás do Dataº. E
 
 ## Bugs ativos / bloqueadores conhecidos
 
-- Botão "Entrar com ORCID" no login (`(auth)/login/page.tsx`) chama `signIn("orcid", ...)`, mas `src/lib/auth/index.ts` só registra o provider do Google — o ORCID nunca foi configurado (precisa de client ID/secret do ORCID e decisão de Israel sobre isso). Clicar no botão hoje quebra. Descoberto em 2026-07-02 testando o Catálogo de Entidades, não é um bug introduzido agora.
+- ORCID: `src/lib/auth/index.ts` só registra o provider do Google. Desde out/2026 o botão "Continuar com ORCID" fica escondido enquanto `ORCID_CLIENT_ID`/`ORCID_CLIENT_SECRET` não existirem; para ativar de verdade ainda falta registrar o provider no NextAuth.
 - `DATABASE_URL` no `.env.local` roda em Postgres 18 (Neon), que cria constraints NOT NULL nomeadas (recurso do PG 17+). O `drizzle-kit` do projeto (`^0.27.0`) não reconhece isso e propõe (incorretamente) remover o NOT NULL de quase toda coluna do banco sempre que `npm run db:push` é rodado — **nunca aceitar esse lote de `DROP CONSTRAINT ..._not_null` do prompt do `db:push`**. Até resolver (upgrade de `drizzle-kit`/`drizzle-orm`, não testado ainda), aplicar mudanças de schema aditivas (tabelas/colunas novas) via SQL direto, só com os `CREATE TABLE`/`CREATE TYPE`/`ALTER TABLE ADD CONSTRAINT` relevantes.
 
 Testado ao vivo por Israel em 2026-06-30 na Pesquisa Gênesis (`pesquisa-genesis-mqy406bg`) — cascata geográfica e seleção de opções confirmadas funcionando.
@@ -233,7 +233,23 @@ Princípio: quem tem orçamento institucional paga o suficiente pra manter a pla
 - O maior risco é execução e gestão de escopo, não obsolescência conceitual. Validação focada do MVP antes de expandir escopo é crítico.
 - Blockchain entra depois do MVP — rastreabilidade via hash resolve a maior parte da necessidade de auditabilidade científica sem a complexidade do blockchain agora.
 
-## Identidade visual (redesenhada em 2026-07-01 — substitui o azul/slate de 2026-06-30)
+## Sistema visual "Confluência" (out/2026) — VIGENTE, substitui as seções de identidade abaixo
+
+Modernização completa da interface pedida por Israel: o produto passa a seguir o registro editorial-institucional dos painéis que ele construiu com a CONAQ (Raizame Dados, Escolas Quilombolas em Dados, Central de Confluência). As seções "Identidade visual" e "Observatório" abaixo ficam só como histórico.
+
+- **Tema padrão: claro** (papel creme). Escuro continua disponível em Preferências e no botão sol/lua do topo. Alto contraste mantido.
+- **Tokens**: todas as cores são variáveis RGB em `src/styles/globals.css`, ligadas no `tailwind.config.ts` (`ink-*`, `brand-*` = verde institucional `#3B5D42`, `gold` = dourado dos rótulos, `teal/amber/coral/purple`, `chart-1..6`). Os seletores são `[data-theme]` em **qualquer elemento** — por isso `/d/[slug]` e a landing fixam o próprio tema no bloco raiz.
+- **Tipografia**: Inter (corpo/interface), **Source Serif 4** (`font-serif`, títulos e números de destaque), IBM Plex Mono (identificadores). `font-condensed` virou alias de Inter. Atenção: no `tailwind.config.ts` o nome "Source Serif 4" precisa de aspas internas (`'"Source Serif 4"'`) — sem elas o CSS descarta a regra inteira.
+- **Ícones Tabler** servidos pelo pacote npm `@tabler/icons-webfont` (importado em `layout.tsx`), não mais por CDN `@latest`.
+- **Componentes de página** (`src/components/ui/page.tsx`): `PageContainer`, `PageHeader` (kicker + título serifado + ações), `SectionHeader`, `StatGrid` (grade com divisória de 1px do Raizame), `EmptyState`, `Callout`. Classes utilitárias em `globals.css`: `.kicker`, `.kicker-plain`, `.stat-grid`, `.link`, `.map-editorial` (filtro sépia nos tiles do Leaflet). `buttonClasses()` em `button.tsx` para estilizar `<Link>` como botão; `fieldClasses` em `input.tsx` para `<select>`/`<input>` soltos.
+- **Navegação**: `AppShell` (`src/components/layout/app-shell.tsx`) com barra lateral recolhível (desktop), gaveta (celular), topo com trilha, tema e menu do usuário. Estrutura de menu em `nav-config.ts`. Form-builder e dashboard-builder abrem em **modo foco** (sem a moldura, `isFocusRoute`). "Sistema visual" (`/design-system`) agora fica no grupo da equipe interna.
+- **Painel público `/d/[slug]`**: faixa institucional, cabeçalho editorial, filtro fixo no topo, widgets em cartões, empilhamento no celular (<900px), rodapé "Sobre / Como ler / Proteção de dados".
+- **Widgets**: cores trocadas por variáveis (funcionam nos dois temas); paleta padrão "Confluência" (chave `terracota` mantida por compatibilidade); nova paleta `barro`; mapa coroplético com 5 classes discretas, legenda por faixa, enquadramento travado no Brasil. **Corrigido**: indicador de contagem com máximo ≤ 100 aparecia com "%".
+- **Mapa dos estados** para ilustrações: `src/components/layout/brazil-states-paths.ts`, gerado da malha IBGE por `scripts/gerar-estados-svg.mjs`.
+- **Capa gerada** de pesquisa sem imagem: `ResearchCover` (curvas de nível com semente no id).
+- **Bugs corrigidos junto**: fila offline do site (`use-offline-storage.ts`) usava `IDBKeyRange.only(false)` — booleano não é chave válida no IndexedDB, então contagem e sincronização nunca funcionavam; botão ORCID no login agora só aparece com `ORCID_CLIENT_ID`/`ORCID_CLIENT_SECRET` definidos.
+
+## Identidade visual (redesenhada em 2026-07-01 — substitui o azul/slate de 2026-06-30) — HISTÓRICO
 
 A decisão de 2026-06-30 (azul `brand` + slate + Inter puro) durou menos de 24h: Israel trouxe um mockup HTML (`login-cartografico.html`) com uma direção cartográfica — paleta terracota/argila inspirada na malha do IBGE, com Fraunces serifada nos títulos — e pediu para adotar essa paleta em todo o projeto (não só na tela de login). Isso reverte a regra "sem serifada" e "não usar mais Georgia" da versão anterior.
 

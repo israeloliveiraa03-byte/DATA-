@@ -1,261 +1,262 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { DataLogo } from "@/components/layout/data-logo";
+import { buttonClasses } from "@/components/ui/button";
+import { PanelPreview } from "@/components/marketing/panel-preview";
 
 export const metadata: Metadata = {
-  title: "Dataº — Plataforma de pesquisa de campo",
-  description: "Plataforma brasileira de coleta, sistematização e visualização de dados para pesquisadores, governos e comunidades tradicionais.",
+  title: "Dataº — Do instrumento de coleta ao painel público",
+  description: "Infraestrutura brasileira de conhecimento para pesquisa e territórios: instrumentos de coleta, coleta offline, georreferenciamento IBGE e painéis públicos que se atualizam a cada resposta.",
 };
+
+const NAV = [
+  { href: "#ciclo", label: "Como funciona" },
+  { href: "#paineis", label: "Painéis" },
+  { href: "#rede", label: "Rede" },
+  { href: "#territorio", label: "Dataº Território" },
+];
+
+const CYCLE = [
+  {
+    n: "01", icon: "ti-forms", title: "Instrumento",
+    text: "Mais de 30 tipos de campo — escalas, matrizes, assinatura, GPS e cascata geográfica do IBGE — com lógica condicional e seções.",
+  },
+  {
+    n: "02", icon: "ti-device-mobile", title: "Coleta",
+    text: "Link público, equipe de campo com papéis e aplicativo que funciona sem internet e sincroniza ao reconectar.",
+  },
+  {
+    n: "03", icon: "ti-git-merge", title: "Sistematização",
+    text: "Cruzamentos entre perguntas, indicadores por território e vínculo de cada resposta a entidades com identificador persistente.",
+  },
+  {
+    n: "04", icon: "ti-world", title: "Publicação",
+    text: "Painéis públicos com mapas coropléticos, gráficos e filtros — atualizados a cada nova resposta, sem republicar.",
+  },
+];
+
+const PANEL_TYPES = [
+  { icon: "ti-clipboard-data", title: "Coleta primária", text: "O instrumento aplicado no Dataº gera o painel automaticamente: cada resposta recalcula indicadores e mapas.", status: "Disponível" },
+  { icon: "ti-article", title: "Narrativo", text: "Visualizações intercaladas com texto editorial — um relatório vivo, com títulos, notas de leitura e imagens.", status: "Disponível" },
+  { icon: "ti-arrows-cross", title: "Cruzamentos", text: "Compare grupos dentro da pesquisa: categoria × categoria, barras agrupadas, distribuições e divergências.", status: "Disponível" },
+  { icon: "ti-table-import", title: "Dados importados", text: "Bases externas (INEP, IBGE, Fundação Palmares) em CSV ou XLSX transformadas em painel, com fonte e data citadas.", status: "Em desenvolvimento" },
+];
+
+const AUDIENCES = [
+  { icon: "ti-building-bank", label: "Universidades e grupos de pesquisa" },
+  { icon: "ti-users-group", label: "Movimentos sociais e redes" },
+  { icon: "ti-building-community", label: "Prefeituras e secretarias" },
+  { icon: "ti-plant-2", label: "Comunidades tradicionais" },
+];
 
 export default function LandingPage() {
   return (
-    <div style={{ fontFamily: "sans-serif", background: "#fbf3e7" }}>
-
-      {/* ── HERO ── */}
-      <section style={{ position: "relative", overflow: "hidden", background: "#fbf3e7", padding: "36px 48px 0", minHeight: "500px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-
-        {/* SVG de fundo */}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} viewBox="0 0 900 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <defs>
-            <pattern id="hg" width="38" height="38" patternUnits="userSpaceOnUse">
-              <path d="M 38 0 L 0 0 0 38" fill="none" stroke="#e8d8be" strokeWidth="0.5"/>
-            </pattern>
-            <linearGradient id="hf" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="45%" stopColor="#fbf3e7" stopOpacity="0"/>
-              <stop offset="100%" stopColor="#fbf3e7" stopOpacity="1"/>
-            </linearGradient>
-            <linearGradient id="hfb" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="55%" stopColor="#fbf3e7" stopOpacity="0"/>
-              <stop offset="100%" stopColor="#fbf3e7" stopOpacity="1"/>
-            </linearGradient>
-          </defs>
-          <rect width="900" height="500" fill="url(#hg)"/>
-          {/* Linhas saindo do º */}
-          <line x1="156" y1="48" x2="490" y2="82" stroke="#1a56db" strokeWidth="1.5" strokeDasharray="8 5" opacity="0.6"/>
-          <line x1="156" y1="48" x2="360" y2="175" stroke="#c48a42" strokeWidth="1.5" strokeDasharray="8 5" opacity="0.6"/>
-          <line x1="156" y1="48" x2="620" y2="195" stroke="#3a5430" strokeWidth="1.5" strokeDasharray="8 5" opacity="0.55"/>
-          <line x1="156" y1="48" x2="520" y2="310" stroke="#4c6b3c" strokeWidth="1.3" strokeDasharray="7 5" opacity="0.5"/>
-          <line x1="156" y1="48" x2="740" y2="130" stroke="#534ab7" strokeWidth="1.2" strokeDasharray="6 5" opacity="0.45"/>
-          {/* Rede */}
-          <line x1="490" y1="82" x2="360" y2="175" stroke="#c48a42" strokeWidth="1" strokeDasharray="5 4" opacity="0.3"/>
-          <line x1="490" y1="82" x2="620" y2="195" stroke="#1a56db" strokeWidth="1" strokeDasharray="5 4" opacity="0.28"/>
-          <line x1="360" y1="175" x2="520" y2="310" stroke="#4c6b3c" strokeWidth="1" strokeDasharray="5 4" opacity="0.32"/>
-          <line x1="620" y1="195" x2="520" y2="310" stroke="#3a5430" strokeWidth="1" strokeDasharray="5 4" opacity="0.28"/>
-          <line x1="740" y1="130" x2="620" y2="195" stroke="#534ab7" strokeWidth="0.8" strokeDasharray="4 4" opacity="0.28"/>
-          {/* Pontos — anéis */}
-          <circle cx="490" cy="82" r="12" fill="none" stroke="#1a56db" strokeWidth="2.5"/>
-          <circle cx="490" cy="82" r="5" fill="#1a56db"/>
-          <circle cx="360" cy="175" r="12" fill="none" stroke="#c48a42" strokeWidth="2.5"/>
-          <circle cx="360" cy="175" r="5" fill="#c48a42"/>
-          <circle cx="620" cy="195" r="12" fill="none" stroke="#3a5430" strokeWidth="2.5"/>
-          <circle cx="620" cy="195" r="5" fill="#3a5430"/>
-          <circle cx="520" cy="310" r="11" fill="none" stroke="#4c6b3c" strokeWidth="2.5"/>
-          <circle cx="520" cy="310" r="4.5" fill="#4c6b3c"/>
-          <circle cx="740" cy="130" r="12" fill="none" stroke="#534ab7" strokeWidth="2.5"/>
-          <circle cx="740" cy="130" r="5" fill="#534ab7"/>
-          <circle cx="680" cy="320" r="8" fill="none" stroke="#a06d28" strokeWidth="1.8" opacity="0.6"/>
-          <circle cx="680" cy="320" r="3" fill="#a06d28" opacity="0.5"/>
-          <rect width="900" height="500" fill="url(#hf)"/>
-          <rect width="900" height="500" fill="url(#hfb)"/>
-        </svg>
-
-        {/* Topbar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", zIndex: 2 }}>
-          <div>
-            <DataLogo className="text-3xl" />
-            <span style={{ display: "block", width: "24px", height: "2.5px", background: "#1a56db", marginTop: "3px", borderRadius: "2px" }} />
-          </div>
-          <nav style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-            {["Funcionalidades", "Rede", "Território"].map(l => (
-              <a key={l} style={{ fontSize: "11px", fontWeight: 600, color: "#5c3f13", textDecoration: "none", cursor: "pointer" }}>{l}</a>
-            ))}
-            <Link href="/login" style={{ background: "#c48a42", color: "#fff", padding: "7px 16px", borderRadius: "5px", fontSize: "11px", fontWeight: 700, textDecoration: "none" }}>
-              Começar agora
-            </Link>
+    <div data-theme="light" className="min-h-dvh bg-ink-950 text-ink-100">
+      {/* ── Navegação ── */}
+      <header className="sticky top-0 z-40 border-b border-ink-700/70 bg-ink-950/80 backdrop-blur supports-[backdrop-filter]:bg-ink-950/65">
+        <div className="max-w-page mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-6">
+          <Link href="/" className="text-ink-50" aria-label="Dataº — início"><DataLogo className="text-2xl" /></Link>
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-ink-300" aria-label="Seções">
+            {NAV.map(n => <a key={n.href} href={n.href} className="hover:text-ink-50 transition-colors">{n.label}</a>)}
           </nav>
-        </div>
-
-        {/* Headline */}
-        <div style={{ position: "relative", zIndex: 2, maxWidth: "460px", paddingTop: "28px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5c3f13", background: "#fbf3e7", border: "1px solid #d9bb8c", borderRadius: "3px", padding: "3px 10px", marginBottom: "14px" }}>
-            <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#c48a42", display: "inline-block" }} />
-            Plataforma de pesquisa de campo
-          </div>
-          <h1 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "38px", fontWeight: 700, color: "#111", lineHeight: 1.1, letterSpacing: "-0.6px", marginBottom: "14px" }}>
-            Dados que<br/><span style={{ color: "#c48a42" }}>fundamentam</span><br/>territórios.
-          </h1>
-          <p style={{ fontSize: "12px", color: "#5c3f13", lineHeight: 1.75, fontWeight: 500, maxWidth: "380px", marginBottom: "24px" }}>
-            Plataforma brasileira de coleta, sistematização e visualização de dados para pesquisadores, governos e comunidades tradicionais. Em conformidade com a LGPD.
-          </p>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <Link href="/login" style={{ background: "#c48a42", color: "#fff", padding: "10px 20px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, textDecoration: "none" }}>
-              Criar conta gratuita
-            </Link>
-            <a style={{ background: "#fff", color: "#5c3f13", padding: "10px 20px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, border: "1.5px solid #d9bb8c", cursor: "pointer", textDecoration: "none" }}>
-              Ver funcionalidades
-            </a>
+          <div className="flex items-center gap-2">
+            <Link href="/login" className={buttonClasses("ghost", "sm", "hidden sm:inline-flex")}>Entrar</Link>
+            <Link href="/login" className={buttonClasses("primary", "sm")}>Começar gratuitamente</Link>
           </div>
         </div>
+      </header>
 
-        {/* Cards de funcionalidade */}
-        <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", paddingBottom: "32px", marginTop: "28px" }}>
-          {[
-            { icon: "ti-clipboard-list", bg: "#e8f0fe", color: "#1a56db", title: "Formulários inteligentes", desc: "50+ tipos de campo, coleta offline e GPS" },
-            { icon: "ti-map-pin",        bg: "#eaf0e4", color: "#3a5430", title: "Georreferenciamento IBGE", desc: "Hierarquia territorial completa" },
-            { icon: "ti-users",          bg: "#fbf3e7", color: "#c48a42", title: "Rede de pesquisadores",  desc: "Colaboração, notas e instrumentos" },
-          ].map(f => (
-            <div key={f.title} style={{ background: "#fff", border: "1px solid #e8d8be", borderRadius: "8px", padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
-              <div style={{ width: "30px", height: "30px", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", flexShrink: 0, background: f.bg, color: f.color }}>
-                <i className={`ti ${f.icon}`} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <strong style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#111", marginBottom: "2px" }}>{f.title}</strong>
-                <span style={{ fontSize: "9px", color: "#a06d28" }}>{f.desc}</span>
-              </div>
-              <i className="ti ti-chevron-right" style={{ color: "#c48a42", fontSize: "12px", alignSelf: "center", flexShrink: 0 }} />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Seals */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", padding: "16px 48px", background: "#fff", borderTop: "1px solid #e8d8be", borderBottom: "1px solid #e8d8be" }}>
-        {[
-          { icon: "ti-shield-check", title: "LGPD", desc: "Em conformidade com a Lei Geral de Proteção de Dados" },
-          { icon: "ti-wifi-off",     title: "Coleta offline", desc: "Funciona sem internet, sincroniza depois" },
-          { icon: "ti-plug",         title: "Integrado ao IBGE", desc: "Estados, municípios e regiões atualizados" },
-        ].map(s => (
-          <div key={s.title} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <i className={`ti ${s.icon}`} style={{ fontSize: "16px", color: "#c48a42" }} />
-            <div>
-              <strong style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#111" }}>{s.title}</strong>
-              <span style={{ fontSize: "9px", color: "#a06d28" }}>{s.desc}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* FUNCIONALIDADES */}
-      <section style={{ padding: "48px", background: "#fff" }}>
-        <p style={{ fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#c48a42", marginBottom: "6px" }}>Funcionalidades</p>
-        <h2 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "26px", fontWeight: 700, color: "#111", letterSpacing: "-0.4px", marginBottom: "6px" }}>
-          Tudo que sua pesquisa <span style={{ color: "#c48a42" }}>precisa</span>
-        </h2>
-        <p style={{ fontSize: "12px", color: "#5c3f13", fontWeight: 500, lineHeight: 1.7, maxWidth: "480px", marginBottom: "28px" }}>
-          Do campo ao relatório público — em uma única plataforma pensada para a realidade brasileira.
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
-          {[
-            { icon: "ti-forms",          bg: "#e8f0fe", color: "#1a56db", title: "Construtor de formulários",    desc: "50+ tipos de campo incluindo escalas, matrizes, GPS, assinatura, NPS e campos geográficos com hierarquia IBGE. Lógica condicional e coleta offline.", tag: "✓ Disponível", tagBg: "#eaf0e4", tagColor: "#3a5430" },
-            { icon: "ti-map-2",          bg: "#eaf0e4", color: "#3a5430", title: "Biblioteca de territórios",   desc: "Criação colaborativa de territórios com versionamento, pull requests geográficos e atribuição acadêmica automática. Integrado à hierarquia do IBGE.", tag: "⧗ Em desenvolvimento", tagBg: "#fbf3e7", tagColor: "#7a5218" },
-            { icon: "ti-chart-dots",     bg: "#fbf3e7", color: "#c48a42", title: "Sistematização automática",   desc: "Indicadores e índices calculados a partir das respostas. Suporte a pesos, escalas e fórmulas personalizadas pelo pesquisador.", tag: "⧗ Em desenvolvimento", tagBg: "#fbf3e7", tagColor: "#7a5218" },
-            { icon: "ti-layout-dashboard",bg: "#eeedfe",color: "#534ab7", title: "Dashboards públicos",         desc: "Editor visual com mapas, gráficos e tabelas interativas. Dashboards publicáveis com URL própria, sem necessidade de programação.", tag: "⧗ Em desenvolvimento", tagBg: "#fbf3e7", tagColor: "#7a5218" },
-          ].map(f => (
-            <div key={f.title} style={{ background: "#fbf3e7", border: "1px solid #e8d8be", borderRadius: "10px", padding: "18px" }}>
-              <div style={{ width: "36px", height: "36px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", marginBottom: "10px", background: f.bg, color: f.color }}>
-                <i className={`ti ${f.icon}`} />
-              </div>
-              <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#111", marginBottom: "4px", fontFamily: "var(--font-serif), Georgia, serif" }}>{f.title}</h3>
-              <p style={{ fontSize: "10px", color: "#a06d28", lineHeight: 1.6 }}>{f.desc}</p>
-              <span style={{ display: "inline-block", fontSize: "8px", fontWeight: 700, padding: "2px 7px", borderRadius: "10px", marginTop: "8px", background: f.tagBg, color: f.tagColor }}>{f.tag}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* REDE DE PESQUISADORES */}
-      <section style={{ padding: "48px", background: "#fff", borderTop: "1px solid #e8d8be" }}>
-        <p style={{ fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#c48a42", marginBottom: "6px" }}>Rede de pesquisadores</p>
-        <h2 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "26px", fontWeight: 700, color: "#111", letterSpacing: "-0.4px", marginBottom: "6px" }}>
-          Colabore, publique e <span style={{ color: "#c48a42" }}>cresça</span>
-        </h2>
-        <p style={{ fontSize: "12px", color: "#5c3f13", fontWeight: 500, lineHeight: 1.7, maxWidth: "480px", marginBottom: "28px" }}>
-          O Dataº é também uma rede profissional de pesquisa de campo — onde pesquisadores compartilham metodologias, territórios e projetos.
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
-          {[
-            { icon: "ti-user-circle",    title: "Perfil público",           desc: "ORCID, Lattes e Google Scholar integrados. Controle total sobre o que é público — pesquisas, projetos e publicações." },
-            { icon: "ti-notebook",       title: "Notas metodológicas",      desc: "Publique orientações sobre como conduzir pesquisas em contextos específicos — quilombos, zonas de conflito, populações vulneráveis." },
-            { icon: "ti-users-group",    title: "Grupos de pesquisa",       desc: "Organize-se em grupos temáticos com repositório compartilhado de formulários, territórios e instrumentos." },
-            { icon: "ti-speakerphone",   title: "Chamadas de colaboração",  desc: "Lance chamadas voluntárias, institucionais ou remuneradas para compor equipes de pesquisa. Gratuito para publicar." },
-            { icon: "ti-clipboard-check",title: "Biblioteca de instrumentos",desc: "Formulários validados pela comunidade, reutilizáveis e adaptáveis. Curadoria de destaque disponível no plano pago." },
-            { icon: "ti-award",          title: "Reputação científica",     desc: "Indicador de contribuição integrado com ORCID e Lattes. Cada mapa criado e nota publicada gera credibilidade verificável." },
-          ].map(f => (
-            <div key={f.title} style={{ border: "1px solid #e8d8be", borderRadius: "10px", padding: "18px", background: "#fbf3e7" }}>
-              <i className={`ti ${f.icon}`} style={{ fontSize: "22px", color: "#c48a42", marginBottom: "10px", display: "block" }} />
-              <h3 style={{ fontSize: "12px", fontWeight: 700, color: "#111", marginBottom: "4px", fontFamily: "var(--font-serif), Georgia, serif" }}>{f.title}</h3>
-              <p style={{ fontSize: "10px", color: "#a06d28", lineHeight: 1.6 }}>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* TERRITÓRIO */}
-      <section style={{ background: "#111", padding: "48px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "40px", alignItems: "center" }}>
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden">
+        <svg className="motif-roots absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 1000 600" preserveAspectRatio="none" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <path d="M60,600 C90,520 40,470 90,400 C120,350 90,300 140,260" />
+          <path d="M60,600 C100,540 130,530 150,470 C165,430 210,420 220,360" />
+          <path d="M60,600 C40,530 70,490 40,430 C20,390 40,350 15,300" />
+          <path d="M150,470 C180,455 195,420 230,415" />
+          <path d="M90,400 C60,385 55,355 20,350" />
+        </svg>
+        <div className="relative max-w-page mx-auto px-4 sm:px-8 pt-14 sm:pt-20 pb-16 sm:pb-24 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-16 items-center">
           <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#d2a05c", background: "rgba(196,163,90,0.1)", border: "1px solid rgba(196,163,90,0.3)", borderRadius: "3px", padding: "3px 10px", marginBottom: "14px" }}>
-              Programa social
+            <p className="kicker mb-5">Infraestrutura de conhecimento · pesquisa e territórios</p>
+            <h1 className="font-serif text-5xl sm:text-6xl font-semibold text-ink-50 leading-[1.02]">
+              Do instrumento de coleta ao <span className="italic text-brand-400">painel público</span>, num só lugar.
+            </h1>
+            <p className="mt-6 text-lg text-ink-300 leading-relaxed max-w-xl">
+              O Dataº une criação de instrumentos, coleta em campo — inclusive sem internet —, georreferenciamento pela malha do IBGE e painéis que se atualizam a cada resposta. Feito para a realidade da pesquisa brasileira.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/login" className={buttonClasses("primary", "lg")}>
+                Criar conta gratuita <i className="ti ti-arrow-right" aria-hidden="true" />
+              </Link>
+              <a href="#ciclo" className={buttonClasses("secondary", "lg")}>Ver como funciona</a>
             </div>
-            <h2 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "26px", fontWeight: 700, color: "#f3e4cb", lineHeight: 1.2, letterSpacing: "-0.4px", marginBottom: "12px" }}>
-              Dataº <span style={{ color: "#d2a05c" }}>Território</span>
-            </h2>
-            <p style={{ fontSize: "11px", color: "rgba(240,230,208,0.7)", lineHeight: 1.75, fontWeight: 500, marginBottom: "12px" }}>
-              Acesso completo e gratuito à plataforma para instituições representantes de comunidades tradicionais. Porque quem vive no território é quem melhor conhece ele.
-            </p>
-            <p style={{ fontSize: "11px", color: "rgba(240,230,208,0.7)", lineHeight: 1.75, fontWeight: 500, marginBottom: "12px" }}>
-              Quilombolas, indígenas, ribeirinhos, pescadores artesanais, agricultores familiares organizados, povos de terreiro e outros povos tradicionais podem candidatar suas organizações.
-            </p>
-            <p style={{ fontSize: "10px", color: "rgba(240,230,208,0.4)", marginBottom: "20px", lineHeight: 1.6 }}>
-              O número de vagas é calculado para garantir a sustentabilidade da plataforma. Durante a análise da candidatura, a instituição tem acesso gratuito por 30 dias.
-            </p>
-            <Link href="/territorio" style={{ background: "#c48a42", color: "#fff", padding: "10px 20px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-              Candidatar minha organização →
-            </Link>
+            <dl className="mt-10 grid grid-cols-3 max-w-lg border-t border-ink-700 pt-5 gap-4">
+              {[["30+", "tipos de campo"], ["5.570", "municípios na malha IBGE"], ["Offline", "coleta sem internet"]].map(([v, l]) => (
+                <div key={l}>
+                  <dt className="sr-only">{l}</dt>
+                  <dd className="font-serif text-2xl font-semibold text-ink-50">{v}</dd>
+                  <dd className="mt-0.5 text-xs text-ink-500 leading-snug">{l}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px" }}>
-            {[
-              { icon: "ti-home",   title: "Comunidades quilombolas", desc: "Associações e federações representativas" },
-              { icon: "ti-trees",  title: "Povos indígenas",         desc: "Organizações e coordenações territoriais" },
-              { icon: "ti-fish",   title: "Pesca artesanal",         desc: "Colônias e associações de pescadores" },
-              { icon: "ti-plant",  title: "Agricultura familiar",    desc: "Cooperativas e assentamentos organizados" },
-            ].map(c => (
-              <div key={c.title} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(196,163,90,0.2)", borderRadius: "8px", padding: "14px" }}>
-                <i className={`ti ${c.icon}`} style={{ fontSize: "18px", color: "#d2a05c", marginBottom: "8px", display: "block" }} />
-                <strong style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#f3e4cb", marginBottom: "3px" }}>{c.title}</strong>
-                <span style={{ fontSize: "9px", color: "rgba(240,230,208,0.55)", lineHeight: 1.5, display: "block" }}>{c.desc}</span>
+          <PanelPreview />
+        </div>
+      </section>
+
+      {/* ── Para quem ── */}
+      <section className="border-y border-ink-700 bg-ink-900">
+        <div className="max-w-page mx-auto px-4 sm:px-8 py-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+          <p className="kicker-plain">Pensado para</p>
+          {AUDIENCES.map(a => (
+            <span key={a.label} className="inline-flex items-center gap-2 text-sm font-medium text-ink-300">
+              <i className={`ti ${a.icon} text-lg text-brand-500`} aria-hidden="true" /> {a.label}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Ciclo da pesquisa ── */}
+      <section id="ciclo" className="scroll-mt-20 max-w-page mx-auto px-4 sm:px-8 py-20 sm:py-24">
+        <div className="max-w-2xl">
+          <p className="kicker mb-3">O ciclo completo</p>
+          <h2 className="font-serif text-4xl font-semibold text-ink-50 leading-tight">Cada etapa da pesquisa conversa com a seguinte.</h2>
+          <p className="mt-4 text-base text-ink-300 leading-relaxed">Sem exportar planilhas entre ferramentas: o que é coletado já chega estruturado, georreferenciado e pronto para virar indicador público.</p>
+        </div>
+        <ol className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-ink-700 border border-ink-700 rounded-2xl overflow-hidden">
+          {CYCLE.map(c => (
+            <li key={c.n} className="bg-ink-900 p-6 sm:p-7">
+              <div className="flex items-center justify-between">
+                <span className="w-11 h-11 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center"><i className={`ti ${c.icon} text-xl`} aria-hidden="true" /></span>
+                <span className="font-serif text-3xl text-ink-600 font-semibold">{c.n}</span>
+              </div>
+              <h3 className="mt-5 font-serif text-xl font-semibold text-ink-50">{c.title}</h3>
+              <p className="mt-2 text-sm text-ink-300 leading-relaxed">{c.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* ── Tipos de painel ── */}
+      <section id="paineis" className="scroll-mt-20 bg-ink-900 border-y border-ink-700">
+        <div className="max-w-page mx-auto px-4 sm:px-8 py-20 sm:py-24 grid lg:grid-cols-[0.9fr_1.1fr] gap-12">
+          <div>
+            <p className="kicker mb-3">Painéis</p>
+            <h2 className="font-serif text-4xl font-semibold text-ink-50 leading-tight">Dados públicos com o rigor de uma publicação.</h2>
+            <p className="mt-4 text-base text-ink-300 leading-relaxed">
+              O registro editorial dos painéis nasceu da prática de pesquisa com redes quilombolas: indicadores com base declarada, notas de leitura, fontes citadas e mapas pela malha oficial do IBGE.
+            </p>
+            <ul className="mt-8 space-y-3 text-sm text-ink-300">
+              {["Mapas coropléticos por UF e por município", "Filtros que recortam o painel inteiro ao mesmo tempo", "Versão empilhada e legível no celular", "Tema claro ou escuro, capa e paleta próprias"].map(t => (
+                <li key={t} className="flex gap-2.5"><i className="ti ti-circle-check text-lg text-brand-500 flex-shrink-0" aria-hidden="true" />{t}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {PANEL_TYPES.map(p => (
+              <div key={p.title} className="rounded-xl border border-ink-700 bg-ink-950 p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <i className={`ti ${p.icon} text-2xl text-gold`} aria-hidden="true" />
+                  <span className={`text-2xs font-semibold rounded-full px-2 py-0.5 border ${p.status === "Disponível" ? "bg-brand-50 text-brand-400 border-brand-500/25" : "bg-ink-800 text-ink-500 border-ink-700"}`}>{p.status}</span>
+                </div>
+                <h3 className="mt-4 font-serif text-lg font-semibold text-ink-50">{p.title}</h3>
+                <p className="mt-1.5 text-sm text-ink-300 leading-relaxed">{p.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section style={{ background: "#c48a42", padding: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px" }}>
-        <div>
-          <h2 style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "24px", fontWeight: 700, color: "#fff", letterSpacing: "-0.3px", marginBottom: "6px" }}>Comece sua pesquisa hoje</h2>
-          <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>Gratuito para começar. Login com Google ou ORCID. Sem cartão de crédito.</p>
+      {/* ── Rede e entidades ── */}
+      <section id="rede" className="scroll-mt-20 max-w-page mx-auto px-4 sm:px-8 py-20 sm:py-24">
+        <div className="max-w-2xl">
+          <p className="kicker mb-3">Conhecimento que se acumula</p>
+          <h2 className="font-serif text-4xl font-semibold text-ink-50 leading-tight">Cada território registrado uma vez. Cada pesquisa somando ao que já se sabe.</h2>
         </div>
-        <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
-          <Link href="/login" style={{ background: "#fff", color: "#c48a42", padding: "10px 20px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, textDecoration: "none" }}>
-            Criar conta gratuita
-          </Link>
-          <a style={{ background: "transparent", color: "#fff", padding: "10px 20px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, border: "1.5px solid rgba(255,255,255,0.5)", cursor: "pointer", textDecoration: "none" }}>
-            Ver funcionalidades
-          </a>
+        <div className="mt-12 grid md:grid-cols-3 gap-6">
+          {[
+            { icon: "ti-fingerprint", title: "Identificador persistente", text: "Comunidades, escolas e territórios recebem um código permanente (ex.: COM-000245), com histórico de nomes, limites e vínculos." },
+            { icon: "ti-map-pin-cog", title: "Geometria viva", text: "Desenhe limites, pontos e trilhas sobre o mapa ou capture o contorno caminhando em campo, com GPS ponto a ponto." },
+            { icon: "ti-notebook", title: "Rede de pesquisa", text: "Notas metodológicas, chamadas de colaboração e um mapa geral em que cada um decide o que é visível — oculto por padrão." },
+          ].map(f => (
+            <div key={f.title} className="border-t-2 border-gold/60 pt-5">
+              <i className={`ti ${f.icon} text-2xl text-brand-500`} aria-hidden="true" />
+              <h3 className="mt-3 font-serif text-xl font-semibold text-ink-50">{f.title}</h3>
+              <p className="mt-2 text-sm text-ink-300 leading-relaxed">{f.text}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{ background: "#111", padding: "28px 48px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <DataLogo className="text-lg text-white" animated={false} />
-          <div style={{ fontSize: "9px", color: "rgba(240,230,208,0.4)", marginTop: "3px" }}>© 2026 Dataº · Em conformidade com a LGPD</div>
+      {/* ── Dataº Território ── */}
+      <section id="territorio" data-theme="dark" className="scroll-mt-20 bg-brand-700 text-ink-100" style={{ background: "#24382a" }}>
+        <div className="max-w-page mx-auto px-4 sm:px-8 py-20 sm:py-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <p className="kicker mb-3">Programa social</p>
+            <h2 className="font-serif text-4xl font-semibold text-white leading-tight">Dataº Território</h2>
+            <p className="mt-4 text-base text-white/75 leading-relaxed">
+              Acesso completo e gratuito para organizações que representam comunidades tradicionais — porque quem vive no território é quem produz o conhecimento sobre ele. Comunidades como coautoras dos dados, não como objeto de estudo.
+            </p>
+            <Link href="/territorio" className="mt-8 inline-flex h-11 items-center gap-2 rounded-md bg-white px-5 text-sm font-semibold text-[#24382a] hover:bg-white/90 transition-colors">
+              Candidatar minha organização <i className="ti ti-arrow-right" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-px rounded-2xl overflow-hidden border border-white/15 bg-white/15">
+            {[
+              { icon: "ti-home-heart", title: "Comunidades quilombolas", text: "Associações e federações" },
+              { icon: "ti-trees", title: "Povos indígenas", text: "Organizações e coordenações" },
+              { icon: "ti-fish", title: "Pesca artesanal", text: "Colônias e associações" },
+              { icon: "ti-plant", title: "Agricultura familiar", text: "Cooperativas e assentamentos" },
+            ].map(c => (
+              <div key={c.title} className="p-6" style={{ background: "#2a4231" }}>
+                <i className={`ti ${c.icon} text-2xl text-gold`} aria-hidden="true" />
+                <p className="mt-3 font-semibold text-white">{c.title}</p>
+                <p className="mt-0.5 text-sm text-white/60">{c.text}</p>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "20px" }}>
-          {["Política de Privacidade","Termos de Uso","Suporte","Dataº Território"].map(l => (
-            <a key={l} style={{ fontSize: "10px", color: "rgba(240,230,208,0.5)", cursor: "pointer", textDecoration: "none" }}>{l}</a>
-          ))}
+      </section>
+
+      {/* ── Chamada final ── */}
+      <section className="max-w-page mx-auto px-4 sm:px-8 py-20">
+        <div className="rounded-2xl border border-ink-700 bg-ink-900 shadow-sm px-6 sm:px-12 py-12 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="max-w-xl">
+            <h2 className="font-serif text-3xl font-semibold text-ink-50">Comece pela próxima pesquisa.</h2>
+            <p className="mt-2 text-base text-ink-300">Gratuito para começar, com login pelo Google. Seus dados seguem a LGPD (Lei nº 13.709/2018).</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/login" className={buttonClasses("primary", "lg")}>Criar conta gratuita</Link>
+            <Link href="/territorio" className={buttonClasses("secondary", "lg")}>Conhecer o Território</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Rodapé ── */}
+      <footer className="border-t border-ink-700 bg-ink-900">
+        <div className="max-w-page mx-auto px-4 sm:px-8 py-10 grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr]">
+          <div>
+            <DataLogo className="text-2xl text-ink-50" animated={false} />
+            <p className="mt-3 text-sm text-ink-500 max-w-sm">Infraestrutura brasileira de conhecimento para pesquisa e territórios.</p>
+          </div>
+          <div>
+            <p className="kicker-plain mb-3">Plataforma</p>
+            <ul className="space-y-2 text-sm text-ink-300">
+              <li><a href="#ciclo" className="hover:text-ink-50">Como funciona</a></li>
+              <li><a href="#paineis" className="hover:text-ink-50">Painéis</a></li>
+              <li><Link href="/login" className="hover:text-ink-50">Entrar</Link></li>
+            </ul>
+          </div>
+          <div>
+            <p className="kicker-plain mb-3">Institucional</p>
+            <ul className="space-y-2 text-sm text-ink-300">
+              <li><Link href="/territorio" className="hover:text-ink-50">Dataº Território</Link></li>
+              <li><Link href="/privacidade" className="hover:text-ink-50">Política de privacidade</Link></li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-ink-700">
+          <p className="max-w-page mx-auto px-4 sm:px-8 py-4 text-xs text-ink-500">© {new Date().getFullYear()} Dataº · Em conformidade com a LGPD</p>
         </div>
       </footer>
     </div>

@@ -3,16 +3,12 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { Research } from "@/lib/types";
-
-const CTA_CLASS = "inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold bg-brand-500 text-on-accent border border-brand-500 hover:bg-brand-600 hover:border-brand-600 transition-colors duration-150";
-
-const STATUS_MAP: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  draft:     { label: "Rascunho",  bg: "bg-ink-800",    text: "text-ink-300",   dot: "bg-ink-300" },
-  active:    { label: "Ativa",     bg: "bg-brand-50",   text: "text-brand-700", dot: "bg-brand-500" },
-  paused:    { label: "Pausada",   bg: "bg-amber-50",   text: "text-amber-500", dot: "bg-amber-500" },
-  closed:    { label: "Encerrada", bg: "bg-coral-50",   text: "text-coral-500", dot: "bg-coral-500" },
-  published: { label: "Publicada", bg: "bg-chart-1/15", text: "text-chart-1",   dot: "bg-chart-1" },
-};
+import { cn } from "@/lib/utils";
+import { buttonClasses } from "@/components/ui/button";
+import { ResearchStatusBadge } from "@/components/ui/badge";
+import { fieldClasses } from "@/components/ui/input";
+import { PageContainer, PageHeader, EmptyState } from "@/components/ui/page";
+import { ResearchCover } from "@/components/researches/research-cover";
 
 const THEME_MAP: Record<string, string> = {
   health:      "Saúde",
@@ -25,11 +21,20 @@ const THEME_MAP: Record<string, string> = {
   other:       "Outro",
 };
 
-const PROGRESS_MAP: Record<string, number> = {
-  draft: 20, active: 65, paused: 65, closed: 100, published: 100,
-};
+const STATUS_FILTERS = [
+  { key: "all",       label: "Todas" },
+  { key: "active",    label: "Em coleta" },
+  { key: "draft",     label: "Rascunhos" },
+  { key: "paused",    label: "Pausadas" },
+  { key: "published", label: "Publicadas" },
+  { key: "closed",    label: "Encerradas" },
+];
 
-const ROLE_LABEL: Record<string, string> = { editor: "Convidado (editor)", viewer: "Convidado (visualizador)" };
+const ROLE_LABEL: Record<string, string> = { editor: "Convidado · editor", viewer: "Convidado · leitura" };
+
+function formatDate(d: Date | string) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(d));
+}
 
 interface Props {
   researches: Research[];
@@ -43,257 +48,154 @@ export function ResearchesClient({ researches, roleByResearchId = {} }: Props) {
   const [viewMode,     setViewMode]     = useState<"grid" | "list">("grid");
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return researches.filter(r => {
-      const matchSearch = !search.trim() ||
-        r.title.toLowerCase().includes(search.toLowerCase()) ||
-        (r.description ?? "").toLowerCase().includes(search.toLowerCase());
+      const matchSearch = !q || r.title.toLowerCase().includes(q) || (r.description ?? "").toLowerCase().includes(q) || (r.cityName ?? "").toLowerCase().includes(q);
       const matchStatus = statusFilter === "all" || r.status === statusFilter;
       const matchTheme  = themeFilter  === "all" || r.theme  === themeFilter;
       return matchSearch && matchStatus && matchTheme;
     });
   }, [researches, search, statusFilter, themeFilter]);
 
-  // Contadores por status
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: researches.length };
     researches.forEach(r => { c[r.status] = (c[r.status] ?? 0) + 1; });
     return c;
   }, [researches]);
 
+  const hasFilters = !!search || statusFilter !== "all" || themeFilter !== "all";
+
   return (
-    <div className="flex-1 overflow-auto bg-ink-950">
-      <div className="p-6 max-w-6xl mx-auto">
-
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest font-condensed bg-ink-900 border border-ink-700 text-ink-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-              Minhas pesquisas
-            </div>
-            <h1 className="text-2xl font-bold font-condensed text-ink-100" style={{ letterSpacing: "-0.3px" }}>
-              Pesquisas
-            </h1>
-            <p className="text-sm font-medium mt-0.5 text-ink-300">
-              {researches.length} {researches.length === 1 ? "pesquisa" : "pesquisas"} no total
-            </p>
-          </div>
-          <Link href="/researches/new" className={CTA_CLASS}>
-            <i className="ti ti-plus" /> Nova pesquisa
+    <PageContainer>
+      <PageHeader
+        kicker="Seu acervo"
+        title="Pesquisas"
+        description={`${researches.length} ${researches.length === 1 ? "pesquisa" : "pesquisas"} — cada uma com equipe, instrumento, coleta e painéis próprios.`}
+        actions={
+          <Link href="/researches/new" className={buttonClasses("primary", "md")}>
+            <i className="ti ti-plus" aria-hidden="true" /> Nova pesquisa
           </Link>
-        </div>
+        }
+      />
 
-        {/* Filtros de status */}
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          {[
-            { key: "all",       label: "Todas"     },
-            { key: "draft",     label: "Rascunho"  },
-            { key: "active",    label: "Ativas"    },
-            { key: "paused",    label: "Pausadas"  },
-            { key: "published", label: "Publicadas"},
-            { key: "closed",    label: "Encerradas"},
-          ].map(f => {
-            const active = statusFilter === f.key;
-            return (
-              <button key={f.key} onClick={() => setStatusFilter(f.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold font-condensed border transition-colors duration-150 ${
-                  active
-                    ? "border-brand-500 bg-brand-50/10 text-brand-400"
-                    : "border-ink-700 bg-ink-900 text-ink-300 hover:border-ink-500 hover:text-ink-100"
-                }`}>
-                {f.label}
-                {counts[f.key] !== undefined && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${active ? "bg-brand-500 text-on-accent" : "bg-ink-700 text-ink-300"}`}>
-                    {counts[f.key] ?? 0}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Busca e filtros secundários */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 relative">
-            <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-500" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por título ou descrição..."
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-md border border-ink-700 bg-ink-900 text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors duration-150" />
+      {researches.length === 0 ? (
+        <EmptyState
+          icon="ti-clipboard-plus"
+          title="Nenhuma pesquisa ainda"
+          description="Crie a primeira pesquisa para montar o instrumento, organizar a equipe de campo e publicar resultados."
+          action={<Link href="/researches/new" className={buttonClasses("primary", "md")}><i className="ti ti-plus" aria-hidden="true" /> Criar pesquisa</Link>}
+        />
+      ) : (
+        <>
+          {/* Barra de filtros */}
+          <div className="mb-6 rounded-xl border border-ink-700 bg-ink-900 shadow-xs">
+            <div className="flex gap-1 overflow-x-auto px-2 pt-2 border-b border-ink-700" role="tablist" aria-label="Filtrar por situação">
+              {STATUS_FILTERS.map(f => {
+                const active = statusFilter === f.key;
+                const n = counts[f.key] ?? 0;
+                if (f.key !== "all" && n === 0) return null;
+                return (
+                  <button key={f.key} role="tab" aria-selected={active} onClick={() => setStatusFilter(f.key)}
+                    className={cn(
+                      "relative flex items-center gap-2 whitespace-nowrap px-3 pb-2.5 pt-1.5 text-sm font-medium transition-colors",
+                      active ? "text-ink-50" : "text-ink-500 hover:text-ink-100",
+                    )}>
+                    {f.label}
+                    <span className={cn("rounded-full px-1.5 text-2xs font-semibold tabular", active ? "bg-brand-500 text-on-accent" : "bg-ink-800 text-ink-500")}>{n}</span>
+                    {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand-500" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 p-3">
+              <div className="relative flex-1">
+                <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" aria-hidden="true" />
+                <input value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar pesquisas"
+                  placeholder="Buscar por título, descrição ou município"
+                  className={cn(fieldClasses, "pl-9")} />
+              </div>
+              <select value={themeFilter} onChange={e => setThemeFilter(e.target.value)} aria-label="Filtrar por tema" className={cn(fieldClasses, "sm:w-48")}>
+                <option value="all">Todos os temas</option>
+                {Object.entries(THEME_MAP).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <div className="flex rounded-md border border-ink-700 p-0.5 bg-ink-800/50 self-start sm:self-auto" role="group" aria-label="Modo de exibição">
+                {([["grid", "ti-layout-grid", "Cartões"], ["list", "ti-list-details", "Tabela"]] as const).map(([mode, icon, label]) => (
+                  <button key={mode} onClick={() => setViewMode(mode)} aria-pressed={viewMode === mode} title={label}
+                    className={cn("h-8 w-9 rounded flex items-center justify-center transition-colors", viewMode === mode ? "bg-ink-900 text-brand-500 shadow-xs" : "text-ink-500 hover:text-ink-100")}>
+                    <i className={cn("ti", icon)} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Filtro de tema */}
-          <select value={themeFilter} onChange={e => setThemeFilter(e.target.value)}
-            className="px-3 py-2 text-xs rounded-md border border-ink-700 bg-ink-900 text-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
-            <option value="all">Todos os temas</option>
-            {Object.entries(THEME_MAP).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-
-          {/* Alternar view */}
-          <div className="flex rounded-md overflow-hidden border border-ink-700">
-            {[
-              { mode: "grid", icon: "ti-layout-grid" },
-              { mode: "list", icon: "ti-list" },
-            ].map(v => (
-              <button key={v.mode} onClick={() => setViewMode(v.mode as "grid" | "list")}
-                className={`px-3 py-2 transition-colors duration-150 ${viewMode === v.mode ? "bg-ink-800" : "bg-ink-900"} ${v.mode === "grid" ? "border-r border-ink-700" : ""}`}>
-                <i className={`ti ${v.icon} text-sm ${viewMode === v.mode ? "text-brand-400" : "text-ink-500"}`} />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Resultado vazio */}
-        {researches.length === 0 ? (
-          <div className="text-center py-20 rounded-lg border-2 border-dashed border-ink-700 bg-ink-900">
-            <i className="ti ti-clipboard-list text-4xl block mb-3 text-ink-500" />
-            <p className="text-sm font-semibold mb-1 text-ink-100">Nenhuma pesquisa ainda</p>
-            <p className="text-xs mb-5 text-ink-300">Crie sua primeira pesquisa para começar a coletar dados</p>
-            <Link href="/researches/new" className={CTA_CLASS}>
-              <i className="ti ti-plus" /> Criar primeira pesquisa
-            </Link>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 rounded-lg border border-ink-700 bg-ink-900">
-            <i className="ti ti-search text-3xl block mb-3 text-ink-500" />
-            <p className="text-sm font-semibold mb-1 text-ink-100">Nenhum resultado encontrado</p>
-            <p className="text-xs text-ink-300">Tente ajustar os filtros ou a busca</p>
-          </div>
-        ) : viewMode === "grid" ? (
-
-          /* ── GRID ── */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 list-gap">
-            {filtered.map(r => {
-              const s = STATUS_MAP[r.status] ?? STATUS_MAP.draft;
-              const progress = PROGRESS_MAP[r.status] ?? 20;
-              return (
-                <Link key={r.id} href={`/researches/${r.id}`}
-                  className="block rounded-lg overflow-hidden border border-ink-700 bg-ink-900 transition-colors duration-150 hover:border-brand-500/40 group">
-
-                  {/* Capa */}
-                  <div className="h-28 w-full bg-ink-800 relative overflow-hidden">
-                    {r.coverImage ? (
-                      <img src={r.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <i className="ti ti-photo text-2xl text-ink-700" />
+          {filtered.length === 0 ? (
+            <EmptyState icon="ti-search-off" title="Nenhum resultado"
+              description="Ajuste a busca ou os filtros para encontrar a pesquisa."
+              action={hasFilters && <button onClick={() => { setSearch(""); setStatusFilter("all"); setThemeFilter("all"); }} className={buttonClasses("secondary", "sm")}>Limpar filtros</button>} />
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 list-gap">
+              {filtered.map(r => {
+                const role = roleByResearchId[r.id];
+                return (
+                  <Link key={r.id} href={`/researches/${r.id}`}
+                    className="group flex flex-col overflow-hidden rounded-xl border border-ink-700 bg-ink-900 shadow-xs transition-[border-color,box-shadow] duration-150 hover:border-ink-600 hover:shadow-md">
+                    <ResearchCover id={r.id} theme={r.theme} image={r.coverImage} className="h-28 border-b border-ink-700" />
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                        <ResearchStatusBadge status={r.status} />
+                        <span className="text-2xs font-medium text-ink-500">{THEME_MAP[r.theme] ?? "Outro"}</span>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="card-pad">
-                    {/* Status + Tema */}
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${s.bg} ${s.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                        {s.label}
-                      </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-ink-800 border border-ink-700 text-ink-300">
-                        {THEME_MAP[r.theme] ?? "Outro"}
-                      </span>
-                      {roleByResearchId[r.id] && roleByResearchId[r.id] !== "owner" && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-500/15 text-teal-500">
-                          {ROLE_LABEL[roleByResearchId[r.id]]}
-                        </span>
-                      )}
+                      <h3 className="font-serif text-lg font-semibold leading-snug text-ink-50 line-clamp-2 group-hover:text-brand-400 transition-colors">{r.title}</h3>
+                      {r.description && <p className="mt-1.5 text-sm leading-relaxed text-ink-300 line-clamp-2">{r.description}</p>}
+                      <div className="mt-auto pt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
+                        {r.cityName && <span className="inline-flex items-center gap-1"><i className="ti ti-map-pin text-xs" aria-hidden="true" />{r.cityName}</span>}
+                        {role && role !== "owner" && <span className="inline-flex items-center gap-1"><i className="ti ti-users text-xs" aria-hidden="true" />{ROLE_LABEL[role]}</span>}
+                        <span className="ml-auto inline-flex items-center gap-1"><i className="ti ti-clock text-xs" aria-hidden="true" />{formatDate(r.updatedAt)}</span>
+                      </div>
                     </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-ink-700 bg-ink-900 shadow-xs">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="border-b border-ink-700 bg-ink-800/50 text-left">
+                    <th className="px-4 py-3 text-2xs font-semibold uppercase tracking-[0.1em] text-ink-500">Pesquisa</th>
+                    <th className="px-4 py-3 text-2xs font-semibold uppercase tracking-[0.1em] text-ink-500">Situação</th>
+                    <th className="px-4 py-3 text-2xs font-semibold uppercase tracking-[0.1em] text-ink-500">Tema</th>
+                    <th className="px-4 py-3 text-2xs font-semibold uppercase tracking-[0.1em] text-ink-500">Local</th>
+                    <th className="px-4 py-3 text-2xs font-semibold uppercase tracking-[0.1em] text-ink-500 text-right">Atualizada</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(r => {
+                    const role = roleByResearchId[r.id];
+                    return (
+                      <tr key={r.id} className="border-b border-ink-700 last:border-0 hover:bg-ink-800/50 transition-colors">
+                        <td className="px-4 py-3 max-w-[22rem]">
+                          <Link href={`/researches/${r.id}`} className="font-semibold text-ink-50 hover:text-brand-400 line-clamp-1">{r.title}</Link>
+                          {role && role !== "owner" && <p className="text-xs text-ink-500 mt-0.5">{ROLE_LABEL[role]}</p>}
+                        </td>
+                        <td className="px-4 py-3"><ResearchStatusBadge status={r.status} /></td>
+                        <td className="px-4 py-3 text-ink-300">{THEME_MAP[r.theme] ?? "Outro"}</td>
+                        <td className="px-4 py-3 text-ink-300">{r.cityName ?? "—"}</td>
+                        <td className="px-4 py-3 text-right text-ink-500 whitespace-nowrap">{formatDate(r.updatedAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-                    {/* Título */}
-                    <h3 className="text-sm font-bold mb-1 line-clamp-2 leading-snug font-condensed text-ink-100">
-                      {r.title}
-                    </h3>
-
-                    {/* Descrição */}
-                    {r.description && (
-                      <p className="text-xs mb-3 line-clamp-2 leading-relaxed text-ink-300">
-                        {r.description}
-                      </p>
-                    )}
-
-                    {/* Localização */}
-                    {r.cityName && (
-                      <p className="text-xs flex items-center gap-1 mb-3 text-ink-300">
-                        <i className="ti ti-map-pin text-xs text-brand-400" />
-                        {r.cityName}
-                      </p>
-                    )}
-
-                    {/* Barra de progresso */}
-                    <div className="h-1 rounded-full overflow-hidden mb-2 bg-ink-700">
-                      <div className="h-full rounded-full bg-brand-500" style={{ width: `${progress}%` }} />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-ink-300">
-                        {r.status === "draft"     ? "Em construção"    :
-                         r.status === "active"    ? "Coletando dados"  :
-                         r.status === "paused"    ? "Coleta pausada"   :
-                         r.status === "published" ? "Dashboard público":
-                         "Encerrada"}
-                      </p>
-                      <i className="ti ti-arrow-right text-xs text-brand-400 transition-transform duration-150 group-hover:translate-x-0.5" />
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-        ) : (
-
-          /* ── LISTA ── */
-          <div className="rounded-lg overflow-hidden border border-ink-700">
-            {filtered.map((r, idx) => {
-              const s = STATUS_MAP[r.status] ?? STATUS_MAP.draft;
-              return (
-                <Link key={r.id} href={`/researches/${r.id}`}
-                  className={`flex items-center gap-4 px-4 py-3 bg-ink-900 hover:bg-ink-800 transition-colors duration-150 ${idx < filtered.length - 1 ? "border-b border-ink-700" : ""}`}>
-
-                  {/* Status dot */}
-                  <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${s.bg}`}>
-                    <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
-                  </div>
-
-                  {/* Título e desc */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold truncate text-ink-100">{r.title}</p>
-                      {roleByResearchId[r.id] && roleByResearchId[r.id] !== "owner" && (
-                        <span className="text-2xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-teal-500/15 text-teal-500">
-                          {ROLE_LABEL[roleByResearchId[r.id]]}
-                        </span>
-                      )}
-                    </div>
-                    {r.description && (
-                      <p className="text-xs truncate mt-0.5 text-ink-300">{r.description}</p>
-                    )}
-                  </div>
-
-                  {/* Tema */}
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap hidden md:block bg-ink-800 border border-ink-700 text-ink-300">
-                    {THEME_MAP[r.theme] ?? "Outro"}
-                  </span>
-
-                  {/* Status */}
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap ${s.bg} ${s.text}`}>
-                    {s.label}
-                  </span>
-
-                  <i className="ti ti-chevron-right text-xs flex-shrink-0 text-brand-400" />
-                </Link>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Resumo */}
-        {filtered.length > 0 && (
-          <p className="text-center text-xs mt-6 font-medium text-ink-500">
-            Mostrando {filtered.length} de {researches.length} pesquisas
-          </p>
-        )}
-      </div>
-    </div>
+          {filtered.length > 0 && (
+            <p className="mt-6 text-center text-xs text-ink-500">Mostrando {filtered.length} de {researches.length} pesquisas</p>
+          )}
+        </>
+      )}
+    </PageContainer>
   );
 }

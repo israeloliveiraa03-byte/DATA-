@@ -100,11 +100,10 @@ export function DashboardListClient({ research, dashboards: initial }: { researc
 
         <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest font-condensed bg-ink-900 border border-ink-700 text-ink-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+            <div className="kicker mb-2">
               Dashboards
             </div>
-            <h1 className="text-2xl font-bold font-condensed text-ink-100" style={{ letterSpacing: "-0.3px" }}>
+            <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">
               {research.title}
             </h1>
             <p className="text-sm mt-0.5 text-ink-300">

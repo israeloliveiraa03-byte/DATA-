@@ -35,7 +35,7 @@ function resolveTheme(mode: ColorMode): "dark" | "light" {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [colorMode, setColorModeState] = useState<ColorMode>("dark");
+  const [colorMode, setColorModeState] = useState<ColorMode>("light");
   const [contrast,  setContrastState]  = useState<Contrast>("normal");
   const [textSize,  setTextSizeState]  = useState<TextSize>("default");
   const [motion,    setMotionState]    = useState<Motion>("system");
@@ -45,7 +45,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // aplicou os atributos no <html> antes do paint; isso só sincroniza o
   // estado do React com o que já está lá).
   useEffect(() => {
-    setColorModeState((localStorage.getItem(STORAGE_KEYS.colorMode) as ColorMode) || "dark");
+    setColorModeState((localStorage.getItem(STORAGE_KEYS.colorMode) as ColorMode) || "light");
     setContrastState((localStorage.getItem(STORAGE_KEYS.contrast) as Contrast) || "normal");
     setTextSizeState((localStorage.getItem(STORAGE_KEYS.textSize) as TextSize) || "default");
     setMotionState((localStorage.getItem(STORAGE_KEYS.motion) as Motion) || "system");

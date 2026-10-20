@@ -137,7 +137,7 @@ export function GlobePointsWidget({ data, palette }: GlobePointsProps) {
       {hasCategories && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center px-1 flex-shrink-0">
           {data.categories!.map((c, i) => (
-            <span key={c.id} className="flex items-center gap-1 text-2xs" style={{ color: "#5c3f13" }}>
+            <span key={c.id} className="flex items-center gap-1 text-2xs" style={{ color: "rgb(var(--color-ink-100))" }}>
               <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: data.categoryStyles?.[c.id]?.color ?? colors[i % colors.length] }} />
               {c.label}
             </span>
@@ -186,7 +186,7 @@ export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapP
     ? Object.fromEntries(Object.entries(byStateRaw).map(([k, s]) => [k, { value: totalCount > 0 ? (s.count / totalCount) * 100 : 0, count: s.count }]))
     : byStateRaw;
   const max = asPercent ? Math.max(1, ...Object.values(byState).map(s => s.value)) : (activeKey ? (data.maxByIndicator[activeKey] ?? 0) : 0);
-  const isPercentLike = asPercent || max <= 100;
+  const isPercentLike = asPercent || activeIndicator?.mode === "choice_percent";
 
   // Sem dado ainda é comum (pesquisa em andamento) — deixa translúcido em vez
   // de um grude cinza escuro cobrindo o país inteiro, senão o globo fica sem
@@ -212,7 +212,7 @@ export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapP
       {data.indicators.length > 1 && (
         <select value={activeKey} onChange={e => setIndicatorKey(e.target.value)}
           className="flex-shrink-0 text-2xs rounded px-1.5 py-1 focus:outline-none"
-          style={{ border: "1px solid #e8d8be", background: "#fff", color: "#5c3f13" }}>
+          style={{ border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
           {data.indicators.map(ind => <option key={ind.key} value={ind.key}>{ind.label}</option>)}
         </select>
       )}
@@ -239,9 +239,9 @@ export function GlobeHeatmapWidget({ data, palette, displayMode }: GlobeHeatmapP
         {size.width > 0 && estados && <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} />}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
-        <span className="text-2xs" style={{ color: "#a06d28" }}>0{isPercentLike ? "%" : ""}</span>
+        <span className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>0{isPercentLike ? "%" : ""}</span>
         <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${ACCENT},0.15), rgba(${ACCENT},0.9))` }} />
-        <span className="text-2xs font-semibold" style={{ color: "#5c3f13" }}>{isPercentLike ? `${max.toFixed(0)}%` : `${Math.round(max)} respostas`}</span>
+        <span className="text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{isPercentLike ? `${max.toFixed(0)}%` : `${Math.round(max)} respostas`}</span>
       </div>
     </div>
   );

@@ -121,8 +121,8 @@ export function ColaboracaoClient({ calls: initialCalls, currentUserId, myResear
       <div className="p-6 max-w-5xl mx-auto">
         <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-1">Rede</p>
-            <h1 className="text-2xl font-bold font-condensed text-ink-100">Chamadas de colaboração</h1>
+            <p className="kicker mb-1">Rede</p>
+            <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">Chamadas de colaboração</h1>
             <p className="text-sm text-ink-300 mt-0.5">
               Peça ajuda de campo, dado ou expertise — sem taxa, é ponte entre pessoas e território.
             </p>

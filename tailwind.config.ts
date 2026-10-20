@@ -1,5 +1,10 @@
 import type { Config } from "tailwindcss";
 
+// Todas as cores apontam para variáveis CSS definidas em src/styles/globals.css
+// (sistema visual "Confluência"). Trocar o tema = trocar [data-theme] em
+// qualquer elemento; nenhuma tela precisa trocar classe.
+const v = (name: string) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,112 +14,85 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Escala neutra "Observatório" — papel/fundo/texto/borda. Ligada a
-        // variável CSS pra responder ao modo de cor (claro/escuro/alto
-        // contraste) escolhido em /settings, sem precisar trocar classe em
-        // cada tela. Ver `globals.css` (":root" e "[data-theme=light]") e
-        // "Identidade visual" no CLAUDE.md.
         ink: {
-          50:  "rgb(var(--color-ink-50) / <alpha-value>)",
-          100: "rgb(var(--color-ink-100) / <alpha-value>)",
-          300: "rgb(var(--color-ink-300) / <alpha-value>)",
-          500: "rgb(var(--color-ink-500) / <alpha-value>)",
-          700: "rgb(var(--color-ink-700) / <alpha-value>)",
-          800: "rgb(var(--color-ink-800) / <alpha-value>)",
-          900: "rgb(var(--color-ink-900) / <alpha-value>)",
-          950: "rgb(var(--color-ink-950) / <alpha-value>)",
+          50: v("ink-50"), 100: v("ink-100"), 300: v("ink-300"), 500: v("ink-500"),
+          600: v("ink-600"), 700: v("ink-700"), 800: v("ink-800"), 900: v("ink-900"), 950: v("ink-950"),
         },
-        // Acento único de ação/dado — verde-dado. Usar com disciplina. Só o
-        // tom usado como TEXTO solto (400) muda por tema — os tons usados
-        // como preenchimento sólido (500/600/700) e os tons de chip (50/100)
-        // funcionam nos dois fundos sem precisar variar.
         brand: {
-          50:  "#e4ebdc",
-          100: "#cddcbb",
-          400: "rgb(var(--color-brand-400) / <alpha-value>)",
-          500: "#7a9b5c",
-          600: "#61804a",
-          700: "#4c6539",
+          50: v("brand-50"), 100: v("brand-100"), 200: v("brand-200"), 300: v("brand-300"),
+          400: v("brand-400"), 500: v("brand-500"), 600: v("brand-600"), 700: v("brand-700"),
         },
-        // Texto/ícone fixo sobre preenchimento de acento (botão primário,
-        // chips sólidos) — não varia com o tema, porque o preenchimento por
-        // trás (brand-500/coral-500) também não varia.
-        "on-accent": "#14140f",
-        // Acentos reservados a badges de status e gráficos — recalibrados pra
-        // contraste em fundo escuro (mais claros/saturados que em fundo branco)
-        teal: {
-          50:  "#dce8ea",
-          500: "#4fa3ad",
-          600: "#3d8189",
-        },
-        amber: {
-          50:  "#3a3122",
-          500: "#e0a940",
-          600: "#f0c674",
-        },
-        coral: {
-          50:  "#3a2521",
-          500: "#e0715a",
-          600: "#ec9686",
-        },
-        purple: {
-          50:  "#2c2a3a",
-          500: "#9d94e0",
-          600: "#b8b0ec",
-        },
-        // Paleta de séries pra gráficos multi-categoria, legível em fundo escuro
+        // Texto/ícone sobre preenchimento de acento (botão primário, chips sólidos)
+        "on-accent": "#ffffff",
+        gold:   v("gold"),
+        teal:   { 50: v("teal-50"),   500: v("teal-500"),   600: v("teal-600") },
+        amber:  { 50: v("amber-50"),  500: v("amber-500"),  600: v("amber-600") },
+        coral:  { 50: v("coral-50"),  500: v("coral-500"),  600: v("coral-600") },
+        purple: { 50: v("purple-50"), 500: v("purple-500"), 600: v("purple-600") },
         chart: {
-          1: "#5b8fd9",
-          2: "#7a9b5c",
-          3: "#e0a940",
-          4: "#9d94e0",
-          5: "#e0715a",
-          6: "#4fa3ad",
+          1: v("chart-1"), 2: v("chart-2"), 3: v("chart-3"),
+          4: v("chart-4"), 5: v("chart-5"), 6: v("chart-6"),
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
-        condensed: ["var(--font-condensed)", "IBM Plex Sans Condensed", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "IBM Plex Mono", "Fira Code", "monospace"],
+        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
+        // "condensed" foi a voz de título do tema anterior (IBM Plex
+        // Condensed). Mantido como alias do corpo pra não quebrar as ~200
+        // ocorrências; títulos novos usam `font-serif`.
+        condensed: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
+        // Aspas obrigatórias: nome de fonte com número ("4") sem aspas invalida a
+        // declaração inteira no CSS.
+        serif: ["var(--font-serif)", '"Source Serif 4"', "Georgia", "serif"],
+        mono: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
       },
       borderRadius: {
         DEFAULT: "6px",
         sm: "4px",
         md: "8px",
-        lg: "8px",
-        xl: "10px",
+        lg: "10px",
+        xl: "14px",
+        "2xl": "18px",
       },
-      // Em rem (não px) de propósito: assim a opção "Tamanho do texto" em
-      // /settings (que muda o font-size do <html>) escala essas fontes junto.
+      // Em rem (não px): a opção "Tamanho do texto" em /settings escala tudo.
       fontSize: {
-        "2xs": ["0.625rem",  { lineHeight: "0.875rem" }],
-        xs:   ["0.6875rem", { lineHeight: "1rem" }],
-        sm:   ["0.8125rem", { lineHeight: "1.25rem" }],
-        base: ["0.875rem",  { lineHeight: "1.375rem" }],
-        lg:   ["1rem",      { lineHeight: "1.5rem" }],
-        xl:   ["1.125rem",  { lineHeight: "1.75rem" }],
+        "2xs": ["0.6875rem",  { lineHeight: "1rem" }],
+        xs:    ["0.75rem",    { lineHeight: "1.125rem" }],
+        sm:    ["0.84375rem", { lineHeight: "1.3rem" }],
+        base:  ["0.9375rem",  { lineHeight: "1.5rem" }],
+        lg:    ["1.0625rem",  { lineHeight: "1.6rem" }],
+        xl:    ["1.25rem",    { lineHeight: "1.75rem" }],
+        "2xl": ["1.5rem",     { lineHeight: "2rem", letterSpacing: "-0.01em" }],
+        "3xl": ["1.875rem",   { lineHeight: "2.25rem", letterSpacing: "-0.015em" }],
+        "4xl": ["2.375rem",   { lineHeight: "2.6rem", letterSpacing: "-0.02em" }],
+        "5xl": ["3rem",       { lineHeight: "3.1rem", letterSpacing: "-0.025em" }],
+        "6xl": ["3.75rem",    { lineHeight: "1.02", letterSpacing: "-0.03em" }],
       },
       boxShadow: {
-        // Profundidade vem de borda + camada de fundo, não de sombra pesada —
-        // esses tokens ficam quase imperceptíveis, só pra separar bordas finas.
-        xs: "0 1px 2px rgba(0, 0, 0, 0.16)",
-        sm: "0 1px 2px rgba(0, 0, 0, 0.20)",
-        md: "0 2px 6px rgba(0, 0, 0, 0.24)",
+        xs: "0 1px 2px rgb(var(--shadow-color) / 0.05)",
+        sm: "0 1px 3px rgb(var(--shadow-color) / 0.07), 0 1px 2px rgb(var(--shadow-color) / 0.04)",
+        md: "0 4px 14px -2px rgb(var(--shadow-color) / 0.09), 0 2px 4px rgb(var(--shadow-color) / 0.04)",
+        lg: "0 14px 36px -10px rgb(var(--shadow-color) / 0.18), 0 4px 10px rgb(var(--shadow-color) / 0.05)",
+        xl: "0 24px 60px -18px rgb(var(--shadow-color) / 0.28)",
+      },
+      maxWidth: {
+        page: "1240px",
+        prose: "68ch",
       },
       keyframes: {
-        "fade-in":    { from: { opacity: "0", transform: "translateY(2px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        "fade-in":    { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        "slide-in-left": { from: { transform: "translateX(-100%)" }, to: { transform: "translateX(0)" } },
         "pulse-soft": { "0%, 100%": { opacity: "1", transform: "scale(1)" }, "50%": { opacity: "0.55", transform: "scale(0.82)" } },
         "dot-pulse":  { "0%, 80%, 100%": { opacity: "0.35", transform: "scale(0.75)" }, "40%": { opacity: "1", transform: "scale(1)" } },
-        // Barra de progresso indeterminada — usada quando o navegador não
-        // informa Content-Length (raro, mas o mapa de calor municipal
-        // precisa de ALGUM feedback visual mesmo nesse caso).
         "loading-indeterminate": { "0%": { transform: "translateX(-100%)" }, "100%": { transform: "translateX(300%)" } },
+        shimmer: { "0%": { backgroundPosition: "-400px 0" }, "100%": { backgroundPosition: "400px 0" } },
       },
       animation: {
-        "fade-in":    "fade-in 0.15s ease-out both",
+        "fade-in":    "fade-in 0.25s cubic-bezier(0.2,0.8,0.2,1) both",
+        "slide-in-left": "slide-in-left 0.22s cubic-bezier(0.2,0.8,0.2,1) both",
         "pulse-soft": "pulse-soft 2.4s ease-in-out infinite",
         "dot-pulse":  "dot-pulse 1s ease-in-out infinite",
         "loading-indeterminate": "loading-indeterminate 1.1s ease-in-out infinite",
+        shimmer: "shimmer 1.4s linear infinite",
       },
     },
   },

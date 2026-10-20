@@ -1,18 +1,9 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { PlatformTopbar } from "@/components/layout/topbar";
-import { PlatformSidebar } from "@/components/layout/sidebar";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  return (
-    <div className="min-h-dvh flex flex-col bg-ink-950">
-      <PlatformTopbar user={session.user} />
-      <div className="flex flex-1">
-        <PlatformSidebar role={session.user.role} />
-        <main className="flex-1 overflow-auto">{children}</main>
-      </div>
-    </div>
-  );
+  return <AppShell user={session.user}>{children}</AppShell>;
 }

@@ -41,13 +41,15 @@ export function WidgetRenderer({ type, title, data, config, palette }: WidgetRen
   const resolvedPalette = widgetPalette ?? COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota;
 
   return (
-    <div className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-3 overflow-hidden"}
+    <div className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-4 overflow-hidden"}
       style={{
         backgroundColor: appearance.backgroundColor,
         borderRadius: appearance.borderRadius,
       }}>
-      {title && !isDecorative && <p className="text-xs font-bold mb-2 flex-shrink-0" style={{ color: "#5c3f13" }}>{title}</p>}
-      <div className="flex-1 min-h-0">
+      {title && !isDecorative && (
+        <p className="text-sm font-semibold leading-snug mb-2.5 flex-shrink-0 text-ink-50 line-clamp-2" title={title}>{title}</p>
+      )}
+      <div className="flex-1 min-h-0" style={{ containerType: "inline-size" }}>
         <WidgetBody type={type} data={data} config={config} palette={resolvedPalette} />
       </div>
     </div>
@@ -238,7 +240,7 @@ function IconView({ config }: { config: Record<string, unknown> }) {
   const iconName = (config.iconName as string) || "map-pin";
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <i className={`ti ti-${iconName}`} style={{ fontSize: textStyle.fontSize ? `${textStyle.fontSize}px` : "32px", color: textStyle.color ?? "#c48a42" }} />
+      <i className={`ti ti-${iconName}`} style={{ fontSize: textStyle.fontSize ? `${textStyle.fontSize}px` : "32px", color: textStyle.color ?? "rgb(var(--color-brand-500))" }} />
     </div>
   );
 }
@@ -247,16 +249,17 @@ function DividerView({ config }: { config: Record<string, unknown> }) {
   const textStyle = (config.textStyle ?? {}) as { color?: string };
   return (
     <div className="w-full h-full flex items-center">
-      <div className="w-full" style={{ height: 2, background: textStyle.color ?? "#e8d8be" }} />
+      <div className="w-full" style={{ height: 2, background: textStyle.color ?? "rgb(var(--color-ink-700))" }} />
     </div>
   );
 }
 
 function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: string; decimals?: number }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center">
-      <p className="text-3xl font-bold" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif" }}>
-        {formatNumber(value, decimals)}{suffix ? ` ${suffix}` : ""}
+    <div className="h-full flex flex-col justify-center">
+      <p className="font-serif font-semibold leading-none tabular text-brand-400" style={{ fontSize: "clamp(1.75rem, 4.2cqw + 1rem, 3.25rem)", letterSpacing: "-0.02em" }}>
+        {formatNumber(value, decimals)}
+        {suffix && <span className="ml-1.5 text-[0.45em] font-sans font-medium text-ink-500 tracking-normal">{suffix}</span>}
       </p>
     </div>
   );
@@ -280,9 +283,9 @@ function BarChartView({ data, colors, displayMode, totalResponses, orientation }
         <ResponsiveContainer width="100%" height="100%">
           {horizontal ? (
             <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-              <CartesianGrid horizontal={false} stroke="#f3e4cb" />
-              <XAxis type="number" tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
-              <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} width={90} />
+              <CartesianGrid horizontal={false} stroke="rgb(var(--color-ink-800))" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
+              <YAxis type="category" dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-300))" }} axisLine={false} tickLine={false} width={112} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
@@ -290,9 +293,9 @@ function BarChartView({ data, colors, displayMode, totalResponses, orientation }
             </BarChart>
           ) : (
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="#f3e4cb" />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
-              <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
+              <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
+              <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [fmt(Number(v)), percent ? "% das respostas" : "Respostas"]} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
@@ -315,7 +318,7 @@ function PieChartView({ data, donut, colors, displayMode, totalResponses }: Choi
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}>
-              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} stroke="#fff" strokeWidth={1.5} />)}
+              {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} stroke="rgb(var(--color-ink-900))" strokeWidth={1.5} />)}
             </Pie>
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
           </PieChart>
@@ -341,9 +344,9 @@ function LineChartView({ data, colors }: { data: TimeSeriesResult; colors: strin
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 6, right: 12, left: 0, bottom: 4 }}>
-            <CartesianGrid vertical={false} stroke="#f3e4cb" />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#5c3f13" }} minTickGap={18} />
-            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} width={34} />
+            <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} minTickGap={18} />
+            <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} width={34} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [formatNumber(Number(v)), String(name)]} />
             {data.series.map((s, i) => (
               <Line key={s.key} type="monotone" dataKey={s.key} name={s.label}
@@ -379,9 +382,9 @@ function GroupedBarView({ data, colors, displayMode }: { data: Extract<WidgetDat
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barGap={2}>
-            <CartesianGrid vertical={false} stroke="#f3e4cb" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5c3f13" }} interval={0} angle={-20} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10, fill: "#5c3f13" }} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
+            <CartesianGrid vertical={false} stroke="rgb(var(--color-ink-800))" />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
+            <YAxis tick={{ fontSize: 11, fill: "rgb(var(--color-ink-500))" }} axisLine={false} tickLine={false} allowDecimals={false} tickFormatter={percent ? (v: number) => `${v}%` : undefined} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
             {data.cols.map((c, i) => (
               <Bar key={c.id} dataKey={c.id} name={c.label} fill={colors[i % colors.length]} radius={[4, 4, 0, 0]} maxBarSize={36} />
@@ -415,42 +418,42 @@ function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, 
   return (
     <div className="h-full flex flex-col gap-1.5">
     <div className="flex-1 min-h-0 overflow-auto">
-      <table className="text-xs" style={{ borderCollapse: "collapse" }}>
+      <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th className="px-2 py-1 text-left sticky left-0" style={{ background: "#fff" }} />
+            <th className="px-2 py-1 text-left sticky left-0" style={{ background: "rgb(var(--color-ink-900))" }} />
             {data.cols.map(c => (
-              <th key={c.id} className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "#c48a42", borderBottom: "1px solid #e8d8be" }}>{c.label}</th>
+              <th key={c.id} className="px-2 py-1.5 text-center font-semibold whitespace-nowrap text-ink-300" style={{ borderBottom: "1px solid rgb(var(--color-ink-700))" }}>{c.label}</th>
             ))}
-            <th className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "#a06d28", borderBottom: "1px solid #e8d8be" }}>Total</th>
+            <th className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "rgb(var(--color-ink-500))", borderBottom: "1px solid rgb(var(--color-ink-700))" }}>Total</th>
           </tr>
         </thead>
         <tbody>
           {data.rows.map((r, ri) => (
             <tr key={r.id}>
-              <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "#5c3f13", background: "#fff", borderRight: "1px solid #e8d8be" }}>{r.label}</td>
+              <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "rgb(var(--color-ink-100))", background: "rgb(var(--color-ink-900))", borderRight: "1px solid rgb(var(--color-ink-700))" }}>{r.label}</td>
               {data.cols.map((c, ci) => (
-                <td key={c.id} className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "#111", background: `rgba(${accent}, ${(0.08 + intensity(ri, ci) * 0.55).toFixed(2)})` }}>
+                <td key={c.id} className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "rgb(var(--color-ink-50))", background: `rgba(${accent}, ${(0.08 + intensity(ri, ci) * 0.55).toFixed(2)})` }}>
                   {formatCell(cellValue(ri, ci))}
                 </td>
               ))}
-              <td className="px-2 py-1 text-center font-semibold whitespace-nowrap" style={{ color: "#a06d28" }}>{formatNumber(data.rowTotals[ri])}</td>
+              <td className="px-2 py-1 text-center font-semibold whitespace-nowrap" style={{ color: "rgb(var(--color-ink-500))" }}>{formatNumber(data.rowTotals[ri])}</td>
             </tr>
           ))}
           <tr>
-            <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "#a06d28", background: "#fff", borderTop: "1px solid #e8d8be" }}>Total</td>
+            <td className="px-2 py-1 font-semibold whitespace-nowrap sticky left-0" style={{ color: "rgb(var(--color-ink-500))", background: "rgb(var(--color-ink-900))", borderTop: "1px solid rgb(var(--color-ink-700))" }}>Total</td>
             {data.colTotals.map((t, i) => (
-              <td key={i} className="px-2 py-1 text-center font-semibold whitespace-nowrap" style={{ color: "#a06d28", borderTop: "1px solid #e8d8be" }}>{formatNumber(t)}</td>
+              <td key={i} className="px-2 py-1 text-center font-semibold whitespace-nowrap" style={{ color: "rgb(var(--color-ink-500))", borderTop: "1px solid rgb(var(--color-ink-700))" }}>{formatNumber(t)}</td>
             ))}
-            <td className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "#5c3f13", borderTop: "1px solid #e8d8be" }}>{formatNumber(data.grandTotal)}</td>
+            <td className="px-2 py-1 text-center font-bold whitespace-nowrap" style={{ color: "rgb(var(--color-ink-100))", borderTop: "1px solid rgb(var(--color-ink-700))" }}>{formatNumber(data.grandTotal)}</td>
           </tr>
         </tbody>
       </table>
     </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
-        <span className="text-2xs" style={{ color: "#a06d28" }}>0</span>
+      <div className="flex items-center gap-1.5 flex-shrink-0 px-1 max-w-xs">
+        <span className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>0</span>
         <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${accent},0.08), rgba(${accent},0.63))` }} />
-        <span className="text-2xs font-semibold" style={{ color: "#5c3f13" }}>{valueMode === "count" ? formatNumber(legendMax) : `${formatNumber(legendMax, 0)}%`}</span>
+        <span className="text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{valueMode === "count" ? formatNumber(legendMax) : `${formatNumber(legendMax, 0)}%`}</span>
       </div>
     </div>
   );
@@ -461,17 +464,17 @@ function TableView({ data }: { data: Extract<WidgetData, { kind: "table" }> }) {
     <div className="h-full overflow-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr style={{ borderBottom: "1px solid #e8d8be" }}>
+          <tr className="sticky top-0 z-[1] bg-ink-800">
             {data.columns.map(c => (
-              <th key={c.fieldId} className="px-2 py-1 text-left font-bold whitespace-nowrap" style={{ color: "#c48a42" }}>{c.label}</th>
+              <th key={c.fieldId} className="px-2.5 py-2 text-left text-2xs font-semibold uppercase tracking-[0.08em] whitespace-nowrap text-ink-300">{c.label}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.rows.map(row => (
-            <tr key={row.responseId} style={{ borderBottom: "1px solid #f3e4cb" }}>
+            <tr key={row.responseId} className="border-b border-ink-700 even:bg-ink-800/40">
               {data.columns.map(c => (
-                <td key={c.fieldId} className="px-2 py-1" style={{ color: "#111" }}>
+                <td key={c.fieldId} className="px-2.5 py-1.5 text-ink-100">
                   {String(row.values[c.fieldId] ?? "—")}
                 </td>
               ))}

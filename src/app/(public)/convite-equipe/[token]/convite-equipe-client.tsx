@@ -37,15 +37,15 @@ export function ConviteEquipeClient({ token, researchTitle, role, invalid, isLog
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-ink-950 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <DataLogo />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h1 className="text-xl font-serif font-semibold text-slate-900 mb-1">Convite para equipe de pesquisa</h1>
-          <p className="text-sm text-slate-500 mb-5">
+        <div className="bg-ink-900 rounded-2xl shadow-sm border border-ink-700 p-6">
+          <h1 className="text-xl font-serif font-semibold text-ink-50 mb-1">Convite para equipe de pesquisa</h1>
+          <p className="text-sm text-ink-500 mb-5">
             Você foi convidado(a) como <strong>{ROLE_LABEL[role] ?? role}</strong> na pesquisa &ldquo;{researchTitle}&rdquo;.
           </p>
 
@@ -57,7 +57,7 @@ export function ConviteEquipeClient({ token, researchTitle, role, invalid, isLog
 
           {!invalid && !isLoggedIn && (
             <div className="space-y-3">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-ink-300">
                 Entre com sua conta para aceitar o convite.
               </p>
               <Button type="button" onClick={() => signIn("google", { callbackUrl: `/convite-equipe/${token}` })}>
