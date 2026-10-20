@@ -61,7 +61,7 @@ export default function NewResearchPage() {
     <div className="flex-1 overflow-auto bg-ink-950">
       <div className="p-6 max-w-2xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold font-condensed text-ink-100">Nova pesquisa</h1>
+          <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">Nova pesquisa</h1>
           <p className="text-sm text-ink-300 mt-0.5">
             Preencha as informações básicas para começar. Você monta o instrumento de coleta em seguida.
           </p>

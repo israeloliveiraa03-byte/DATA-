@@ -90,8 +90,8 @@ export function MapWidget({ data, palette, basemap }: MapWidgetProps) {
   }
 
   return (
-    <div className="w-full h-full flex flex-col gap-1.5">
-      <div className="flex-1 min-h-0 rounded-md overflow-hidden">
+    <div className="w-full h-full flex flex-col gap-2">
+      <div className={`flex-1 min-h-0 rounded-md overflow-hidden ${!basemap || basemap === "light" ? "map-editorial" : ""}`}>
         {/* scrollWheelZoom nasce desligado e é ligado pelo ScrollZoomOnFocus
             no primeiro clique/toque — os botões +/- do Leaflet ficam sempre
             visíveis (zoomControl é o padrão, dentro do próprio container do
@@ -105,7 +105,7 @@ export function MapWidget({ data, palette, basemap }: MapWidgetProps) {
           {visiblePoints.map((p, i) => {
             if (!hasCategories) {
               return (
-                <CircleMarker key={i} center={[p.lat, p.lng]} radius={6} pathOptions={{ color: colors[0], fillColor: colors[0], fillOpacity: 0.85, weight: 1.5 }}>
+                <CircleMarker key={i} center={[p.lat, p.lng]} radius={6} pathOptions={{ color: "#ffffff", fillColor: colors[0], fillOpacity: 0.9, weight: 1.5 }}>
                   <Tooltip>{p.label}</Tooltip>
                 </CircleMarker>
               );
@@ -130,17 +130,15 @@ export function MapWidget({ data, palette, basemap }: MapWidgetProps) {
             return (
               <button key={c.id} onClick={() => toggleCategory(c.id)}
                 title={hidden ? "Mostrar esta categoria" : "Ocultar esta categoria"}
-                className="flex items-center gap-1 text-2xs rounded-full px-2 py-0.5 transition-all"
+                className="flex items-center gap-1.5 text-2xs rounded-full px-2 py-0.5 transition-all border border-ink-700 text-ink-300 hover:border-ink-600"
                 style={{
-                  color: "#5c3f13",
-                  border: "1px solid #e8d8be",
-                  background: hidden ? "transparent" : "#fdfaf4",
+                  background: hidden ? "transparent" : "rgb(var(--color-ink-900))",
                   opacity: hidden ? 0.45 : 1,
                   textDecoration: hidden ? "line-through" : "none",
                 }}>
                 <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
                 {c.label}
-                <span style={{ color: "#a06d28" }}>{countByCategory[c.id] ?? 0}</span>
+                <span className="font-semibold text-ink-100 tabular">{countByCategory[c.id] ?? 0}</span>
               </button>
             );
           })}
@@ -148,7 +146,7 @@ export function MapWidget({ data, palette, basemap }: MapWidgetProps) {
       ) : (
         <div className="flex justify-center px-1 flex-shrink-0">
           <span className="flex items-center gap-1 text-2xs rounded-full px-2 py-0.5"
-            style={{ color: "#5c3f13", border: "1px solid #e8d8be", background: "#fdfaf4" }}>
+            style={{ color: "rgb(var(--color-ink-100))", border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-900))" }}>
             <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[0] }} />
             {data.points.length} ponto{data.points.length === 1 ? "" : "s"} coletado{data.points.length === 1 ? "" : "s"}
           </span>

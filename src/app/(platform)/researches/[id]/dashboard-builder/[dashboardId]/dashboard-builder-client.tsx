@@ -21,8 +21,8 @@ import type { Research, Dashboard, FormField, Response as ResponseRow } from "@/
 // pragmático aqui, só nesse limite com a biblioteca de terceiro.
 const Moveable = dynamic(() => import("react-moveable"), { ssr: false }) as unknown as ComponentType<Record<string, unknown>>;
 
-const BRD = "1px solid #e8d8be";
-const TS  = { color: "#c48a42", fontSize: "9px" } as const;
+const BRD = "1px solid rgb(var(--color-ink-700))";
+const TS  = { color: "rgb(var(--color-brand-500))", fontSize: "11px" } as const;
 // Grade de fundo só como referência visual solta — não trava mais o
 // posicionamento (isso agora é livre, com guias de alinhamento via
 // react-moveable). Mantém a mesma malha de 12 "colunas" que já existia.
@@ -80,7 +80,7 @@ interface WidgetDraft {
 const DECORATIVE_PRESETS: { variant: "text" | "divider" | "block" | "icon"; label: string; icon: string; w: number; h: number; config: Record<string, unknown> }[] = [
   { variant: "text",    label: "Texto",         icon: "ti-typography",           w: 33.33, h: 64, config: { content: "Escreva aqui...", variant: "text" } },
   { variant: "divider", label: "Divisória",     icon: "ti-separator-horizontal", w: 50,    h: 24, config: { variant: "divider" } },
-  { variant: "block",   label: "Bloco de cor",  icon: "ti-square-rounded",       w: 25,    h: 80, config: { variant: "block", style: { backgroundColor: "#7a9b5c", borderRadius: 8 } } },
+  { variant: "block",   label: "Bloco de cor",  icon: "ti-square-rounded",       w: 25,    h: 80, config: { variant: "block", style: { backgroundColor: "rgb(var(--color-brand-500))", borderRadius: 8 } } },
   { variant: "icon",    label: "Ícone",         icon: "ti-map-pin",              w: 16.66, h: 80, config: { variant: "icon", iconName: "map-pin" } },
 ];
 
@@ -144,7 +144,7 @@ function FilterConditionRow({
   onChange: (c: FilterCondition) => void;
   onRemove: () => void;
 }) {
-  const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+  const inputStyle = { border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" };
   const smallInput = "text-2xs rounded px-1.5 py-1";
 
   const options = field
@@ -169,14 +169,14 @@ function FilterConditionRow({
     <div className="flex flex-wrap items-center gap-1.5">
       {condition.kind === "choice" && (
         <div className="flex flex-wrap gap-1">
-          {options.length === 0 && <span className="text-2xs italic" style={{ color: "#a06d28" }}>Sem opções configuradas</span>}
+          {options.length === 0 && <span className="text-2xs italic" style={{ color: "rgb(var(--color-ink-500))" }}>Sem opções configuradas</span>}
           {options.map(o => {
             const checked = condition.optionIds.includes(o.id);
             return (
               <button key={o.id} type="button"
                 onClick={() => onChange({ ...condition, optionIds: checked ? condition.optionIds.filter(id => id !== o.id) : [...condition.optionIds, o.id] })}
                 className="text-2xs rounded-full px-2 py-0.5 font-medium"
-                style={{ border: BRD, background: checked ? "#c48a42" : "#fff", color: checked ? "#fff" : "#5c3f13" }}>
+                style={{ border: BRD, background: checked ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: checked ? "#fff" : "rgb(var(--color-ink-100))" }}>
                 {o.label}
               </button>
             );
@@ -187,7 +187,7 @@ function FilterConditionRow({
         <>
           <input type="number" placeholder="mín" className={`${smallInput} w-16`} style={inputStyle}
             value={condition.min ?? ""} onChange={e => onChange({ ...condition, min: e.target.value === "" ? undefined : Number(e.target.value) })} />
-          <span className="text-2xs" style={{ color: "#a06d28" }}>a</span>
+          <span className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>a</span>
           <input type="number" placeholder="máx" className={`${smallInput} w-16`} style={inputStyle}
             value={condition.max ?? ""} onChange={e => onChange({ ...condition, max: e.target.value === "" ? undefined : Number(e.target.value) })} />
         </>
@@ -203,12 +203,12 @@ function FilterConditionRow({
         <>
           <input type="date" className={smallInput} style={inputStyle}
             value={condition.from ?? ""} onChange={e => onChange({ ...condition, from: e.target.value || undefined })} />
-          <span className="text-2xs" style={{ color: "#a06d28" }}>a</span>
+          <span className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>a</span>
           <input type="date" className={smallInput} style={inputStyle}
             value={condition.to ?? ""} onChange={e => onChange({ ...condition, to: e.target.value || undefined })} />
         </>
       )}
-      <button onClick={onRemove} className="flex-shrink-0" style={{ color: "#c0392b" }} aria-label="Remover condição">
+      <button onClick={onRemove} className="flex-shrink-0" style={{ color: "rgb(var(--color-coral-500))" }} aria-label="Remover condição">
         <i className="ti ti-x text-xs" />
       </button>
     </div>
@@ -243,7 +243,7 @@ function DashboardFilterBar({
 }) {
   const conditions = filter.conditions ?? [];
   const hasFilter = !!(filter.from || filter.to || conditions.length > 0);
-  const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+  const inputStyle = { border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" };
 
   function addCondition() {
     const firstField = fields[0];
@@ -267,33 +267,33 @@ function DashboardFilterBar({
   }
 
   return (
-    <div className="flex flex-col gap-2 mb-3 px-3 py-2 rounded-lg" style={{ border: BRD, background: "#fffaf1" }}>
+    <div className="flex flex-col gap-2 mb-3 px-3 py-2 rounded-lg" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: "#a06d28" }}>
+        <span className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wide flex-shrink-0" style={{ color: "rgb(var(--color-ink-500))" }}>
           <i className="ti ti-filter" /> Filtro geral
         </span>
-        <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
+        <label className="text-2xs flex items-center gap-1" style={{ color: "rgb(var(--color-ink-100))" }}>
           De
           <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
             value={filter.from ?? ""} onChange={e => onChange({ ...filter, from: e.target.value || undefined })} />
         </label>
-        <label className="text-2xs flex items-center gap-1" style={{ color: "#5c3f13" }}>
+        <label className="text-2xs flex items-center gap-1" style={{ color: "rgb(var(--color-ink-100))" }}>
           Até
           <input type="date" className="text-2xs rounded px-1.5 py-1" style={inputStyle}
             value={filter.to ?? ""} onChange={e => onChange({ ...filter, to: e.target.value || undefined })} />
         </label>
-        <span className="text-2xs ml-auto flex-shrink-0" style={{ color: "#a06d28" }}>
+        <span className="text-2xs ml-auto flex-shrink-0" style={{ color: "rgb(var(--color-ink-500))" }}>
           {hasFilter ? `${matchCount} de ${totalCount} respostas` : `${totalCount} respostas`}
         </span>
         {hasFilter && (
-          <button onClick={() => onChange({})} className="text-2xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "#c0392b" }}>
+          <button onClick={() => onChange({})} className="text-2xs font-semibold flex items-center gap-1 flex-shrink-0" style={{ color: "rgb(var(--color-coral-500))" }}>
             <i className="ti ti-x" /> Limpar tudo
           </button>
         )}
       </div>
 
       {conditions.map((cond, i) => (
-        <div key={i} className="flex flex-wrap items-center gap-1.5 pl-1" style={{ borderLeft: "2px solid #e8d8be" }}>
+        <div key={i} className="flex flex-wrap items-center gap-1.5 pl-1" style={{ borderLeft: "2px solid rgb(var(--color-ink-700))" }}>
           <select className="text-2xs rounded px-1.5 py-1 flex-shrink-0" style={inputStyle}
             value={cond.fieldId} onChange={e => updateConditionField(i, e.target.value)}>
             {fields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -304,11 +304,11 @@ function DashboardFilterBar({
       ))}
 
       {fields.length > 0 ? (
-        <button onClick={addCondition} className="self-start flex items-center gap-1 text-2xs font-semibold" style={{ color: "#5c3f13" }}>
+        <button onClick={addCondition} className="self-start flex items-center gap-1 text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>
           <i className="ti ti-plus" /> Adicionar condição
         </button>
       ) : (
-        <p className="text-2xs" style={{ color: "#a06d28" }}>Nenhum campo filtrável (escolha, numérico, geográfico ou data) neste formulário ainda.</p>
+        <p className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo filtrável (escolha, numérico, geográfico ou data) neste formulário ainda.</p>
       )}
     </div>
   );
@@ -653,48 +653,48 @@ export function DashboardBuilderClient({
   const totalHeightPx = Math.max(400, widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) + 64);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#fbf3e7" }}>
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "rgb(var(--color-ink-950))" }}>
 
       {/* TOPBAR */}
-      <header className="h-12 flex items-center justify-between px-4 flex-shrink-0 z-50" style={{ background: "#fbf3e7", borderBottom: BRD }}>
+      <header className="h-12 flex items-center justify-between px-4 flex-shrink-0 z-50" style={{ background: "rgb(var(--color-ink-950))", borderBottom: BRD }}>
         <button onClick={() => router.push(`/researches/${research.id}/dashboard-builder`)}>
           <DataLogo className="text-lg" />
         </button>
         <div className="flex items-center gap-2">
           <input value={title} onChange={e => setTitle(e.target.value)}
             className="text-sm font-semibold border-none bg-transparent outline-none text-center border-b-2 border-transparent transition-colors min-w-48 px-1"
-            style={{ color: "#0f172a" }}
-            onFocus={e => e.currentTarget.style.borderBottomColor = "#d2a05c"}
+            style={{ color: "rgb(var(--color-ink-50))" }}
+            onFocus={e => e.currentTarget.style.borderBottomColor = "rgb(var(--color-gold))"}
             onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"} />
-          {savedAt && <span className="text-xs flex items-center gap-1" style={{ color: "#a06d28" }}><i className="ti ti-check" style={{ color: "#4c6b3c" }} /> Salvo às {savedAt}</span>}
+          {savedAt && <span className="text-xs flex items-center gap-1" style={{ color: "rgb(var(--color-ink-500))" }}><i className="ti ti-check" style={{ color: "rgb(var(--color-brand-500))" }} /> Salvo às {savedAt}</span>}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={undo} disabled={history.length === 0} title="Desfazer (Ctrl+Z)"
             className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30"
-            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
             <i className="ti ti-arrow-back-up text-sm" />
           </button>
           <button onClick={redo} disabled={future.length === 0} title="Refazer (Ctrl+Shift+Z)"
             className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30 mr-1"
-            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
             <i className="ti ti-arrow-forward-up text-sm" />
           </button>
           {isPublic && publicSlug && (
             <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/d/${publicSlug}`)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md"
-              style={{ border: BRD, background: "#eaf0e4", color: "#3a5430" }}>
+              style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-700))" }}>
               <i className="ti ti-link" /> Copiar link público
             </button>
           )}
           <button onClick={togglePublish} disabled={publishing}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md disabled:opacity-50"
-            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
             <i className={`ti ${isPublic ? "ti-lock" : "ti-world"}`} />
             {isPublic ? "Despublicar" : "Publicar"}
           </button>
           <button onClick={save} disabled={saving}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md disabled:opacity-50"
-            style={{ background: "#c48a42", color: "#fff", border: "1.5px solid #7a5218" }}>
+            style={{ background: "rgb(var(--color-brand-500))", color: "#fff", border: "1.5px solid rgb(var(--color-amber-600))" }}>
             <i className={saving ? "ti ti-loader-2 animate-spin" : "ti ti-device-floppy"} />
             {saving ? "Salvando..." : "Salvar"}
           </button>
@@ -704,18 +704,18 @@ export function DashboardBuilderClient({
       <div className="flex flex-1 overflow-hidden">
 
         {/* Painel esquerdo — paleta de widgets */}
-        <aside className="w-48 flex-shrink-0 overflow-y-auto py-3 px-2.5" style={{ background: "#fbf3e7", borderRight: BRD }}>
+        <aside className="w-48 flex-shrink-0 overflow-y-auto py-3 px-2.5" style={{ background: "rgb(var(--color-ink-950))", borderRight: BRD }}>
 
           {/* Aparência da página publicada — a página é do pesquisador, não
               chrome do Dataº: fundo e tom ficam com ele escolher. */}
           <button onClick={() => setAppearanceOpen(v => !v)}
             className="w-full flex items-center justify-between px-1 mb-1.5">
             <span className="font-bold uppercase tracking-widest" style={TS}>Aparência publicada</span>
-            <i className={`ti ${appearanceOpen ? "ti-chevron-up" : "ti-chevron-down"} text-xs`} style={{ color: "#c48a42" }} />
+            <i className={`ti ${appearanceOpen ? "ti-chevron-up" : "ti-chevron-down"} text-xs`} style={{ color: "rgb(var(--color-brand-500))" }} />
           </button>
           {appearanceOpen && (
-            <div className="mb-3 p-2 rounded-md" style={{ border: BRD, background: "#fff" }}>
-              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Imagem de fundo</p>
+            <div className="mb-3 p-2 rounded-md" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
+              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Imagem de fundo</p>
               <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
               {dashboardCoverUrl && (
                 <div className="relative h-16 rounded-md overflow-hidden mb-1.5" style={{ border: BRD }}>
@@ -725,45 +725,45 @@ export function DashboardBuilderClient({
               <div className="flex gap-1.5 mb-3">
                 <button onClick={() => coverInputRef.current?.click()} disabled={coverUploading}
                   className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-2xs font-semibold disabled:opacity-50"
-                  style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
+                  style={{ border: BRD, background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-100))" }}>
                   <i className={`ti ${coverUploading ? "ti-loader-2 animate-spin" : "ti-photo"}`} />
                   {dashboardCoverUrl ? "Trocar" : "Adicionar"}
                 </button>
                 {dashboardCoverUrl && (
-                  <button onClick={removeCover} className="px-2 py-1.5 rounded-md text-2xs font-semibold" style={{ border: BRD, color: "#c0392b" }}>
+                  <button onClick={removeCover} className="px-2 py-1.5 rounded-md text-2xs font-semibold" style={{ border: BRD, color: "rgb(var(--color-coral-500))" }}>
                     <i className="ti ti-x" />
                   </button>
                 )}
               </div>
-              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Tom</p>
+              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Tom</p>
               <div className="flex rounded-md overflow-hidden mb-3" style={{ border: BRD }}>
                 {[{ v: "light", l: "Claro" }, { v: "dark", l: "Escuro" }].map(t => (
                   <button key={t.v} onClick={() => setTheme(t.v)}
                     className="flex-1 py-1.5 text-2xs font-semibold"
-                    style={{ background: dashboardTheme === t.v ? "#c48a42" : "#fff", color: dashboardTheme === t.v ? "#fff" : "#5c3f13" }}>
+                    style={{ background: dashboardTheme === t.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: dashboardTheme === t.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                     {t.l}
                   </button>
                 ))}
               </div>
-              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "#a06d28" }}>Paleta de cores</p>
+              <p className="text-2xs font-bold uppercase mb-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Paleta de cores</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {Object.entries(COLOR_PALETTES).map(([key, p]) => (
                   <button key={key} onClick={() => setPalette(key)}
                     className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left"
-                    style={{ border: dashboardPalette === key ? "2px solid #c48a42" : BRD, background: "#fff" }}>
+                    style={{ border: dashboardPalette === key ? "2px solid rgb(var(--color-brand-500))" : BRD, background: "rgb(var(--color-ink-900))" }}>
                     <span className="flex flex-shrink-0" style={{ width: 18, height: 18, borderRadius: 4, overflow: "hidden" }}>
                       {p.chartColors.slice(0, 3).map((c, i) => <span key={i} className="flex-1 h-full" style={{ background: c }} />)}
                     </span>
-                    <span className="text-2xs font-medium truncate" style={{ color: "#5c3f13" }}>{p.label}</span>
+                    <span className="text-2xs font-medium truncate" style={{ color: "rgb(var(--color-ink-100))" }}>{p.label}</span>
                   </button>
                 ))}
               </div>
-              <p className="text-2xs font-bold uppercase mb-1.5 mt-3" style={{ color: "#a06d28" }}>Fundo do canvas</p>
+              <p className="text-2xs font-bold uppercase mb-1.5 mt-3" style={{ color: "rgb(var(--color-ink-500))" }}>Fundo do canvas</p>
               <div className="flex items-center gap-2">
                 <input type="color" className="w-10 h-8 rounded-md flex-shrink-0" style={{ border: BRD }}
                   value={canvasColor ?? "#ffffff"} onChange={e => setCanvasColor(e.target.value)} />
                 {canvasColor && (
-                  <button onClick={() => setCanvasColor(undefined)} className="text-2xs font-semibold" style={{ color: "#a06d28" }}>
+                  <button onClick={() => setCanvasColor(undefined)} className="text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-500))" }}>
                     Restaurar branco
                   </button>
                 )}
@@ -776,20 +776,20 @@ export function DashboardBuilderClient({
             <button key={item.value} onClick={() => addWidget(item.value)}
               title={item.description}
               className="w-full flex items-start gap-2 px-2 py-1.5 rounded-md mb-1 text-left transition-all"
-              style={{ border: BRD, background: "#fff" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#d2a05c"; e.currentTarget.style.background = "#fbf3e7"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#e8d8be"; e.currentTarget.style.background = "#fff"; }}>
-              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 mt-0.5" style={{ background: "#fbf3e7", color: "#c48a42" }}>
+              style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgb(var(--color-gold))"; e.currentTarget.style.background = "rgb(var(--color-ink-950))"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"; e.currentTarget.style.background = "rgb(var(--color-ink-900))"; }}>
+              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 mt-0.5" style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))" }}>
                 <i className={`ti ${item.icon}`} />
               </div>
               <span className="flex-1 min-w-0">
-                <span className="text-xs font-medium block" style={{ color: "#5c3f13" }}>{item.label}</span>
-                <span className="text-2xs leading-snug block" style={{ color: "#a06d28" }}>{item.description}</span>
+                <span className="text-xs font-medium block" style={{ color: "rgb(var(--color-ink-100))" }}>{item.label}</span>
+                <span className="text-2xs leading-snug block" style={{ color: "rgb(var(--color-ink-500))" }}>{item.description}</span>
               </span>
             </button>
           ))}
           {fields.length === 0 && (
-            <p className="text-xs mt-3 px-1" style={{ color: "#a06d28" }}>
+            <p className="text-xs mt-3 px-1" style={{ color: "rgb(var(--color-ink-500))" }}>
               Esta pesquisa ainda não tem campos no formulário — os widgets vão ficar vazios até você criar perguntas.
             </p>
           )}
@@ -802,21 +802,21 @@ export function DashboardBuilderClient({
           <button onClick={() => setExtraChartsOpen(v => !v)}
             className="w-full flex items-center justify-between px-1 mb-1.5 mt-3">
             <span className="font-bold uppercase tracking-widest" style={TS}>Gráficos avançados</span>
-            <i className={`ti ${extraChartsOpen ? "ti-chevron-up" : "ti-chevron-down"} text-xs`} style={{ color: "#c48a42" }} />
+            <i className={`ti ${extraChartsOpen ? "ti-chevron-up" : "ti-chevron-down"} text-xs`} style={{ color: "rgb(var(--color-brand-500))" }} />
           </button>
           {extraChartsOpen && EXTRA_CHART_TYPES.map(item => (
             <button key={item.kind} onClick={() => addExtraChart(item)}
               title={item.description}
               className="w-full flex items-start gap-2 px-2 py-1.5 rounded-md mb-1 text-left transition-all"
-              style={{ border: BRD, background: "#fff" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#d2a05c"; e.currentTarget.style.background = "#fbf3e7"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#e8d8be"; e.currentTarget.style.background = "#fff"; }}>
-              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 mt-0.5" style={{ background: "#fbf3e7", color: "#c48a42" }}>
+              style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgb(var(--color-gold))"; e.currentTarget.style.background = "rgb(var(--color-ink-950))"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"; e.currentTarget.style.background = "rgb(var(--color-ink-900))"; }}>
+              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 mt-0.5" style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))" }}>
                 <i className={`ti ${item.icon}`} />
               </div>
               <span className="flex-1 min-w-0">
-                <span className="text-xs font-medium block" style={{ color: "#5c3f13" }}>{item.label}</span>
-                <span className="text-2xs leading-snug block" style={{ color: "#a06d28" }}>{item.description}</span>
+                <span className="text-xs font-medium block" style={{ color: "rgb(var(--color-ink-100))" }}>{item.label}</span>
+                <span className="text-2xs leading-snug block" style={{ color: "rgb(var(--color-ink-500))" }}>{item.description}</span>
               </span>
             </button>
           ))}
@@ -827,18 +827,18 @@ export function DashboardBuilderClient({
               <button key={preset.variant} onClick={() => addDecorative(preset)}
                 title={preset.label}
                 className="flex-1 flex flex-col items-center gap-1 py-2 rounded-md"
-                style={{ border: BRD, background: "#fff" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#fbf3e7"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}>
-                <i className={`ti ${preset.icon} text-sm`} style={{ color: "#c48a42" }} />
-                <span className="text-2xs font-medium" style={{ color: "#5c3f13" }}>{preset.label}</span>
+                style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgb(var(--color-ink-950))"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgb(var(--color-ink-900))"; }}>
+                <i className={`ti ${preset.icon} text-sm`} style={{ color: "rgb(var(--color-brand-500))" }} />
+                <span className="text-2xs font-medium" style={{ color: "rgb(var(--color-ink-100))" }}>{preset.label}</span>
               </button>
             ))}
           </div>
         </aside>
 
         {/* Canvas */}
-        <main className="flex-1 overflow-auto p-5" style={{ background: "#f3e4cb" }}>
+        <main className="flex-1 overflow-auto p-5" style={{ background: "rgb(var(--color-ink-800))" }}>
           {loaded && widgets.length > 0 && (
             <DashboardFilterBar
               filter={filter} onChange={setFilter}
@@ -847,38 +847,38 @@ export function DashboardBuilderClient({
             />
           )}
           {!loaded ? (
-            <p className="text-xs" style={{ color: "#a06d28" }}>Carregando...</p>
+            <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Carregando...</p>
           ) : widgets.length === 0 ? (
             <div className="max-w-2xl mx-auto py-10">
               <div className="text-center mb-6">
-                <i className="ti ti-layout-grid text-3xl block mb-2" style={{ color: "#d9bb8c" }} />
-                <p className="text-sm font-semibold mb-1" style={{ color: "#5c3f13" }}>Comece com um modelo, ou monte do zero</p>
-                <p className="text-xs" style={{ color: "#a06d28" }}>Um modelo só define tipo e posição — você liga os campos da sua pesquisa depois</p>
+                <i className="ti ti-layout-grid text-3xl block mb-2" style={{ color: "rgb(var(--color-ink-600))" }} />
+                <p className="text-sm font-semibold mb-1" style={{ color: "rgb(var(--color-ink-100))" }}>Comece com um modelo, ou monte do zero</p>
+                <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Um modelo só define tipo e posição — você liga os campos da sua pesquisa depois</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {TEMPLATES.map(t => (
                   <button key={t.id} onClick={() => applyTemplate(t)}
                     className="p-4 rounded-xl text-left transition-all"
-                    style={{ border: BRD, background: "#fff" }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#d2a05c"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#e8d8be"; }}>
-                    <i className={`ti ${t.icon} text-xl block mb-2`} style={{ color: "#c48a42" }} />
-                    <p className="text-xs font-bold mb-1" style={{ color: "#5c3f13" }}>{t.label}</p>
-                    <p className="text-2xs leading-snug" style={{ color: "#a06d28" }}>{t.description}</p>
+                    style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgb(var(--color-gold))"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"; }}>
+                    <i className={`ti ${t.icon} text-xl block mb-2`} style={{ color: "rgb(var(--color-brand-500))" }} />
+                    <p className="text-xs font-bold mb-1" style={{ color: "rgb(var(--color-ink-100))" }}>{t.label}</p>
+                    <p className="text-2xs leading-snug" style={{ color: "rgb(var(--color-ink-500))" }}>{t.description}</p>
                   </button>
                 ))}
               </div>
-              <p className="text-center text-xs mt-6" style={{ color: "#a06d28" }}>
+              <p className="text-center text-xs mt-6" style={{ color: "rgb(var(--color-ink-500))" }}>
                 Ou clique em um tipo de widget no painel esquerdo pra montar do zero
               </p>
             </div>
           ) : (
             <div ref={canvasRef} className="relative rounded-xl" style={{
-              height: totalHeightPx, background: canvasColor ?? "#fff", border: BRD,
+              height: totalHeightPx, background: canvasColor ?? "rgb(var(--color-ink-900))", border: BRD,
               // Grade sutil de fundo — só referência visual solta agora, não
               // trava mais o posicionamento (isso é livre, com guias via
               // react-moveable abaixo).
-              backgroundImage: `repeating-linear-gradient(to right, transparent, transparent calc(${100 / GRID_COLUMNS}% - 1px), #f3e4cb calc(${100 / GRID_COLUMNS}% - 1px), #f3e4cb ${100 / GRID_COLUMNS}%), repeating-linear-gradient(to bottom, transparent, transparent ${GRID_ROW - 1}px, #f3e4cb ${GRID_ROW - 1}px, #f3e4cb ${GRID_ROW}px)`,
+              backgroundImage: `repeating-linear-gradient(to right, transparent, transparent calc(${100 / GRID_COLUMNS}% - 1px), rgb(var(--color-ink-800)) calc(${100 / GRID_COLUMNS}% - 1px), rgb(var(--color-ink-800)) ${100 / GRID_COLUMNS}%), repeating-linear-gradient(to bottom, transparent, transparent ${GRID_ROW - 1}px, rgb(var(--color-ink-800)) ${GRID_ROW - 1}px, rgb(var(--color-ink-800)) ${GRID_ROW}px)`,
             }}
               onClick={e => { if (e.target === e.currentTarget) setSelectedIds(new Set()); }}>
               {widgets.map(w => (
@@ -971,19 +971,19 @@ export function DashboardBuilderClient({
         </main>
 
         {/* Painel direito — inspetor */}
-        <aside className="w-64 flex-shrink-0 overflow-hidden flex flex-col" style={{ background: "#fbf3e7", borderLeft: BRD }}>
+        <aside className="w-64 flex-shrink-0 overflow-hidden flex flex-col" style={{ background: "rgb(var(--color-ink-950))", borderLeft: BRD }}>
           <div className="px-3 py-2.5 flex items-center gap-1.5" style={{ borderBottom: BRD }}>
-            <i className="ti ti-settings text-sm" style={{ color: "#c48a42" }} />
-            <span className="text-xs font-bold" style={{ color: "#5c3f13" }}>Propriedades</span>
+            <i className="ti ti-settings text-sm" style={{ color: "rgb(var(--color-brand-500))" }} />
+            <span className="text-xs font-bold" style={{ color: "rgb(var(--color-ink-100))" }}>Propriedades</span>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             {selectedIdsArray.length > 1 ? (
               <div className="flex flex-col gap-3">
-                <p className="text-xs font-semibold" style={{ color: "#5c3f13" }}>{selectedIdsArray.length} widgets selecionados</p>
-                <p className="text-2xs" style={{ color: "#a06d28" }}>Shift+clique adiciona ou remove da seleção. Arraste/redimensione juntos.</p>
+                <p className="text-xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{selectedIdsArray.length} widgets selecionados</p>
+                <p className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>Shift+clique adiciona ou remove da seleção. Arraste/redimensione juntos.</p>
                 <button onClick={deleteSelected}
                   className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold"
-                  style={{ border: "1px solid #f0b8ab", background: "#fdf0ee", color: "#c0392b" }}>
+                  style={{ border: "1px solid rgb(var(--color-coral-500) / 0.4)", background: "rgb(var(--color-coral-50))", color: "rgb(var(--color-coral-500))" }}>
                   <i className="ti ti-trash" /> Remover selecionados
                 </button>
               </div>
@@ -996,7 +996,7 @@ export function DashboardBuilderClient({
                 onDelete={() => deleteWidget(selectedWidget.id)}
               />
             ) : (
-              <p className="text-xs" style={{ color: "#a06d28" }}>Selecione um widget no canvas pra editar. Shift+clique seleciona vários.</p>
+              <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Selecione um widget no canvas pra editar. Shift+clique seleciona vários.</p>
             )}
           </div>
         </aside>
@@ -1024,9 +1024,9 @@ function GridWidget({
     width:  `${widget.w}%`,
     height: widget.h,
     zIndex: selected ? 10 : 1,
-    border: selected ? "2px solid #c48a42" : BRD,
+    border: selected ? "2px solid rgb(var(--color-brand-500))" : BRD,
     boxShadow: selected ? "0 0 0 3px rgba(196,138,66,0.1)" : "none",
-    background: "#fff",
+    background: "rgb(var(--color-ink-900))",
   };
 
   return (
@@ -1034,7 +1034,7 @@ function GridWidget({
       {selected && (
         <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(); }}
           className="absolute -top-2.5 -right-2.5 w-5 h-5 flex items-center justify-center rounded-full z-20"
-          style={{ background: "#c0392b", color: "#fff" }} aria-label="Remover widget">
+          style={{ background: "rgb(var(--color-coral-500))", color: "#fff" }} aria-label="Remover widget">
           <i className="ti ti-x text-xs" />
         </button>
       )}
@@ -1055,9 +1055,9 @@ function MapAppearanceFields({ config, onUpdateConfig }: {
   config: Record<string, unknown>;
   onUpdateConfig: (patch: Record<string, unknown>) => void;
 }) {
-  const label = { className: "text-xs font-semibold mb-1 block", style: { color: "#5c3f13" } };
+  const label = { className: "text-xs font-semibold mb-1 block", style: { color: "rgb(var(--color-ink-100))" } };
   const input = "w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none";
-  const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+  const inputStyle = { border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" };
   return (
     <div className="pt-2 flex flex-col gap-3" style={{ borderTop: BRD }}>
       <div>
@@ -1074,7 +1074,7 @@ function MapAppearanceFields({ config, onUpdateConfig }: {
           onChange={e => onUpdateConfig({ basemap: e.target.value === "light" ? undefined : e.target.value })}>
           {BASEMAP_OPTIONS.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
         </select>
-        <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Quem visualiza ainda pode trocar pelo controle de camadas no canto do mapa.</p>
+        <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Quem visualiza ainda pode trocar pelo controle de camadas no canto do mapa.</p>
       </div>
     </div>
   );
@@ -1088,9 +1088,9 @@ function WidgetInspector({
   onUpdateConfig: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
 }) {
-  const label = { className: "text-xs font-semibold mb-1 block", style: { color: "#5c3f13" } };
+  const label = { className: "text-xs font-semibold mb-1 block", style: { color: "rgb(var(--color-ink-100))" } };
   const input = "w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none";
-  const inputStyle = { border: BRD, background: "#fff", color: "#111" };
+  const inputStyle = { border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" };
 
   const choiceFields = useMemo(() => fields.filter(f => (CHOICE_FIELD_TYPES as readonly string[]).includes(f.type)), [fields]);
   const numericFields = useMemo(() => fields.filter(f => (NUMERIC_FIELD_TYPES as readonly string[]).includes(f.type)), [fields]);
@@ -1171,7 +1171,7 @@ function WidgetInspector({
               <option value="">Selecione...</option>
               {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
-            {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de escolha (múltipla escolha, sim/não etc.) neste formulário ainda.</p>}
+            {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de escolha (múltipla escolha, sim/não etc.) neste formulário ainda.</p>}
           </div>
           <div>
             <label {...label}>Ordenar por</label>
@@ -1187,7 +1187,7 @@ function WidgetInspector({
               {[{ v: "count", l: "Número" }, { v: "percent", l: "Percentual" }].map(o => (
                 <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                   className="flex-1 py-1.5 text-2xs font-semibold"
-                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                   {o.l}
                 </button>
               ))}
@@ -1202,7 +1202,7 @@ function WidgetInspector({
                   <option value="">Sem comparação</option>
                   {choiceFields.filter(f => f.id !== widget.config.fieldId).map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </select>
-                <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Vira barras agrupadas — uma barra por opção deste campo, dentro de cada opção do campo principal.</p>
+                <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Vira barras agrupadas — uma barra por opção deste campo, dentro de cada opção do campo principal.</p>
               </div>
               <div>
                 <label {...label}>Orientação</label>
@@ -1210,12 +1210,12 @@ function WidgetInspector({
                   {[{ v: "vertical", l: "Vertical" }, { v: "horizontal", l: "Horizontal" }].map(o => (
                     <button key={o.v} onClick={() => onUpdateConfig({ orientation: o.v === "vertical" ? undefined : o.v })}
                       className="flex-1 py-1.5 text-2xs font-semibold"
-                      style={{ background: ((widget.config.orientation as string) ?? "vertical") === o.v ? "#c48a42" : "#fff", color: ((widget.config.orientation as string) ?? "vertical") === o.v ? "#fff" : "#5c3f13" }}>
+                      style={{ background: ((widget.config.orientation as string) ?? "vertical") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.orientation as string) ?? "vertical") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                       {o.l}
                     </button>
                   ))}
                 </div>
-                <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Horizontal ajuda quando o nome das categorias é longo.</p>
+                <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Horizontal ajuda quando o nome das categorias é longo.</p>
               </div>
             </>
           )}
@@ -1240,7 +1240,7 @@ function WidgetInspector({
               <option value="">Total de respostas</option>
               {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
-            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Uma linha por opção deste campo, em vez de uma linha só com o total.</p>
+            <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Uma linha por opção deste campo, em vez de uma linha só com o total.</p>
           </div>
         </>
       )}
@@ -1256,13 +1256,13 @@ function WidgetInspector({
               <option value="">Selecione...</option>
               {divergingFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
-            {divergingFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de escala/NPS/semântico/ponderado neste formulário ainda.</p>}
+            {divergingFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de escala/NPS/semântico/ponderado neste formulário ainda.</p>}
           </div>
           <div>
             <label {...label}>Valor neutro (opcional)</label>
             <input type="number" className={input} style={inputStyle} placeholder="automático (ponto médio)"
               value={(widget.config.neutralValue as number) ?? ""} onChange={e => onUpdateConfig({ neutralValue: e.target.value === "" ? undefined : Number(e.target.value) })} />
-            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Só se aplica a campo numérico (escala/NPS/semântico) — em campo ponderado o neutro é sempre a opção do meio.</p>
+            <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Só se aplica a campo numérico (escala/NPS/semântico) — em campo ponderado o neutro é sempre a opção do meio.</p>
           </div>
         </>
       )}
@@ -1291,14 +1291,14 @@ function WidgetInspector({
                 </select>
               </div>
             )}
-            {isMatrix && <p className="text-2xs" style={{ color: "#a06d28" }}>Linhas da matriz viram as barras, colunas viram os segmentos.</p>}
+            {isMatrix && <p className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>Linhas da matriz viram as barras, colunas viram os segmentos.</p>}
             <div>
               <label {...label}>Mostrar como</label>
               <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
                 {[{ v: "count", l: "Número" }, { v: "percent", l: "100% empilhado" }].map(o => (
                   <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                     className="flex-1 py-1.5 text-2xs font-semibold"
-                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                     {o.l}
                   </button>
                 ))}
@@ -1376,7 +1376,7 @@ function WidgetInspector({
               </select>
             </div>
           )}
-          {numericFields.length < 2 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Precisa de pelo menos 2 campos numéricos no formulário.</p>}
+          {numericFields.length < 2 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Precisa de pelo menos 2 campos numéricos no formulário.</p>}
         </>
       )}
 
@@ -1388,7 +1388,7 @@ function WidgetInspector({
             <option value="">Selecione...</option>
             {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
           </select>
-          {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de escolha neste formulário ainda.</p>}
+          {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de escolha neste formulário ainda.</p>}
         </div>
       )}
 
@@ -1401,13 +1401,13 @@ function WidgetInspector({
               <option value="">Selecione...</option>
               {dateRangeFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
-            {dateRangeFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de período (data início–fim) neste formulário ainda.</p>}
+            {dateRangeFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de período (data início–fim) neste formulário ainda.</p>}
           </div>
           <div>
             <label {...label}>Máx. de respostas mostradas</label>
             <input type="number" min={5} max={100} className={input} style={inputStyle}
               value={(widget.config.limit as number) ?? 30} onChange={e => onUpdateConfig({ limit: Number(e.target.value) })} />
-            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Mostra as mais recentes primeiro.</p>
+            <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Mostra as mais recentes primeiro.</p>
           </div>
         </>
       )}
@@ -1429,7 +1429,7 @@ function WidgetInspector({
               <option value="">Um grupo só</option>
               {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
-            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Até 8 grupos (opções do campo escolhido).</p>
+            <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Até 8 grupos (opções do campo escolhido).</p>
           </div>
         </>
       )}
@@ -1450,7 +1450,7 @@ function WidgetInspector({
               {[{ v: "count", l: "Número" }, { v: "percent", l: "Percentual" }].map(o => (
                 <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                   className="flex-1 py-1.5 text-2xs font-semibold"
-                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                   {o.l}
                 </button>
               ))}
@@ -1504,7 +1504,7 @@ function WidgetInspector({
             <label {...label}>Data de corte (opcional)</label>
             <input type="date" className={input} style={inputStyle}
               value={(widget.config.splitDate as string) ?? ""} onChange={e => onUpdateConfig({ splitDate: e.target.value || undefined })} />
-            <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Período A = envios até essa data; B = depois. Sem data, usa a data mediana de envio.</p>
+            <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Período A = envios até essa data; B = depois. Sem data, usa a data mediana de envio.</p>
           </div>
           <div>
             <label {...label}>Mostrar como</label>
@@ -1512,7 +1512,7 @@ function WidgetInspector({
               {[{ v: "count", l: "Número" }, { v: "percent", l: "% do período" }].map(o => (
                 <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                   className="flex-1 py-1.5 text-2xs font-semibold"
-                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                  style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                   {o.l}
                 </button>
               ))}
@@ -1527,11 +1527,11 @@ function WidgetInspector({
           <>
             <div>
               <label {...label} className="mb-0">Eixos (mín. 3 campos numéricos/escala)</label>
-              <div className="flex flex-col gap-1 max-h-40 overflow-y-auto rounded-md p-1.5 mt-1" style={{ border: BRD, background: "#fff" }}>
+              <div className="flex flex-col gap-1 max-h-40 overflow-y-auto rounded-md p-1.5 mt-1" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
                 {radarAxisFields.map(f => {
                   const checked = axisIds.includes(f.id);
                   return (
-                    <label key={f.id} className="flex items-center gap-1.5 text-xs" style={{ color: "#5c3f13" }}>
+                    <label key={f.id} className="flex items-center gap-1.5 text-xs" style={{ color: "rgb(var(--color-ink-100))" }}>
                       <input type="checkbox" checked={checked}
                         onChange={() => onUpdateConfig({ axisFieldIds: checked ? axisIds.filter(id => id !== f.id) : [...axisIds, f.id] })} />
                       {f.label}
@@ -1539,7 +1539,7 @@ function WidgetInspector({
                   );
                 })}
               </div>
-              {radarAxisFields.length < 3 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Precisa de pelo menos 3 campos numéricos/escala no formulário.</p>}
+              {radarAxisFields.length < 3 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Precisa de pelo menos 3 campos numéricos/escala no formulário.</p>}
             </div>
             <div>
               <label {...label}>Comparar por (opcional)</label>
@@ -1548,7 +1548,7 @@ function WidgetInspector({
                 <option value="">Média geral</option>
                 {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
-              <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Um polígono por opção deste campo (até 6).</p>
+              <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Um polígono por opção deste campo (até 6).</p>
             </div>
           </>
         );
@@ -1558,12 +1558,12 @@ function WidgetInspector({
         <>
           <div>
             <label {...label}>Colunas</label>
-            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto rounded-md p-1.5" style={{ border: BRD, background: "#fff" }}>
+            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto rounded-md p-1.5" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
               {questionFields.map(f => {
                 const fieldIds = (widget.config.fieldIds as string[]) ?? [];
                 const checked = fieldIds.includes(f.id);
                 return (
-                  <label key={f.id} className="flex items-center gap-1.5 text-xs" style={{ color: "#5c3f13" }}>
+                  <label key={f.id} className="flex items-center gap-1.5 text-xs" style={{ color: "rgb(var(--color-ink-100))" }}>
                     <input type="checkbox" checked={checked}
                       onChange={() => onUpdateConfig({ fieldIds: checked ? fieldIds.filter(id => id !== f.id) : [...fieldIds, f.id] })} />
                     {f.label}
@@ -1654,13 +1654,13 @@ function WidgetInspector({
               <>
                 <div>
                   <label {...label}>Ícone</label>
-                  <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-md max-h-32 overflow-y-auto" style={{ border: BRD, background: "#fff" }}>
+                  <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-md max-h-32 overflow-y-auto" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
                     {DECORATIVE_ICON_OPTIONS.map(opt => {
                       const active = (widget.config.iconName as string) === opt.name;
                       return (
                         <button key={opt.name} title={opt.label} onClick={() => onUpdateConfig({ iconName: opt.name })}
                           className="aspect-square flex items-center justify-center rounded-md text-base"
-                          style={{ border: active ? "2px solid #c48a42" : "1px solid transparent", color: "#5c3f13", background: active ? "#fbf3e7" : "transparent" }}>
+                          style={{ border: active ? "2px solid rgb(var(--color-brand-500))" : "1px solid transparent", color: "rgb(var(--color-ink-100))", background: active ? "rgb(var(--color-ink-950))" : "transparent" }}>
                           <i className={`ti ti-${opt.name}`} />
                         </button>
                       );
@@ -1697,7 +1697,7 @@ function WidgetInspector({
               <input type="color" className="w-10 h-8 rounded-md flex-shrink-0" style={{ border: BRD }}
                 value={appearance.backgroundColor ?? "#ffffff"} onChange={e => updateAppearance({ backgroundColor: e.target.value })} />
               {appearance.backgroundColor && (
-                <button onClick={() => updateAppearance({ backgroundColor: undefined })} className="text-2xs font-semibold" style={{ color: "#a06d28" }}>
+                <button onClick={() => updateAppearance({ backgroundColor: undefined })} className="text-2xs font-semibold" style={{ color: "rgb(var(--color-ink-500))" }}>
                   Remover
                 </button>
               )}
@@ -1737,7 +1737,7 @@ function WidgetInspector({
                 <option value="">Selecione...</option>
                 {geoCoordsFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
-              {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
+              {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
             </div>
             <div>
               <label {...label}>Categorizar marcador por (opcional)</label>
@@ -1751,8 +1751,8 @@ function WidgetInspector({
               <div className="flex flex-col gap-1.5">
                 <label {...label} className="mb-0">Ícone e cor por opção</label>
                 {categoryOptions.map(opt => (
-                  <div key={opt.id} className="flex items-center gap-1.5 p-1.5 rounded-md" style={{ border: BRD, background: "#fff" }}>
-                    <span className="text-xs flex-1 truncate" style={{ color: "#5c3f13" }}>{opt.label}</span>
+                  <div key={opt.id} className="flex items-center gap-1.5 p-1.5 rounded-md" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
+                    <span className="text-xs flex-1 truncate" style={{ color: "rgb(var(--color-ink-100))" }}>{opt.label}</span>
                     <select className="text-xs rounded-md px-1 py-1" style={inputStyle} value={categoryStyles[opt.id]?.icon ?? "map-pin"}
                       onChange={e => updateCategoryStyle(opt.id, { icon: e.target.value })}>
                       {DECORATIVE_ICON_OPTIONS.map(ic => <option key={ic.name} value={ic.name}>{ic.label}</option>)}
@@ -1789,8 +1789,8 @@ function WidgetInspector({
                 <option value="">Selecione...</option>
                 {geoOptions.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
-              {geoOptions.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de {isCity ? "cidade" : "estado"} neste formulário ainda.</p>}
-              {isCity && geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#c0392b" }}>Precisa também de um campo de estado (UF) no mesmo formulário, pra resolver o município certo.</p>}
+              {geoOptions.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de {isCity ? "cidade" : "estado"} neste formulário ainda.</p>}
+              {isCity && geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-coral-500))" }}>Precisa também de um campo de estado (UF) no mesmo formulário, pra resolver o município certo.</p>}
             </div>
 
             <div>
@@ -1799,12 +1799,12 @@ function WidgetInspector({
                 {[{ v: "count", l: "Nº de respostas" }, { v: "percent", l: "% do total" }].map(o => (
                   <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                     className="flex-1 py-1.5 text-2xs font-semibold"
-                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                    style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                     {o.l}
                   </button>
                 ))}
               </div>
-              <p className="text-2xs mt-1" style={{ color: "#a06d28" }}>Só afeta indicadores de &ldquo;Volume de respostas&rdquo; — indicadores de &ldquo;% de opção&rdquo; já são percentuais.</p>
+              <p className="text-2xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Só afeta indicadores de &ldquo;Volume de respostas&rdquo; — indicadores de &ldquo;% de opção&rdquo; já são percentuais.</p>
             </div>
 
             <div>
@@ -1818,12 +1818,12 @@ function WidgetInspector({
                   : ((rowField.config as { options?: { id: string; label: string }[] } | null)?.options ?? []))
                 : [];
               return (
-                <div key={ind.key} className="p-2 rounded-md mb-1.5" style={{ border: BRD, background: "#fff" }}>
+                <div key={ind.key} className="p-2 rounded-md mb-1.5" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <input className={input} style={inputStyle} value={ind.label}
                       placeholder="Nome do indicador"
                       onChange={e => updateHeatmapIndicator(i, { label: e.target.value })} />
-                    <button onClick={() => removeHeatmapIndicator(i)} className="flex-shrink-0 text-gray-300 hover:text-red-400">
+                    <button onClick={() => removeHeatmapIndicator(i)} className="flex-shrink-0 text-ink-500 hover:text-red-400">
                       <i className="ti ti-x text-xs" />
                     </button>
                   </div>
@@ -1853,7 +1853,7 @@ function WidgetInspector({
             })}
             <button onClick={addHeatmapIndicator}
               className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold"
-              style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13" }}>
+              style={{ border: BRD, background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-100))" }}>
               <i className="ti ti-plus" /> Adicionar indicador
             </button>
             </div>
@@ -1879,7 +1879,7 @@ function WidgetInspector({
               <option value="">Selecione...</option>
               {choiceFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
-            {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de escolha neste formulário ainda.</p>}
+            {choiceFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de escolha neste formulário ainda.</p>}
           </div>
           <div>
             <label {...label}>Mostrar</label>
@@ -1912,7 +1912,7 @@ function WidgetInspector({
                   <option value="">Selecione...</option>
                   {geoCoordsFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </select>
-                {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
+                {geoCoordsFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de coordenadas (GPS) neste formulário ainda.</p>}
               </div>
             )}
             {mode === "heatmap" && (
@@ -1923,14 +1923,14 @@ function WidgetInspector({
                   <option value="">Selecione...</option>
                   {geoStateFields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </select>
-                {geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "#a06d28" }}>Nenhum campo de estado neste formulário ainda.</p>}
-                <p className="text-2xs mt-2" style={{ color: "#a06d28" }}>Usa o volume de respostas por estado — pra indicadores por opção, monte primeiro um widget de mapa de calor 2D e depois troque pra &ldquo;Globo 3D&rdquo;.</p>
+                {geoStateFields.length === 0 && <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum campo de estado neste formulário ainda.</p>}
+                <p className="text-2xs mt-2" style={{ color: "rgb(var(--color-ink-500))" }}>Usa o volume de respostas por estado — pra indicadores por opção, monte primeiro um widget de mapa de calor 2D e depois troque pra &ldquo;Globo 3D&rdquo;.</p>
                 <label {...label} className="mt-2">Mostrar como</label>
                 <div className="flex rounded-md overflow-hidden" style={{ border: BRD }}>
                   {[{ v: "count", l: "Nº de respostas" }, { v: "percent", l: "% do total" }].map(o => (
                     <button key={o.v} onClick={() => onUpdateConfig({ displayMode: o.v === "count" ? undefined : o.v })}
                       className="flex-1 py-1.5 text-2xs font-semibold"
-                      style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "#c48a42" : "#fff", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "#5c3f13" }}>
+                      style={{ background: ((widget.config.displayMode as string) ?? "count") === o.v ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: ((widget.config.displayMode as string) ?? "count") === o.v ? "#fff" : "rgb(var(--color-ink-100))" }}>
                       {o.l}
                     </button>
                   ))}
@@ -1943,7 +1943,7 @@ function WidgetInspector({
 
       <button onClick={onDelete}
         className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold mt-2"
-        style={{ border: "1px solid #f0b8ab", background: "#fdf0ee", color: "#c0392b" }}>
+        style={{ border: "1px solid rgb(var(--color-coral-500) / 0.4)", background: "rgb(var(--color-coral-50))", color: "rgb(var(--color-coral-500))" }}>
         <i className="ti ti-trash" /> Remover widget
       </button>
     </div>
@@ -2005,14 +2005,14 @@ function ImageWidgetFields({
   const tabBtn = (t: typeof tab, label: string) => (
     <button onClick={() => setTab(t)}
       className="flex-1 py-1.5 text-2xs font-semibold"
-      style={{ background: tab === t ? "#c48a42" : "#fff", color: tab === t ? "#fff" : "#5c3f13" }}>
+      style={{ background: tab === t ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))", color: tab === t ? "#fff" : "rgb(var(--color-ink-100))" }}>
       {label}
     </button>
   );
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold mb-1 block" style={{ color: "#5c3f13" }}>Imagem</label>
+      <label className="text-xs font-semibold mb-1 block" style={{ color: "rgb(var(--color-ink-100))" }}>Imagem</label>
       {imageUrl && (
         <div className="relative h-24 rounded-md overflow-hidden" style={{ border: BRD }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- preview de base64 gerado no cliente */}
@@ -2031,11 +2031,11 @@ function ImageWidgetFields({
           <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
           <button onClick={() => inputRef.current?.click()} disabled={uploading}
             className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold disabled:opacity-50"
-            style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
             <i className={`ti ${uploading ? "ti-loader-2 animate-spin" : "ti-upload"}`} />
             {imageUrl ? "Trocar imagem" : "Enviar imagem"}
           </button>
-          <label className="flex items-center gap-1.5 text-2xs" style={{ color: "#5c3f13" }}>
+          <label className="flex items-center gap-1.5 text-2xs" style={{ color: "rgb(var(--color-ink-100))" }}>
             <input type="checkbox" checked={shareOnUpload} onChange={e => setShareOnUpload(e.target.checked)} />
             Compartilhar com a comunidade Dataº (outros pesquisadores podem usar)
           </label>
@@ -2052,8 +2052,8 @@ function ImageWidgetFields({
 
       {imageUrl && (
         <div>
-          <label className="text-xs font-semibold mb-1 block" style={{ color: "#5c3f13" }}>Encaixe</label>
-          <select className="w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none" style={{ border: BRD, background: "#fff", color: "#111" }}
+          <label className="text-xs font-semibold mb-1 block" style={{ color: "rgb(var(--color-ink-100))" }}>Encaixe</label>
+          <select className="w-full px-2.5 py-1.5 text-xs rounded-md focus:outline-none" style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" }}
             value={fit} onChange={e => onUpdateConfig({ fit: e.target.value })}>
             <option value="cover">Preencher (corta as bordas)</option>
             <option value="contain">Encaixar (mostra a imagem inteira)</option>
@@ -2072,13 +2072,13 @@ function AssetGrid({
   emptyMessage: string;
 }) {
   if (assets === null) {
-    return <p className="text-2xs" style={{ color: "#a06d28" }}>Carregando...</p>;
+    return <p className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>Carregando...</p>;
   }
   if (assets.length === 0) {
-    return <p className="text-2xs" style={{ color: "#a06d28" }}>{emptyMessage}</p>;
+    return <p className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>{emptyMessage}</p>;
   }
   return (
-    <div className="grid grid-cols-4 gap-1.5 max-h-36 overflow-y-auto p-1 rounded-md" style={{ border: BRD, background: "#fff" }}>
+    <div className="grid grid-cols-4 gap-1.5 max-h-36 overflow-y-auto p-1 rounded-md" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
       {assets.map(a => (
         <button key={a.id} onClick={() => onPick(a)} title={a.name}
           className="aspect-square rounded-md overflow-hidden relative"

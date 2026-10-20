@@ -1,110 +1,45 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-const nav = [
-  {
-    label: "Geral",
-    items: [
-      { href: "/dashboard",  icon: "ti-home", label: "Início"  },
-      { href: "/researches", icon: "ti-clipboard-list",   label: "Pesquisas"  },
-    ],
-  },
-  {
-    label: "Catálogo",
-    items: [
-      { href: "/entidades", icon: "ti-database", label: "Entidades" },
-    ],
-  },
-  {
-    label: "Rede",
-    items: [
-      { href: "/mapa-geral",     icon: "ti-map-2",      label: "Mapa Geral" },
-      { href: "/notas-tecnicas", icon: "ti-notebook",   label: "Notas técnicas" },
-      { href: "/colaboracao",    icon: "ti-hand-heart", label: "Colaboração" },
-    ],
-  },
-  {
-    label: "Conta",
-    items: [
-      { href: "/profile",  icon: "ti-user-circle", label: "Perfil"  },
-      { href: "/settings", icon: "ti-settings",    label: "Config." },
-      { href: "/suporte",  icon: "ti-headset",     label: "Suporte" },
-    ],
-  },
-  {
-    label: "Produto",
-    items: [
-      { href: "/design-system", icon: "ti-palette", label: "Design" },
-    ],
-  },
-];
+import { DataLogo } from "@/components/layout/data-logo";
+import { NAV_GROUPS, STAFF_GROUP, isActive, type NavGroup } from "@/components/layout/nav-config";
 
 const STORAGE_KEY = "dataz-sidebar-collapsed";
 
-export function PlatformSidebar({ role }: { role?: string } = {}) {
+function NavList({ groups, collapsed, onNavigate }: { groups: NavGroup[]; collapsed: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-  const isStaff = role === "admin" || role === "support";
-  const navGroups = isStaff
-    ? [...nav, { label: "Interno", items: [{ href: "/admin", icon: "ti-shield-lock", label: "Admin" }] }]
-    : nav;
-
-  useEffect(() => {
-    setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
-  }, []);
-
-  function toggle() {
-    setCollapsed(prev => {
-      const next = !prev;
-      localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      return next;
-    });
-  }
-
   return (
-    <aside className={cn(
-      "flex-shrink-0 py-4 px-2.5 overflow-y-auto flex flex-col bg-ink-950 border-r border-ink-700 transition-[width] duration-150 ease-out",
-      collapsed ? "w-14" : "w-44",
-    )}>
-      <button
-        onClick={toggle}
-        title={collapsed ? "Expandir menu" : "Recolher menu"}
-        className={cn(
-          "flex items-center gap-2 mb-4 px-2 py-1.5 rounded text-ink-500 hover:text-ink-100 hover:bg-ink-900 transition-colors duration-150",
-          collapsed ? "justify-center" : "justify-end",
-        )}
-      >
-        <i className={`ti ${collapsed ? "ti-chevron-right" : "ti-chevron-left"} text-base`} />
-      </button>
-
-      {navGroups.map(group => (
-        <div key={group.label} className="mb-5">
-          {!collapsed && (
-            <p className="px-2 mb-1.5 font-bold uppercase font-condensed text-ink-500" style={{ fontSize: "9px", letterSpacing: "0.1em" }}>
-              {group.label}
-            </p>
+    <nav aria-label="Navegação principal" className="flex-1 overflow-y-auto px-3 py-2">
+      {groups.map(group => (
+        <div key={group.label} className="mb-5 last:mb-2">
+          {collapsed ? (
+            <div className="mx-auto my-2 h-px w-6 bg-ink-700" aria-hidden="true" />
+          ) : (
+            <p className="px-2.5 mb-1.5 text-2xs font-semibold uppercase tracking-[0.12em] text-ink-500">{group.label}</p>
           )}
           <ul className="space-y-0.5">
             {group.items.map(item => {
-              const active = pathname.startsWith(item.href);
+              const active = isActive(pathname, item.href);
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    onClick={onNavigate}
                     title={collapsed ? item.label : undefined}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-2 px-2 py-1.5 rounded text-sm font-medium font-condensed transition-colors duration-150 border",
-                      collapsed && "justify-center",
+                      "group relative flex items-center gap-3 rounded-md text-sm font-medium transition-colors duration-150",
+                      collapsed ? "justify-center h-10 w-10 mx-auto" : "h-9 px-2.5",
                       active
-                        ? "bg-brand-50/10 text-brand-400 border-brand-500/30"
-                        : "text-ink-300 border-transparent hover:bg-ink-900 hover:text-ink-100",
+                        ? "bg-brand-50 text-brand-400"
+                        : "text-ink-300 hover:bg-ink-800 hover:text-ink-50",
                     )}
                   >
-                    <i className={`ti ${item.icon} text-base flex-shrink-0 ${active ? "text-brand-400" : "text-ink-500"}`} />
-                    {!collapsed && item.label}
+                    {active && !collapsed && <span className="absolute -left-3 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-brand-500" aria-hidden="true" />}
+                    <i className={cn("ti", item.icon, "text-[1.15rem] flex-shrink-0", active ? "text-brand-500" : "text-ink-500 group-hover:text-ink-300")} aria-hidden="true" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
                   </Link>
                 </li>
               );
@@ -112,51 +47,118 @@ export function PlatformSidebar({ role }: { role?: string } = {}) {
           </ul>
         </div>
       ))}
+    </nav>
+  );
+}
 
-      {/* Card Dataº Território */}
-      <Link href="/territorio"
-        title={collapsed ? "Dataº Território" : undefined}
-        className={cn(
-          "block mx-1 mb-3 mt-auto rounded-md transition-colors duration-150 group bg-ink-900 border border-ink-700 hover:border-ink-500",
-          collapsed ? "p-2 flex justify-center" : "p-3",
-        )}>
-        {collapsed ? (
-          <i className="ti ti-heart-handshake text-base text-brand-400" />
-        ) : (
-          <>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <i className="ti ti-heart-handshake text-sm text-brand-400" />
-              <span className="font-bold uppercase font-condensed text-brand-400" style={{ fontSize: "8px", letterSpacing: "0.1em" }}>
-                Programa social
-              </span>
-            </div>
-            <p className="font-bold mb-1 leading-tight text-ink-100" style={{ fontSize: "11px" }}>
-              Dataº Território
-            </p>
-            <p className="leading-snug mb-2 text-ink-300" style={{ fontSize: "8px" }}>
-              Acesso gratuito para comunidades tradicionais
-            </p>
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-bold transition-[gap] duration-150 group-hover:gap-1.5 bg-brand-500 text-on-accent"
-              style={{ fontSize: "8px" }}>
-              Candidatar <i className="ti ti-arrow-right" style={{ fontSize: "8px" }} />
-            </span>
-          </>
-        )}
+function TerritorioCard({ collapsed }: { collapsed: boolean }) {
+  if (collapsed) {
+    return (
+      <Link href="/territorio" title="Dataº Território — acesso gratuito para comunidades tradicionais"
+        className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md text-gold hover:bg-ink-800 transition-colors">
+        <i className="ti ti-plant-2 text-lg" aria-hidden="true" />
       </Link>
+    );
+  }
+  return (
+    <Link href="/territorio"
+      className="group mx-3 mb-3 block rounded-lg border border-ink-700 bg-ink-800/60 p-3.5 transition-colors hover:border-ink-600 hover:bg-ink-800">
+      <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-[0.12em] text-gold">
+        <i className="ti ti-plant-2 text-sm" aria-hidden="true" /> Programa social
+      </p>
+      <p className="mt-1.5 font-serif text-base font-semibold text-ink-50 leading-tight">Dataº Território</p>
+      <p className="mt-1 text-xs text-ink-300 leading-snug">Acesso gratuito para organizações de comunidades tradicionais.</p>
+      <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-brand-400 transition-[gap] group-hover:gap-1.5">
+        Candidatar organização <i className="ti ti-arrow-right text-xs" aria-hidden="true" />
+      </span>
+    </Link>
+  );
+}
 
-      {/* Badge LGPD */}
-      <div
-        title={collapsed ? "LGPD — Conformidade" : undefined}
-        className={cn("mx-1 rounded text-center bg-ink-900 border border-ink-700", collapsed ? "py-2" : "px-2 py-2")}
-      >
-        <i className="ti ti-shield-check text-sm block mb-0.5 text-brand-400" />
+/** Barra lateral fixa (desktop). */
+export function PlatformSidebar({ role }: { role?: string } = {}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const isStaff = role === "admin" || role === "support";
+  const groups = isStaff ? [...NAV_GROUPS, STAFF_GROUP] : NAV_GROUPS;
+
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(STORAGE_KEY) === "1"); } catch {}
+  }, []);
+
+  function toggle() {
+    setCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem(STORAGE_KEY, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  }
+
+  return (
+    <aside className={cn(
+      "hidden lg:flex sticky top-0 h-dvh flex-shrink-0 flex-col border-r border-ink-700 bg-ink-900 transition-[width] duration-200 ease-out",
+      collapsed ? "w-[68px]" : "w-[248px]",
+    )}>
+      <div className={cn("flex h-14 items-center border-b border-ink-700 flex-shrink-0", collapsed ? "justify-center px-2" : "justify-between pl-5 pr-2")}>
         {!collapsed && (
-          <>
-            <p className="font-semibold text-ink-300" style={{ fontSize: "8px" }}>LGPD</p>
-            <p className="text-ink-500" style={{ fontSize: "7px" }}>Conformidade</p>
-          </>
+          <Link href="/dashboard" className="text-ink-50" aria-label="Dataº — início">
+            <DataLogo className="text-[1.35rem]" />
+          </Link>
         )}
+        <button
+          onClick={toggle}
+          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+          title={collapsed ? "Expandir menu" : "Recolher menu"}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-ink-500 hover:bg-ink-800 hover:text-ink-100 transition-colors"
+        >
+          <i className={cn("ti text-lg", collapsed ? "ti-layout-sidebar-left-expand" : "ti-layout-sidebar-left-collapse")} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="pt-3 flex-1 min-h-0 flex flex-col">
+        <NavList groups={groups} collapsed={collapsed} />
+      </div>
+
+      <TerritorioCard collapsed={collapsed} />
+
+      <div className={cn("border-t border-ink-700 py-3 flex items-center gap-2 text-2xs text-ink-500 flex-shrink-0", collapsed ? "justify-center" : "px-5")}>
+        <i className="ti ti-shield-check text-sm text-brand-500" aria-hidden="true" />
+        {!collapsed && <span>Dados protegidos · LGPD (Lei nº 13.709/2018)</span>}
       </div>
     </aside>
+  );
+}
+
+/** Gaveta de navegação no celular/tablet. */
+export function MobileNav({ open, onClose, role }: { open: boolean; onClose: () => void; role?: string }) {
+  const isStaff = role === "admin" || role === "support";
+  const groups = isStaff ? [...NAV_GROUPS, STAFF_GROUP] : NAV_GROUPS;
+  const pathname = usePathname();
+
+  // Fecha a gaveta ao trocar de rota e com Esc
+  useEffect(() => { onClose(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="lg:hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Menu">
+      <button className="absolute inset-0 bg-ink-50/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} aria-label="Fechar menu" />
+      <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-ink-900 border-r border-ink-700 shadow-xl flex flex-col animate-slide-in-left">
+        <div className="flex h-14 items-center justify-between pl-5 pr-2 border-b border-ink-700">
+          <DataLogo className="text-[1.35rem] text-ink-50" />
+          <button onClick={onClose} aria-label="Fechar menu" className="flex h-9 w-9 items-center justify-center rounded-md text-ink-500 hover:bg-ink-800 hover:text-ink-100">
+            <i className="ti ti-x text-lg" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="pt-3 flex-1 min-h-0 flex flex-col">
+          <NavList groups={groups} collapsed={false} onNavigate={onClose} />
+        </div>
+        <TerritorioCard collapsed={false} />
+      </div>
+    </div>
   );
 }

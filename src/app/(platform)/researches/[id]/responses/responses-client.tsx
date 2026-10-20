@@ -202,11 +202,10 @@ export function ResponsesClient({
         {/* Header */}
         <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded mb-2 text-xs font-bold uppercase tracking-widest font-condensed bg-ink-900 border border-ink-700 text-ink-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+            <div className="kicker mb-2">
               Respostas coletadas
             </div>
-            <h1 className="text-2xl font-bold font-condensed text-ink-100" style={{ letterSpacing: "-0.3px" }}>
+            <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">
               {research.title}
             </h1>
           </div>
@@ -284,16 +283,16 @@ export function ResponsesClient({
                   <table className="w-full text-xs min-w-[640px]">
                     <thead>
                       <tr className="bg-ink-900 border-b border-ink-700">
-                        <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "9px" }}>#</th>
-                        <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "9px" }}>Data</th>
-                        <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "9px" }}>Status</th>
+                        <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "11px" }}>#</th>
+                        <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "11px" }}>Data</th>
+                        <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "11px" }}>Status</th>
                         {questionFields.slice(0, 4).map(f => (
-                          <th key={f.id} className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed text-brand-400" style={{ fontSize: "9px", maxWidth: "140px" }}>
+                          <th key={f.id} className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed text-brand-400" style={{ fontSize: "11px", maxWidth: "140px" }}>
                             <span className="truncate block" style={{ maxWidth: "120px" }}>{f.label}</span>
                           </th>
                         ))}
                         {questionFields.length > 4 && (
-                          <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "9px" }}>
+                          <th className="px-3 py-2.5 text-left font-bold uppercase tracking-widest font-condensed whitespace-nowrap text-brand-400" style={{ fontSize: "11px" }}>
                             +{questionFields.length - 4} campos
                           </th>
                         )}

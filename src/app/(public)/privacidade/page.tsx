@@ -7,24 +7,24 @@ export const metadata: Metadata = { title: "Política de Privacidade — Dataº"
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-8">
-      <h2 className="text-lg font-bold text-slate-900 mb-2 font-serif">{title}</h2>
-      <div className="text-sm text-slate-600 leading-relaxed flex flex-col gap-3">{children}</div>
+      <h2 className="text-lg font-bold text-ink-50 mb-2 font-serif">{title}</h2>
+      <div className="text-sm text-ink-300 leading-relaxed flex flex-col gap-3">{children}</div>
     </section>
   );
 }
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-ink-900">
+      <header className="border-b border-ink-700 px-6 py-4 flex items-center justify-between">
         <Link href="/"><DataLogo className="text-lg" /></Link>
         <Link href="/login" className="text-xs font-semibold text-brand-600 hover:underline">Voltar ao login</Link>
       </header>
 
       <div className="max-w-2xl mx-auto px-6 py-10">
         <p className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-1">Conformidade LGPD</p>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 font-serif">Política de Privacidade</h1>
-        <p className="text-xs text-slate-400 mb-8">
+        <h1 className="text-2xl font-bold text-ink-50 mb-2 font-serif">Política de Privacidade</h1>
+        <p className="text-xs text-ink-500 mb-8">
           Última atualização: julho de 2026 · Em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais)
         </p>
 

@@ -57,9 +57,9 @@ export function resolveChartKind(config: Record<string, unknown> | null | undefi
 // vermelho×verde não é). Passos mais claros são gerados por mistura com
 // branco conforme a distância do centro (uma matiz por lado, claro→escuro).
 export const DIVERGING_COLORS = {
-  negative: "#c0392b",
-  neutral:  "#9ca3af",
-  positive: "#1a56db",
+  negative: "#a85630", // terracota
+  neutral:  "#b5aa94",
+  positive: "#2a7680", // rio — terracota × azul-petróleo segue seguro pra daltonismo
 } as const;
 
 // Paleta de cores do dashboard inteiro (gráficos, mapa de calor, cruzamento,
@@ -74,10 +74,18 @@ export interface ColorPalette {
 }
 
 export const COLOR_PALETTES: Record<string, ColorPalette> = {
+  // Chave "terracota" mantida por compatibilidade com dashboards já salvos —
+  // a paleta em si é a "Confluência", a mesma dos painéis CONAQ (verde
+  // institucional, dourado, terracota, rio, roxo, oliva, argila, grafite).
   terracota: {
-    label: "Terracota (padrão)",
-    chartColors: ["#c48a42", "#4c6b3c", "#1a56db", "#534ab7", "#c0392b", "#0c447c", "#7a5218", "#3a5430"],
-    accent: "126, 155, 92",
+    label: "Confluência (padrão)",
+    chartColors: ["#3b5d42", "#b9812f", "#a85630", "#2a7680", "#5c4fa8", "#7a8b3c", "#c48a42", "#4a4033"],
+    accent: "59, 93, 66",
+  },
+  barro: {
+    label: "Barro e argila",
+    chartColors: ["#a85630", "#c48a42", "#7a3b22", "#d9a36a", "#5c3f13", "#e0b98c", "#8a5a2b", "#b9812f"],
+    accent: "168, 86, 48",
   },
   oceano: {
     label: "Oceano",
@@ -86,8 +94,8 @@ export const COLOR_PALETTES: Record<string, ColorPalette> = {
   },
   "verde-mata": {
     label: "Verde-mata",
-    chartColors: ["#4c6b3c", "#7a9b5c", "#2d4025", "#8fb37a", "#3a5430", "#1f2e19", "#6b8752", "#527a3f"],
-    accent: "76, 107, 60",
+    chartColors: ["#24382a", "#3b5d42", "#5f8a66", "#8fb38f", "#7a8b3c", "#b8c98a", "#2f4b35", "#4f7a57"],
+    accent: "36, 56, 42",
   },
   "alto-contraste": {
     label: "Alto contraste",

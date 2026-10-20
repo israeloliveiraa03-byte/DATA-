@@ -10,7 +10,22 @@ import { CODAREA_TO_SIGLA } from "@/lib/geo/uf";
 import { resolveMunicipioName } from "@/lib/geo/municipios";
 import { BasemapLayers, ScrollZoomOnFocus } from "./map-common";
 
-const NO_DATA_STYLE: PathOptions = { fillColor: "#5c5847", weight: 1, color: "#302e22", fillOpacity: 0.25 };
+const NO_DATA_STYLE: PathOptions = { fillColor: "rgb(var(--color-ink-600))", weight: 0.8, color: "rgb(var(--color-ink-900))", fillOpacity: 0.35 };
+
+// Classes discretas (intervalos iguais de 0 ao máximo) em vez de gradiente
+// contínuo: o leitor compara faixas, não tons quase iguais — padrão dos
+// painéis CONAQ e de atlas como o do IBGE.
+const CLASS_OPACITY = [0.2, 0.38, 0.56, 0.74, 0.92];
+
+function classIndex(value: number, max: number): number {
+  if (max <= 0) return 0;
+  const i = Math.floor((value / max) * CLASS_OPACITY.length);
+  return Math.min(CLASS_OPACITY.length - 1, Math.max(0, i));
+}
+
+// Caixa do território brasileiro (com folga) — impede o mapa de "fugir"
+// para o Atlântico/África ao arrastar ou dar zoom out.
+const BRAZIL_BOUNDS = L.latLngBounds([[-35.5, -75.5], [7.5, -28.0]]);
 
 interface HeatmapWidgetProps {
   data: HeatmapResult;
@@ -33,7 +48,10 @@ function FitToBrazil({ geo }: { geo: FeatureCollection }) {
     const fit = () => {
       map.invalidateSize();
       const bounds = L.geoJSON(geo).getBounds();
-      if (bounds.isValid()) map.fitBounds(bounds, { padding: [8, 8] });
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [6, 6] });
+        map.setMinZoom(Math.max(2, map.getZoom() - 1));
+      }
     };
     const t = setTimeout(fit, 150);
 
@@ -114,7 +132,9 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
     ? Object.fromEntries(Object.entries(byStateRaw).map(([k, s]) => [k, { value: totalCount > 0 ? (s.count / totalCount) * 100 : 0, count: s.count }]))
     : byStateRaw;
   const max = asPercent ? Math.max(1, ...Object.values(byState).map(s => s.value)) : (activeKey ? (data.maxByIndicator[activeKey] ?? 0) : 0);
-  const isPercentLike = asPercent || max <= 100;
+  // Percentual só quando o indicador é percentual de fato (antes, qualquer
+  // contagem com máximo ≤ 100 aparecia com "%" — 37 respostas viravam "37%").
+  const isPercentLike = asPercent || activeIndicator?.mode === "choice_percent";
 
   // Estado: codarea (2 dígitos) precisa virar sigla pra bater com byState.
   // Município: codarea (7 dígitos) já É a chave usada em byState direto.
@@ -132,8 +152,8 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
     const groupKey = groupKeyFor(codarea);
     const stateData = groupKey ? byState[groupKey] : undefined;
     if (!stateData || max === 0) return NO_DATA_STYLE;
-    const intensity = 0.15 + (stateData.value / max) * 0.75;
-    return { fillColor: `rgb(${ACCENT})`, weight: isCity ? 0.5 : 1, color: isCity ? "#e8e4d5" : "#f5f3ec", fillOpacity: intensity };
+    const intensity = CLASS_OPACITY[classIndex(stateData.value, max)];
+    return { fillColor: `rgb(${ACCENT})`, weight: isCity ? 0.3 : 0.9, color: "rgb(var(--color-ink-900))", opacity: isCity ? 0.6 : 1, fillOpacity: intensity };
   }
 
   function onEachFeature(feature: Feature, layer: Layer) {
@@ -142,26 +162,30 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
     const stateData = groupKey ? byState[groupKey] : undefined;
     const label = labelFor(codarea, groupKey);
     const content = stateData
-      ? `<b>${label}</b><br/>${stateData.value.toFixed(1)}${isPercentLike ? "%" : ""} · ${stateData.count} resposta${stateData.count === 1 ? "" : "s"}`
-      : `<b>${label}</b><br/>Sem dados`;
-    layer.bindTooltip(content);
+      ? `<b>${label}</b><br/><span style="font-size:15px;font-weight:600">${stateData.value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${isPercentLike ? "%" : ""}</span> <span style="opacity:.7">· ${stateData.count} resposta${stateData.count === 1 ? "" : "s"}</span>`
+      : `<b>${label}</b><br/><span style="opacity:.7">Sem dados</span>`;
+    layer.bindTooltip(content, { sticky: true, direction: "top", offset: [0, -6] });
+    layer.on({
+      mouseover: e => { (e.target as L.Path).setStyle({ weight: isCity ? 1.2 : 2, color: "rgb(var(--color-ink-50))" }); (e.target as L.Path).bringToFront(); },
+      mouseout:  e => { (e.target as L.Path).setStyle({ weight: isCity ? 0.3 : 0.9, color: "rgb(var(--color-ink-900))" }); },
+    });
   }
 
   if (!estados) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-6">
-        <i className="ti ti-map-2 text-xl animate-pulse-soft" style={{ color: "#d2a05c" }} />
-        <p className="text-xs text-center" style={{ color: "#a06d28" }}>
+        <i className="ti ti-map-2 text-xl animate-pulse-soft" style={{ color: "rgb(var(--color-gold))" }} />
+        <p className="text-xs text-center" style={{ color: "rgb(var(--color-ink-500))" }}>
           Carregando mapa{isCity ? " — malha municipal (~3 MB, milhares de polígonos)" : ""}...
         </p>
-        <div className="w-full max-w-48 h-1.5 rounded-full overflow-hidden" style={{ background: "#f3e4cb" }}>
+        <div className="w-full max-w-48 h-1.5 rounded-full overflow-hidden" style={{ background: "rgb(var(--color-ink-800))" }}>
           {loadProgress === null ? (
             <div className="h-full w-1/3 rounded-full animate-loading-indeterminate" style={{ background: `rgb(${ACCENT})` }} />
           ) : (
             <div className="h-full rounded-full transition-all duration-150" style={{ width: `${loadProgress}%`, background: `rgb(${ACCENT})` }} />
           )}
         </div>
-        {loadProgress !== null && <p className="text-2xs" style={{ color: "#c4a878" }}>{loadProgress}%</p>}
+        {loadProgress !== null && <p className="text-2xs" style={{ color: "rgb(var(--color-ink-500))" }}>{loadProgress}%</p>}
       </div>
     );
   }
@@ -171,25 +195,42 @@ export function HeatmapWidget({ data, palette, basemap, displayMode }: HeatmapWi
       {data.indicators.length > 1 && (
         <select value={activeKey} onChange={e => setIndicatorKey(e.target.value)}
           className="flex-shrink-0 text-2xs rounded px-1.5 py-1 focus:outline-none"
-          style={{ border: "1px solid #e8d8be", background: "#fff", color: "#5c3f13" }}>
+          style={{ border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
           {data.indicators.map(ind => <option key={ind.key} value={ind.key}>{ind.label}</option>)}
         </select>
       )}
-      <div className="flex-1 min-h-0 rounded-md overflow-hidden">
+      <div className={`flex-1 min-h-0 rounded-md overflow-hidden ${!basemap || basemap === "light" ? "map-editorial" : ""}`}>
         {/* scrollWheelZoom liga só depois do primeiro clique/toque no mapa
             (ScrollZoomOnFocus) — os botões +/- ficam sempre disponíveis. */}
-        <MapContainer center={[-14.235, -51.9253]} zoom={3} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} preferCanvas={isCity}>
+        <MapContainer center={[-14.235, -51.9253]} zoom={3} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} preferCanvas={isCity}
+          maxBounds={BRAZIL_BOUNDS} maxBoundsViscosity={0.9} zoomSnap={0.25} attributionControl>
           <BasemapLayers defaultBasemap={basemap} />
           <ScrollZoomOnFocus />
           <GeoJSON key={isCity + activeKey + JSON.stringify(byState)} data={estados} style={styleFeature} onEachFeature={onEachFeature} />
           <FitToBrazil geo={estados} />
         </MapContainer>
       </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0 px-1">
-        <span className="text-2xs" style={{ color: "#a06d28" }}>0{isPercentLike ? "%" : ""}</span>
-        <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(to right, rgba(${ACCENT},0.15), rgba(${ACCENT},0.9))` }} />
-        <span className="text-2xs font-semibold" style={{ color: "#5c3f13" }}>{isPercentLike ? `${max.toFixed(0)}%` : `${Math.round(max)} respostas`}</span>
-      </div>
+      {/* Legenda em classes — faixa de valores de cada tom */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-shrink-0 px-0.5 text-2xs text-ink-500">
+        <span className="font-semibold uppercase tracking-[0.08em]">{activeIndicator?.label ?? "Respostas"}{isPercentLike ? " (%)" : ""}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {CLASS_OPACITY.map((op, i) => {
+            const lo = (max / CLASS_OPACITY.length) * i;
+            const hi = (max / CLASS_OPACITY.length) * (i + 1);
+            const fmt = (n: number) => isPercentLike ? `${Math.round(n)}%` : n >= 10 ? Math.round(n).toLocaleString("pt-BR") : n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+            return (
+              <span key={i} className="inline-flex items-center gap-1 tabular">
+                <span className="inline-block w-3.5 h-2.5 rounded-[2px]" style={{ background: `rgba(${ACCENT}, ${op})` }} />
+                {fmt(lo)}–{fmt(hi)}
+              </span>
+            );
+          })}
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-block w-3.5 h-2.5 rounded-[2px]" style={{ background: "rgb(var(--color-ink-600) / 0.35)" }} />
+            sem dados
+          </span>
+        </div>
+</div>
     </div>
   );
 }

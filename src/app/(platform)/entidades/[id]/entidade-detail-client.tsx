@@ -324,7 +324,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
             <Badge variant={s.variant}>{s.label}</Badge>
             <span className="text-xs font-mono text-ink-300">{entity.code}</span>
           </div>
-          <h1 className="text-2xl font-bold font-condensed text-ink-100">{entity.name}</h1>
+          <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">{entity.name}</h1>
           {entity.description && <p className="text-sm text-ink-300 mt-1">{entity.description}</p>}
           {entity.cityName && (
             <p className="text-xs flex items-center gap-1 mt-2 text-ink-300">

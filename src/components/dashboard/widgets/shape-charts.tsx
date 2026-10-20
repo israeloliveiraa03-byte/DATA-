@@ -11,9 +11,9 @@ import type { ChoiceAggResult, DisplayMode, DistributionResult, DivergingResult,
 import { DIVERGING_COLORS } from "@/lib/dashboard/types";
 import { ChartLegend, formatNumber, mixHex, toPercent, useContainerSize } from "./chart-common";
 
-const TEXT_DARK  = "#5c3f13";
-const TEXT_MUTED = "#a06d28";
-const GRID_LINE  = "#f3e4cb";
+const TEXT_DARK  = "rgb(var(--color-ink-100))";
+const TEXT_MUTED = "rgb(var(--color-ink-500))";
+const GRID_LINE  = "rgb(var(--color-ink-800))";
 
 // ─── Barra divergente (Likert em torno do neutro) ──────────────────────────
 // Uma barra horizontal única centrada no ponto neutro: opções abaixo do
@@ -63,7 +63,7 @@ export function DivergingBarView({ data }: { data: DivergingResult }) {
       </div>
       <div className="relative" style={{ height: 30 }}>
         {/* trilho de fundo */}
-        <div className="absolute inset-x-0 rounded-md" style={{ top: 4, bottom: 4, background: "#faf5ea" }} />
+        <div className="absolute inset-x-0 rounded-md" style={{ top: 4, bottom: 4, background: "rgb(var(--color-ink-800))" }} />
         {/* segmentos */}
         <div className="absolute flex" style={{ left: `${startPct}%`, width: `${totalWidthPct}%`, top: 0, bottom: 0, gap: 2 }}>
           {segments.map((s, i) => (
@@ -147,7 +147,7 @@ export function DistributionView({ data, colors, variant }: { data: Distribution
                       <line x1={center - halfW} x2={center + halfW} y1={y(g.median)} y2={y(g.median)} stroke={color} strokeWidth={2.5} />
                       {/* outliers */}
                       {g.outliers.map((o, oi) => (
-                        <circle key={oi} cx={center} cy={y(o)} r={2.5} fill={color} stroke="#fff" strokeWidth={1} />
+                        <circle key={oi} cx={center} cy={y(o)} r={2.5} fill={color} stroke="rgb(var(--color-ink-900))" strokeWidth={1} />
                       ))}
                     </>
                   ) : g.density.length > 0 ? (
@@ -165,7 +165,7 @@ export function DistributionView({ data, colors, variant }: { data: Distribution
                     // grupo com menos de 3 valores: sem densidade — marca mín–máx + mediana
                     <>
                       <line x1={center} x2={center} y1={y(g.max)} y2={y(g.min)} stroke={color} strokeWidth={1.5} />
-                      <circle cx={center} cy={y(g.median)} r={4} fill={color} stroke="#fff" strokeWidth={1.5} />
+                      <circle cx={center} cy={y(g.median)} r={4} fill={color} stroke="rgb(var(--color-ink-900))" strokeWidth={1.5} />
                     </>
                   )}
                   <text x={center} y={H - 5} textAnchor="middle" fontSize={9} fill={TEXT_DARK}>{label}</text>
@@ -242,7 +242,7 @@ export function WaffleView({ data, colors, optionId }: { data: ChoiceAggResult; 
           const row = Math.floor(i / 10); // 0 = topo
           const col = i % 10;
           const rank = (9 - row) * 10 + col; // preenchimento de baixo pra cima
-          return <div key={i} className="rounded-[2px]" style={{ background: rank < filled ? color : "#efe6d2", aspectRatio: "1 / 1" }} />;
+          return <div key={i} className="rounded-[2px]" style={{ background: rank < filled ? color : "rgb(var(--color-ink-800))", aspectRatio: "1 / 1" }} />;
         })}
       </div>
       <div className="flex flex-col min-w-0">
@@ -282,7 +282,7 @@ export function DumbbellView({ data, colors, displayMode }: { data: DumbbellResu
               title={`${r.label} — ${data.periodALabel}: ${formatNumber(r.rawA)} · ${data.periodBLabel}: ${formatNumber(r.rawB)}`}>
               <span className="w-24 flex-shrink-0 text-2xs truncate text-right" style={{ color: TEXT_DARK }}>{r.label}</span>
               <div className="flex-1 relative h-7" style={{ borderLeft: `1px solid ${GRID_LINE}`, marginRight: 38 }}>
-                <div className="absolute rounded-full" style={{ left: `${left}%`, width: `${width}%`, top: "calc(50% - 1px)", height: 2, background: "#d9c9a8" }} />
+                <div className="absolute rounded-full" style={{ left: `${left}%`, width: `${width}%`, top: "calc(50% - 1px)", height: 2, background: "rgb(var(--color-ink-600))" }} />
                 <div className="absolute rounded-full" style={{ left: `${aPct}%`, top: "50%", transform: "translate(-50%, -50%)", width: 10, height: 10, background: colorA, border: "1.5px solid #fff", boxShadow: "0 0 0 1px rgba(0,0,0,0.06)" }} />
                 <div className="absolute rounded-full" style={{ left: `${bPct}%`, top: "50%", transform: "translate(-50%, -50%)", width: 10, height: 10, background: colorB, border: "1.5px solid #fff", boxShadow: "0 0 0 1px rgba(0,0,0,0.06)" }} />
                 <span className="absolute text-2xs font-semibold whitespace-nowrap" style={{ left: `calc(${Math.max(aPct, bPct)}% + 8px)`, top: "50%", transform: "translateY(-50%)", color: TEXT_DARK }}>

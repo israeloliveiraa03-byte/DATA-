@@ -50,7 +50,7 @@ export function SettingsClient() {
     <div className="flex-1 overflow-auto bg-ink-950">
       <div className="p-6 max-w-2xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold font-condensed text-ink-100" style={{ letterSpacing: "-0.3px" }}>
+          <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">
             Configuração
           </h1>
           <p className="text-sm font-medium mt-0.5 text-ink-300">
@@ -66,8 +66,8 @@ export function SettingsClient() {
           <CardContent className="space-y-5">
             <Row label="Modo de cor" hint="&quot;Sistema&quot; segue a preferência do seu computador">
               <Segmented value={colorMode} onChange={setColorMode} options={[
+                { value: "light",  label: "Claro (padrão)" },
                 { value: "dark",   label: "Escuro" },
-                { value: "light",  label: "Claro" },
                 { value: "system", label: "Sistema" },
               ]} />
             </Row>

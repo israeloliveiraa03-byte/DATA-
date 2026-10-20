@@ -19,16 +19,17 @@ export function Toaster() {
       theme={resolvedTheme}
       toastOptions={{
         style: {
-          background: resolvedTheme === "dark" ? "#1e1d17" : "#fff",
-          color: resolvedTheme === "dark" ? "#e8e4d9" : "#1c1917",
-          border: `1px solid ${resolvedTheme === "dark" ? "#302e22" : "#e8d8be"}`,
+          background: "rgb(var(--color-ink-900))",
+          color: "rgb(var(--color-ink-100))",
+          border: "1px solid rgb(var(--color-ink-700))",
           borderRadius: "0.75rem",
-          fontSize: "0.8125rem",
+          fontSize: "0.84375rem",
+          boxShadow: "0 14px 36px -10px rgb(var(--shadow-color) / 0.22)",
         },
       }}
       icons={{
-        success: <i className="ti ti-circle-check" style={{ color: "#4c6b3c" }} />,
-        error:   <i className="ti ti-alert-circle" style={{ color: "#c0392b" }} />,
+        success: <i className="ti ti-circle-check" style={{ color: "rgb(var(--color-brand-500))" }} />,
+        error:   <i className="ti ti-alert-circle" style={{ color: "rgb(var(--color-coral-500))" }} />,
       }}
     />
   );

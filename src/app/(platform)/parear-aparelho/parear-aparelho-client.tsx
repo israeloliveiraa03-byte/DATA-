@@ -44,7 +44,7 @@ export function ParearAparelhoClient() {
     <div className="min-h-full bg-ink-950">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold font-condensed text-ink-100">Parear aparelho de campo</h1>
+          <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">Parear aparelho de campo</h1>
           <p className="text-sm font-medium mt-0.5 text-ink-300">
             Gere um código de acesso pro app <strong>Dataº Campo</strong> — ele permite coletar
             respostas e pontos de GPS sem internet e sincronizar depois, sem precisar entrar
@@ -54,7 +54,7 @@ export function ParearAparelhoClient() {
 
         {!token && (
           <div className="rounded-lg p-4 border border-ink-700 bg-ink-900">
-            <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Novo código</p>
+            <p className="kicker mb-3">Novo código</p>
             <label htmlFor="parear-label" className="text-xs font-semibold mb-1 block text-ink-100">
               Nome do aparelho (opcional)
             </label>
@@ -71,7 +71,7 @@ export function ParearAparelhoClient() {
 
         {token && (
           <div className="rounded-lg p-4 border border-ink-700 bg-ink-900">
-            <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Código gerado</p>
+            <p className="kicker mb-3">Código gerado</p>
             <p className="text-sm text-ink-300 mb-3">
               Copie o código abaixo e cole no app Dataº Campo, na tela de entrada.
               <strong className="text-amber-500"> Ele só aparece esta única vez</strong> — se perder,

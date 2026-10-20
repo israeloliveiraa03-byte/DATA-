@@ -96,8 +96,8 @@ export function CampoClient({ entity }: Props) {
         </nav>
 
         <div className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-1">Mini-pesquisa de campo</p>
-          <h1 className="text-xl font-bold font-condensed text-ink-100">Capturar pontos/limites</h1>
+          <p className="kicker mb-1">Mini-pesquisa de campo</p>
+          <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">Capturar pontos/limites</h1>
           <p className="text-sm text-ink-300 mt-0.5">
             Toque em &quot;Capturar ponto&quot; em cada marco do limite do território, caminhando pela área.
             Ao final, salve — os pontos viram o polígono da entidade.

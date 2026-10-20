@@ -12,7 +12,7 @@ const GeoMapField = dynamic(() => import("./geo-map-field"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center rounded-xl text-sm"
-      style={{ border: "1px solid #e8d8be", background: "#fbf3e7", color: "#a06d28", height: 280 }}>
+      style={{ border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-500))", height: 280 }}>
       <i className="ti ti-loader-2 animate-spin mr-2" /> Carregando mapa...
     </div>
   ),
@@ -69,9 +69,9 @@ function FieldInput({
   allFields: FormField[];
 }) {
   const cfg = (field.config ?? {}) as Record<string, unknown>;
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
   const inputCls = "w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 transition-shadow";
-  const inputStyle = { border: BRD, background: "#fff", color: "#3d2a0d", boxShadow: "none" };
+  const inputStyle = { border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))", boxShadow: "none" };
 
   switch (field.type as string) {
     case "short_text":
@@ -83,8 +83,8 @@ function FieldInput({
           placeholder={cfg.placeholder as string || "Sua resposta..."}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -97,8 +97,8 @@ function FieldInput({
           rows={4}
           className={inputCls + " resize-none"}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -111,8 +111,8 @@ function FieldInput({
           placeholder={cfg.placeholder as string || "0"}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -125,8 +125,8 @@ function FieldInput({
           placeholder="seu@email.com"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -139,8 +139,8 @@ function FieldInput({
           placeholder="(00) 00000-0000"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -152,8 +152,8 @@ function FieldInput({
           onChange={e => onChange(e.target.value)}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -165,8 +165,8 @@ function FieldInput({
           onChange={e => onChange(e.target.value)}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -179,9 +179,9 @@ function FieldInput({
               onClick={() => onChange(opt)}
               className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
               style={{
-                border: value === opt ? "2px solid #c48a42" : BRD,
-                background: value === opt ? "#fbf3e7" : "#fff",
-                color: value === opt ? "#7a5218" : "#5c3f13",
+                border: value === opt ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                background: value === opt ? "rgb(var(--color-ink-950))" : "rgb(var(--color-ink-900))",
+                color: value === opt ? "rgb(var(--color-amber-600))" : "rgb(var(--color-ink-100))",
               }}
             >
               {opt}
@@ -202,16 +202,16 @@ function FieldInput({
               onClick={() => onChange(opt.id)}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
               style={{
-                border: value === opt.id ? "2px solid #c48a42" : BRD,
-                background: value === opt.id ? "#fbf3e7" : "#fff",
-                color: "#3d2a0d",
+                border: value === opt.id ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                background: value === opt.id ? "rgb(var(--color-ink-950))" : "rgb(var(--color-ink-900))",
+                color: "rgb(var(--color-ink-50))",
               }}
             >
               <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-                style={{ border: value === opt.id ? "5px solid #c48a42" : "2px solid #d2a05c" }} />
+                style={{ border: value === opt.id ? "5px solid rgb(var(--color-brand-500))" : "2px solid rgb(var(--color-gold))" }} />
               <span className="flex-1">{opt.label}</span>
               {field.type === "weighted" && opt.weight !== undefined && (
-                <span className="text-xs font-bold" style={{ color: "#c48a42" }}>{opt.weight}pts</span>
+                <span className="text-xs font-bold" style={{ color: "rgb(var(--color-brand-500))" }}>{opt.weight}pts</span>
               )}
             </button>
           ))}
@@ -235,13 +235,13 @@ function FieldInput({
                 }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
                 style={{
-                  border: isSelected ? "2px solid #c48a42" : BRD,
-                  background: isSelected ? "#fbf3e7" : "#fff",
-                  color: "#3d2a0d",
+                  border: isSelected ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                  background: isSelected ? "rgb(var(--color-ink-950))" : "rgb(var(--color-ink-900))",
+                  color: "rgb(var(--color-ink-50))",
                 }}
               >
                 <div className="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center"
-                  style={{ border: isSelected ? "none" : "2px solid #d2a05c", background: isSelected ? "#c48a42" : "transparent" }}>
+                  style={{ border: isSelected ? "none" : "2px solid rgb(var(--color-gold))", background: isSelected ? "rgb(var(--color-brand-500))" : "transparent" }}>
                   {isSelected && <i className="ti ti-check text-white text-xs" />}
                 </div>
                 {opt.label}
@@ -265,14 +265,14 @@ function FieldInput({
                 onClick={() => onChange(n)}
                 className="w-11 h-11 rounded-xl text-sm font-bold transition-all"
                 style={{
-                  border: value === n ? "2px solid #c48a42" : BRD,
-                  background: value === n ? "#c48a42" : "#fff",
-                  color: value === n ? "#fff" : "#5c3f13",
+                  border: value === n ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                  background: value === n ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))",
+                  color: value === n ? "#fff" : "rgb(var(--color-ink-100))",
                 }}
               >{n}</button>
             ))}
           </div>
-          {label && <p className="text-xs mt-2" style={{ color: "#a06d28" }}>{label}</p>}
+          {label && <p className="text-xs mt-2" style={{ color: "rgb(var(--color-ink-500))" }}>{label}</p>}
         </div>
       );
     }
@@ -285,7 +285,7 @@ function FieldInput({
           {Array.from({ length: max }, (_, i) => i + 1).map(n => (
             <button key={n} onClick={() => onChange(n)} className="text-3xl transition-transform hover:scale-110">
               <i className={`ti ti-star${current >= n ? "-filled" : ""}`}
-                style={{ color: current >= n ? "#c48a42" : "#e8d8be" }} />
+                style={{ color: current >= n ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-700))" }} />
             </button>
           ))}
         </div>
@@ -303,16 +303,16 @@ function FieldInput({
                 onClick={() => onChange(n)}
                 className="w-10 h-10 rounded-lg text-sm font-bold transition-all"
                 style={{
-                  border: current === n ? "2px solid #c48a42" : BRD,
-                  background: current === n ? (n <= 6 ? "#c0392b" : n <= 8 ? "#c48a42" : "#4c6b3c") : "#fff",
-                  color: current === n ? "#fff" : "#5c3f13",
+                  border: current === n ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                  background: current === n ? (n <= 6 ? "rgb(var(--color-coral-500))" : n <= 8 ? "rgb(var(--color-brand-500))" : "rgb(var(--color-brand-500))") : "#fff",
+                  color: current === n ? "#fff" : "rgb(var(--color-ink-100))",
                 }}
               >{n}</button>
             ))}
           </div>
           <div className="flex justify-between mt-2">
-            <span className="text-xs font-medium" style={{ color: "#c0392b" }}>Muito improvável</span>
-            <span className="text-xs font-medium" style={{ color: "#4c6b3c" }}>Muito provável</span>
+            <span className="text-xs font-medium" style={{ color: "rgb(var(--color-coral-500))" }}>Muito improvável</span>
+            <span className="text-xs font-medium" style={{ color: "rgb(var(--color-brand-500))" }}>Muito provável</span>
           </div>
         </div>
       );
@@ -331,12 +331,12 @@ function FieldInput({
             value={current}
             onChange={e => onChange(Number(e.target.value))}
             className="w-full accent-current"
-            style={{ accentColor: "#c48a42" }}
+            style={{ accentColor: "rgb(var(--color-brand-500))" }}
           />
           <div className="flex justify-between mt-1">
-            <span className="text-xs" style={{ color: "#a06d28" }}>{min}</span>
-            <span className="text-sm font-bold" style={{ color: "#c48a42" }}>{current}</span>
-            <span className="text-xs" style={{ color: "#a06d28" }}>{max}</span>
+            <span className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>{min}</span>
+            <span className="text-sm font-bold" style={{ color: "rgb(var(--color-brand-500))" }}>{current}</span>
+            <span className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>{max}</span>
           </div>
         </div>
       );
@@ -349,7 +349,7 @@ function FieldInput({
       return (
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: "#5c3f13", minWidth: "90px" }}>{left}</span>
+            <span className="text-xs font-medium" style={{ color: "rgb(var(--color-ink-100))", minWidth: "90px" }}>{left}</span>
             <div className="flex-1 flex gap-1">
               {[1, 2, 3, 4, 5].map(n => (
                 <button
@@ -357,14 +357,14 @@ function FieldInput({
                   onClick={() => onChange(n)}
                   className="flex-1 h-11 rounded-lg text-sm font-bold transition-all"
                   style={{
-                    border: current === n ? "2px solid #c48a42" : BRD,
-                    background: current === n ? "#c48a42" : "#fff",
-                    color: current === n ? "#fff" : "#5c3f13",
+                    border: current === n ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                    background: current === n ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-900))",
+                    color: current === n ? "#fff" : "rgb(var(--color-ink-100))",
                   }}
                 >{n}</button>
               ))}
             </div>
-            <span className="text-xs font-medium text-right" style={{ color: "#5c3f13", minWidth: "90px" }}>{right}</span>
+            <span className="text-xs font-medium text-right" style={{ color: "rgb(var(--color-ink-100))", minWidth: "90px" }}>{right}</span>
           </div>
         </div>
       );
@@ -387,8 +387,8 @@ function FieldInput({
           placeholder="000.000.000-00"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
     }
@@ -398,13 +398,13 @@ function FieldInput({
       return (
         <div className="flex gap-2">
           <div className="flex-1">
-            <p className="text-xs mb-1" style={{ color: "#a06d28" }}>Início</p>
+            <p className="text-xs mb-1" style={{ color: "rgb(var(--color-ink-500))" }}>Início</p>
             <input type="date" value={(range.start as string) ?? ""}
               onChange={e => onChange({ ...range, start: e.target.value })}
               className={inputCls} style={inputStyle} />
           </div>
           <div className="flex-1">
-            <p className="text-xs mb-1" style={{ color: "#a06d28" }}>Fim</p>
+            <p className="text-xs mb-1" style={{ color: "rgb(var(--color-ink-500))" }}>Fim</p>
             <input type="date" value={(range.end as string) ?? ""}
               onChange={e => onChange({ ...range, end: e.target.value })}
               className={inputCls} style={inputStyle} />
@@ -428,14 +428,14 @@ function FieldInput({
         <div className="flex flex-col gap-2">
           {ordered.map((item, i) => (
             <div key={item} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium"
-              style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}>
+              style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ background: "#fbf3e7", color: "#c48a42", border: "1px solid #e8d8be" }}>{i + 1}</span>
+                style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))", border: "1px solid rgb(var(--color-ink-700))" }}>{i + 1}</span>
               <span className="flex-1">{item}</span>
-              <button onClick={() => move(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#c48a42" }}>
+              <button onClick={() => move(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "rgb(var(--color-brand-500))" }}>
                 <i className="ti ti-chevron-up" />
               </button>
-              <button onClick={() => move(i, 1)} disabled={i === ordered.length - 1} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "#c48a42" }}>
+              <button onClick={() => move(i, 1)} disabled={i === ordered.length - 1} className="w-6 h-6 flex items-center justify-center disabled:opacity-30" style={{ color: "rgb(var(--color-brand-500))" }}>
                 <i className="ti ti-chevron-down" />
               </button>
             </div>
@@ -452,12 +452,12 @@ function FieldInput({
       const remaining = total - used;
       return (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold" style={{ color: remaining < 0 ? "#c0392b" : "#c48a42" }}>
+          <p className="text-xs font-semibold" style={{ color: remaining < 0 ? "rgb(var(--color-coral-500))" : "rgb(var(--color-brand-500))" }}>
             {remaining} de {total} pontos restantes
           </p>
           {options.map(opt => (
-            <div key={opt.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ border: BRD, background: "#fff" }}>
-              <span className="flex-1 text-sm font-medium" style={{ color: "#3d2a0d" }}>{opt.label}</span>
+            <div key={opt.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
+              <span className="flex-1 text-sm font-medium" style={{ color: "rgb(var(--color-ink-50))" }}>{opt.label}</span>
               <input
                 type="number"
                 min={0}
@@ -480,8 +480,8 @@ function FieldInput({
       return (
         <div className="flex flex-col gap-2">
           {items.map(item => (
-            <div key={item} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ border: BRD, background: "#fff" }}>
-              <span className="flex-1 text-sm font-medium" style={{ color: "#3d2a0d" }}>{item}</span>
+            <div key={item} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
+              <span className="flex-1 text-sm font-medium" style={{ color: "rgb(var(--color-ink-50))" }}>{item}</span>
               <select
                 value={(assigned[item] as string) ?? ""}
                 onChange={e => onChange({ ...assigned, [item]: e.target.value })}
@@ -507,13 +507,13 @@ function FieldInput({
               onClick={() => onChange(zone)}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
               style={{
-                border: value === zone ? "2px solid #c48a42" : BRD,
-                background: value === zone ? "#fbf3e7" : "#fff",
-                color: "#3d2a0d",
+                border: value === zone ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                background: value === zone ? "rgb(var(--color-ink-950))" : "rgb(var(--color-ink-900))",
+                color: "rgb(var(--color-ink-50))",
               }}
             >
               <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-                style={{ border: value === zone ? "5px solid #c48a42" : "2px solid #d2a05c" }} />
+                style={{ border: value === zone ? "5px solid rgb(var(--color-brand-500))" : "2px solid rgb(var(--color-gold))" }} />
               {zone}
             </button>
           ))}
@@ -533,20 +533,20 @@ function FieldInput({
               <tr>
                 <th className="p-2 text-left"></th>
                 {cols.map(col => (
-                  <th key={col} className="p-2 text-center text-xs font-semibold" style={{ color: "#5c3f13" }}>{col}</th>
+                  <th key={col} className="p-2 text-center text-xs font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map(row => (
                 <tr key={row} style={{ borderTop: BRD }}>
-                  <td className="p-2 pr-3 text-xs font-medium" style={{ color: "#5c3f13" }}>{row}</td>
+                  <td className="p-2 pr-3 text-xs font-medium" style={{ color: "rgb(var(--color-ink-100))" }}>{row}</td>
                   {cols.map(col => (
                     <td key={col} className="p-2 text-center">
                       <button
                         onClick={() => onChange({ ...answersByRow, [row]: col })}
                         className="w-4 h-4 rounded-full mx-auto flex items-center justify-center"
-                        style={{ border: answersByRow[row] === col ? "5px solid #c48a42" : "2px solid #d2a05c" }}
+                        style={{ border: answersByRow[row] === col ? "5px solid rgb(var(--color-brand-500))" : "2px solid rgb(var(--color-gold))" }}
                       />
                     </td>
                   ))}
@@ -620,8 +620,8 @@ function FieldInput({
           placeholder="Digite o nome do bairro..."
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -641,13 +641,13 @@ function FieldInput({
               });
             }}
             className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold"
-            style={{ border: "2px solid #c48a42", background: "#fbf3e7", color: "#7a5218" }}
+            style={{ border: "2px solid rgb(var(--color-brand-500))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-amber-600))" }}
           >
             <i className="ti ti-crosshair" /> Capturar minha localização (GPS)
           </button>
           {value && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
-              style={{ border: BRD, background: "#eaf0e4", color: "#3a5430" }}>
+              style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-700))" }}>
               <i className="ti ti-check" /> {value as string}
             </div>
           )}
@@ -658,8 +658,8 @@ function FieldInput({
             placeholder="Ou digite: -15.7801, -47.9292"
             className={inputCls}
             style={{ ...inputStyle, fontSize: "12px" }}
-            onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-            onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+            onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+            onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
           />
         </div>
       );
@@ -667,10 +667,10 @@ function FieldInput({
     case "file":
       return (
         <label className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl cursor-pointer transition-colors"
-          style={{ border: "2px dashed #d9bb8c", background: "#fbf3e7" }}>
-          <i className="ti ti-upload text-2xl" style={{ color: "#c48a42" }} />
-          <span className="text-sm font-semibold" style={{ color: "#5c3f13" }}>Clique para selecionar arquivo</span>
-          <span className="text-xs" style={{ color: "#a06d28" }}>ou arraste e solte aqui</span>
+          style={{ border: "2px dashed rgb(var(--color-ink-600))", background: "rgb(var(--color-ink-950))" }}>
+          <i className="ti ti-upload text-2xl" style={{ color: "rgb(var(--color-brand-500))" }} />
+          <span className="text-sm font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>Clique para selecionar arquivo</span>
+          <span className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>ou arraste e solte aqui</span>
           <input type="file" className="hidden" onChange={e => onChange(e.target.files?.[0]?.name ?? null)} />
         </label>
       );
@@ -686,8 +686,8 @@ function FieldInput({
           placeholder={cfg.placeholder as string || "Sua resposta..."}
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
       );
 
@@ -712,9 +712,9 @@ function FieldInput({
           <div className="overflow-x-auto rounded-xl" style={{ border: BRD }}>
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr style={{ background: "#fbf3e7" }}>
+                <tr style={{ background: "rgb(var(--color-ink-950))" }}>
                   {cols.map(col => (
-                    <th key={col} className="px-2 py-2 text-left text-xs font-bold" style={{ color: "#7a5218" }}>{col}</th>
+                    <th key={col} className="px-2 py-2 text-left text-xs font-bold" style={{ color: "rgb(var(--color-amber-600))" }}>{col}</th>
                   ))}
                   <th className="w-8" />
                 </tr>
@@ -734,7 +734,7 @@ function FieldInput({
                     ))}
                     <td className="p-1 text-center">
                       <button onClick={() => setRows(rows.filter((_, j) => j !== i))}
-                        className="w-6 h-6 inline-flex items-center justify-center" style={{ color: "#c0392b" }}>
+                        className="w-6 h-6 inline-flex items-center justify-center" style={{ color: "rgb(var(--color-coral-500))" }}>
                         <i className="ti ti-x text-xs" />
                       </button>
                     </td>
@@ -743,11 +743,11 @@ function FieldInput({
               </tbody>
             </table>
             {rows.length === 0 && (
-              <p className="px-3 py-4 text-xs text-center" style={{ color: "#a06d28" }}>Nenhuma linha adicionada ainda.</p>
+              <p className="px-3 py-4 text-xs text-center" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhuma linha adicionada ainda.</p>
             )}
           </div>
           <button onClick={() => setRows([...rows, {}])}
-            className="mt-2 flex items-center gap-1 text-sm font-semibold" style={{ color: "#c48a42" }}>
+            className="mt-2 flex items-center gap-1 text-sm font-semibold" style={{ color: "rgb(var(--color-brand-500))" }}>
             <i className="ti ti-plus" /> Adicionar linha
           </button>
         </div>
@@ -772,22 +772,22 @@ function FieldInput({
               <tr>
                 <th />
                 {days.map(d => (
-                  <th key={d} className="p-1.5 text-center font-semibold" style={{ color: "#5c3f13" }}>{d}</th>
+                  <th key={d} className="p-1.5 text-center font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>{d}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {periods.map(period => (
                 <tr key={period} style={{ borderTop: BRD }}>
-                  <td className="p-1.5 pr-2 font-medium whitespace-nowrap" style={{ color: "#5c3f13" }}>{period}</td>
+                  <td className="p-1.5 pr-2 font-medium whitespace-nowrap" style={{ color: "rgb(var(--color-ink-100))" }}>{period}</td>
                   {days.map(day => {
                     const on = Array.isArray(sel[day]) && (sel[day] as string[]).includes(period);
                     return (
                       <td key={day} className="p-1">
                         <button onClick={() => toggle(day, period)}
                           className="w-full h-9 rounded-lg flex items-center justify-center transition-all"
-                          style={{ border: on ? "2px solid #c48a42" : BRD, background: on ? "#fbf3e7" : "#fff" }}>
-                          {on && <i className="ti ti-check" style={{ color: "#c48a42" }} />}
+                          style={{ border: on ? "2px solid rgb(var(--color-brand-500))" : BRD, background: on ? "rgb(var(--color-ink-950))" : "rgb(var(--color-ink-900))" }}>
+                          {on && <i className="ti ti-check" style={{ color: "rgb(var(--color-brand-500))" }} />}
                         </button>
                       </td>
                     );
@@ -796,7 +796,7 @@ function FieldInput({
               ))}
             </tbody>
           </table>
-          <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>Toque nos horários em que você está disponível.</p>
+          <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Toque nos horários em que você está disponível.</p>
         </div>
       );
     }
@@ -837,7 +837,7 @@ function FieldInput({
         <div className="flex flex-col gap-3">
           {consentText && (
             <div className="px-4 py-3 rounded-xl text-xs leading-relaxed whitespace-pre-wrap overflow-y-auto"
-              style={{ border: BRD, background: "#fbf3e7", color: "#5c3f13", maxHeight: 190 }}>
+              style={{ border: BRD, background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-100))", maxHeight: 190 }}>
               {consentText}
             </div>
           )}
@@ -849,13 +849,13 @@ function FieldInput({
                 onClick={() => toggleItem(item)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all"
                 style={{
-                  border: on ? "2px solid #c48a42" : BRD,
-                  background: on ? "#fbf3e7" : "#fff",
-                  color: "#3d2a0d",
+                  border: on ? "2px solid rgb(var(--color-brand-500))" : BRD,
+                  background: on ? "rgb(var(--color-ink-950))" : "rgb(var(--color-ink-900))",
+                  color: "rgb(var(--color-ink-50))",
                 }}
               >
                 <div className="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center"
-                  style={{ border: on ? "none" : "2px solid #d2a05c", background: on ? "#c48a42" : "transparent" }}>
+                  style={{ border: on ? "none" : "2px solid rgb(var(--color-gold))", background: on ? "rgb(var(--color-brand-500))" : "transparent" }}>
                   {on && <i className="ti ti-check text-white text-xs" />}
                 </div>
                 {item}
@@ -881,12 +881,12 @@ function FieldInput({
         <div className="flex flex-col gap-2">
           {items.map(item => (
             <label key={item} className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all"
-              style={{ border: filesByItem[item] ? "2px solid #a0d4b8" : BRD, background: filesByItem[item] ? "#eaf0e4" : "#fff" }}>
+              style={{ border: filesByItem[item] ? "2px solid rgb(var(--color-brand-200))" : BRD, background: filesByItem[item] ? "rgb(var(--color-brand-50))" : "rgb(var(--color-ink-900))" }}>
               <i className={`ti ${filesByItem[item] ? "ti-check" : "ti-upload"}`}
-                style={{ color: filesByItem[item] ? "#4c6b3c" : "#c48a42" }} />
+                style={{ color: filesByItem[item] ? "rgb(var(--color-brand-500))" : "rgb(var(--color-brand-500))" }} />
               <div className="flex-1">
-                <p className="text-sm font-medium" style={{ color: "#3d2a0d" }}>{item}</p>
-                <p className="text-xs" style={{ color: filesByItem[item] ? "#3a5430" : "#a06d28" }}>
+                <p className="text-sm font-medium" style={{ color: "rgb(var(--color-ink-50))" }}>{item}</p>
+                <p className="text-xs" style={{ color: filesByItem[item] ? "rgb(var(--color-brand-700))" : "rgb(var(--color-ink-500))" }}>
                   {filesByItem[item] ? String(filesByItem[item]) : "Toque para selecionar o arquivo"}
                 </p>
               </div>
@@ -917,18 +917,18 @@ function FieldInput({
       return (
         <div className="flex flex-col gap-3">
           {entries.map((entry, i) => (
-            <div key={i} className="rounded-xl p-3 flex flex-col gap-2" style={{ border: BRD, background: "#fff" }}>
+            <div key={i} className="rounded-xl p-3 flex flex-col gap-2" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold" style={{ color: "#c48a42" }}>Referência {i + 1}</p>
+                <p className="text-xs font-bold" style={{ color: "rgb(var(--color-brand-500))" }}>Referência {i + 1}</p>
                 {entries.length > 1 && (
                   <button onClick={() => setEntries(entries.filter((_, j) => j !== i))}
-                    className="text-xs font-semibold" style={{ color: "#c0392b" }}>Remover</button>
+                    className="text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>Remover</button>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {BIB_FIELDS.map(bf => (
                   <div key={bf.key} className={bf.span ? "col-span-2" : ""}>
-                    <p className="text-xs mb-1" style={{ color: "#a06d28" }}>{bf.label}</p>
+                    <p className="text-xs mb-1" style={{ color: "rgb(var(--color-ink-500))" }}>{bf.label}</p>
                     <input
                       value={(entry[bf.key] as string) ?? ""}
                       onChange={e => setEntries(entries.map((en, j) => j === i ? { ...en, [bf.key]: e.target.value } : en))}
@@ -941,7 +941,7 @@ function FieldInput({
             </div>
           ))}
           <button onClick={() => setEntries([...entries, {}])}
-            className="flex items-center gap-1 text-sm font-semibold" style={{ color: "#c48a42" }}>
+            className="flex items-center gap-1 text-sm font-semibold" style={{ color: "rgb(var(--color-brand-500))" }}>
             <i className="ti ti-plus" /> Adicionar referência
           </button>
         </div>
@@ -950,7 +950,7 @@ function FieldInput({
 
     default:
       return (
-        <div className="px-4 py-3 rounded-xl text-sm" style={{ border: BRD, background: "#fbf3e7", color: "#a06d28" }}>
+        <div className="px-4 py-3 rounded-xl text-sm" style={{ border: BRD, background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-ink-500))" }}>
           Campo em desenvolvimento
         </div>
       );
@@ -1006,26 +1006,26 @@ function CepField({
           placeholder="00000-000"
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
         {loading && (
-          <i className="ti ti-loader-2 animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#c48a42" }} />
+          <i className="ti ti-loader-2 animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "rgb(var(--color-brand-500))" }} />
         )}
       </div>
 
       {error && (
-        <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: "#c0392b" }}>
+        <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: "rgb(var(--color-coral-500))" }}>
           <i className="ti ti-alert-circle" /> {error}
         </p>
       )}
 
       {resolved && (
-        <div className="mt-2 px-4 py-3 rounded-xl text-xs" style={{ background: "#eaf0e4", border: "1px solid #a0d4b8", color: "#3a5430" }}>
+        <div className="mt-2 px-4 py-3 rounded-xl text-xs" style={{ background: "rgb(var(--color-brand-50))", border: "1px solid rgb(var(--color-brand-200))", color: "rgb(var(--color-brand-700))" }}>
           <p className="flex items-center gap-1.5 font-bold mb-1">
             <i className="ti ti-map-pin-check" /> Endereço localizado
           </p>
-          <p style={{ color: "#3a5430" }}>
+          <p style={{ color: "rgb(var(--color-brand-700))" }}>
             {resolved.logradouro && `${resolved.logradouro}, `}
             {resolved.bairro && `${resolved.bairro} — `}
             {resolved.localidade}/{resolved.uf}
@@ -1072,9 +1072,9 @@ function IbgeCascadeField({
       <div>
         <input type="text" value={(value as string) ?? ""} onChange={e => onChange(e.target.value)}
           placeholder={`Digite a ${placeholder}...`} className={inputCls} style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"} />
-        <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"} />
+        <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>
           Dica: se houver um campo de estado antes, selecione-o para carregar a lista.
         </p>
       </div>
@@ -1083,8 +1083,8 @@ function IbgeCascadeField({
 
   if (loading) return (
     <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={inputStyle}>
-      <i className="ti ti-loader-2 animate-spin" style={{ color: "#c48a42" }} />
-      <span style={{ color: "#a06d28" }}>Carregando {placeholder}s de {selectedUF}...</span>
+      <i className="ti ti-loader-2 animate-spin" style={{ color: "rgb(var(--color-brand-500))" }} />
+      <span style={{ color: "rgb(var(--color-ink-500))" }}>Carregando {placeholder}s de {selectedUF}...</span>
     </div>
   );
 
@@ -1094,7 +1094,7 @@ function IbgeCascadeField({
         <option value="">Selecione a {placeholder}...</option>
         {items.map(i => <option key={i} value={i}>{i}</option>)}
       </select>
-      <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
+      <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>
         Nome oficial do IBGE para a {placeholder} — em alguns estados coincide com o nome do município-sede.
       </p>
     </div>
@@ -1146,15 +1146,15 @@ function GeoDistrictField({
       <div>
         <input type="text" value={(value as string) ?? ""} onChange={e => onChange(e.target.value)}
           placeholder="Digite o nome do distrito..." className={inputCls} style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"} />
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"} />
         {!selectedCity && (
-          <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
+          <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>
             Dica: selecione o estado e o município antes para carregar os distritos.
           </p>
         )}
         {selectedCity && manual && (
-          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
+          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "rgb(var(--color-brand-500))" }}>
             ← Voltar para a lista de distritos
           </button>
         )}
@@ -1164,8 +1164,8 @@ function GeoDistrictField({
 
   if (loading) return (
     <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={inputStyle}>
-      <i className="ti ti-loader-2 animate-spin" style={{ color: "#c48a42" }} />
-      <span style={{ color: "#a06d28" }}>Carregando distritos de {selectedCity}...</span>
+      <i className="ti ti-loader-2 animate-spin" style={{ color: "rgb(var(--color-brand-500))" }} />
+      <span style={{ color: "rgb(var(--color-ink-500))" }}>Carregando distritos de {selectedCity}...</span>
     </div>
   );
 
@@ -1175,7 +1175,7 @@ function GeoDistrictField({
         <option value="">Selecione o distrito...</option>
         {districts.map(d => <option key={d} value={d}>{d}</option>)}
       </select>
-      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
+      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "rgb(var(--color-brand-500))" }}>
         Não encontrou? Digite manualmente
       </button>
     </div>
@@ -1224,16 +1224,16 @@ function GeoCityField({
           placeholder="Digite o nome do município..."
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
         {selectedUF && manual && (
-          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
+          <button onClick={() => setManual(false)} className="text-xs mt-1.5 font-medium" style={{ color: "rgb(var(--color-brand-500))" }}>
             ← Voltar para a lista de municípios de {selectedUF}
           </button>
         )}
         {!selectedUF && (
-          <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
+          <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>
             Dica: se houver um campo de estado antes, selecione-o para carregar a lista de municípios.
           </p>
         )}
@@ -1245,8 +1245,8 @@ function GeoCityField({
     <div>
       {loading ? (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={inputStyle}>
-          <i className="ti ti-loader-2 animate-spin" style={{ color: "#c48a42" }} />
-          <span style={{ color: "#a06d28" }}>Carregando municípios de {selectedUF}...</span>
+          <i className="ti ti-loader-2 animate-spin" style={{ color: "rgb(var(--color-brand-500))" }} />
+          <span style={{ color: "rgb(var(--color-ink-500))" }}>Carregando municípios de {selectedUF}...</span>
         </div>
       ) : (
         <select
@@ -1259,7 +1259,7 @@ function GeoCityField({
           {cities.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       )}
-      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "#c48a42" }}>
+      <button onClick={() => setManual(true)} className="text-xs mt-1.5 font-medium" style={{ color: "rgb(var(--color-brand-500))" }}>
         Não encontrou? Digite manualmente
       </button>
     </div>
@@ -1277,7 +1277,7 @@ function SignatureField({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasStroke, setHasStroke] = useState(false);
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
 
   function pos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect();
@@ -1306,7 +1306,7 @@ function SignatureField({
     const { x, y } = pos(e, canvas);
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
-    ctx.strokeStyle = "#3d2a0d";
+    ctx.strokeStyle = "rgb(var(--color-ink-50))";
     ctx.lineTo(x, y);
     ctx.stroke();
     setHasStroke(true);
@@ -1348,7 +1348,7 @@ function SignatureField({
         width={480}
         height={160}
         className="w-full rounded-xl touch-none"
-        style={{ border: BRD, background: "#fff" }}
+        style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}
         onMouseDown={start}
         onMouseMove={draw}
         onMouseUp={finish}
@@ -1358,13 +1358,13 @@ function SignatureField({
         onTouchEnd={finish}
       />
       <div className="flex items-center justify-between mt-2">
-        <p className="text-xs" style={{ color: "#a06d28" }}>
+        <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
           {captureMetadata ? "Assine acima — hora e localização serão registradas" : "Assine no espaço acima"}
         </p>
-        <button onClick={clear} className="text-xs font-semibold" style={{ color: "#c0392b" }}>Limpar</button>
+        <button onClick={clear} className="text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>Limpar</button>
       </div>
       {signedDataUrl && (
-        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#3a5430" }}>
+        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "rgb(var(--color-brand-700))" }}>
           <i className="ti ti-check" /> Assinatura capturada
         </p>
       )}
@@ -1390,7 +1390,7 @@ function GeoRelationalField({
   const [results, setResults] = useState<EntityHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
 
   const selected = value as Record<string, unknown> | null;
   const hasSelection = Boolean(selected && selected.entityId);
@@ -1414,13 +1414,13 @@ function GeoRelationalField({
   if (hasSelection && selected) {
     return (
       <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
-        style={{ border: "2px solid #c48a42", background: "#fbf3e7" }}>
-        <i className="ti ti-point-filled text-lg" style={{ color: "#c48a42" }} />
+        style={{ border: "2px solid rgb(var(--color-brand-500))", background: "rgb(var(--color-ink-950))" }}>
+        <i className="ti ti-point-filled text-lg" style={{ color: "rgb(var(--color-brand-500))" }} />
         <div className="flex-1">
-          <p className="text-sm font-semibold" style={{ color: "#3d2a0d" }}>{String(selected.name ?? "")}</p>
-          <p className="text-xs font-medium" style={{ color: "#a06d28" }}>{String(selected.code ?? "")}</p>
+          <p className="text-sm font-semibold" style={{ color: "rgb(var(--color-ink-50))" }}>{String(selected.name ?? "")}</p>
+          <p className="text-xs font-medium" style={{ color: "rgb(var(--color-ink-500))" }}>{String(selected.code ?? "")}</p>
         </div>
-        <button onClick={() => onChange(null)} className="text-xs font-semibold" style={{ color: "#c0392b" }}>
+        <button onClick={() => onChange(null)} className="text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>
           Trocar
         </button>
       </div>
@@ -1437,11 +1437,11 @@ function GeoRelationalField({
           placeholder="Buscar por nome ou código (ex.: COM-000245)..."
           className={inputCls}
           style={inputStyle}
-          onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-          onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+          onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+          onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
         />
         {loading && (
-          <i className="ti ti-loader-2 animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#c48a42" }} />
+          <i className="ti ti-loader-2 animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "rgb(var(--color-brand-500))" }} />
         )}
       </div>
       <div className="flex flex-col gap-1.5 mt-2 overflow-y-auto" style={{ maxHeight: 230 }}>
@@ -1449,18 +1449,18 @@ function GeoRelationalField({
           <button key={r.id}
             onClick={() => onChange({ entityId: r.id, code: r.code, name: r.name, type: r.type })}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
-            style={{ border: BRD, background: "#fff" }}>
-            <i className="ti ti-point" style={{ color: "#c48a42" }} />
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
+            <i className="ti ti-point" style={{ color: "rgb(var(--color-brand-500))" }} />
             <div className="flex-1">
-              <p className="text-sm font-medium" style={{ color: "#3d2a0d" }}>{r.name}</p>
-              <p className="text-xs" style={{ color: "#a06d28" }}>
+              <p className="text-sm font-medium" style={{ color: "rgb(var(--color-ink-50))" }}>{r.name}</p>
+              <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
                 {r.code}{r.cityName ? ` · ${r.cityName}${r.stateCode ? `/${r.stateCode}` : ""}` : ""}
               </p>
             </div>
           </button>
         ))}
         {searched && !loading && results.length === 0 && (
-          <p className="text-xs px-1 py-2" style={{ color: "#a06d28" }}>
+          <p className="text-xs px-1 py-2" style={{ color: "rgb(var(--color-ink-500))" }}>
             Nenhuma entidade encontrada no Catálogo para esta busca.
           </p>
         )}
@@ -1529,25 +1529,25 @@ function AudioField({
         <>
           <audio controls src={audioUrl} className="w-full" />
           <button onClick={() => onChange(null)}
-            className="self-start text-xs font-semibold" style={{ color: "#c0392b" }}>
+            className="self-start text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>
             Remover e gravar novamente
           </button>
         </>
       ) : recording ? (
         <button onClick={stop}
           className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold"
-          style={{ border: "2px solid #c0392b", background: "#fdf0ef", color: "#c0392b" }}>
+          style={{ border: "2px solid rgb(var(--color-coral-500))", background: "rgb(var(--color-coral-50))", color: "rgb(var(--color-coral-500))" }}>
           <i className="ti ti-player-stop-filled animate-pulse" /> Parar gravação ({mmss})
         </button>
       ) : (
         <button onClick={start}
           className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold"
-          style={{ border: "2px solid #c48a42", background: "#fbf3e7", color: "#7a5218" }}>
+          style={{ border: "2px solid rgb(var(--color-brand-500))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-amber-600))" }}>
           <i className="ti ti-microphone" /> Gravar resposta em áudio
         </button>
       )}
       {error && (
-        <p className="text-xs flex items-center gap-1" style={{ color: "#c0392b" }}>
+        <p className="text-xs flex items-center gap-1" style={{ color: "rgb(var(--color-coral-500))" }}>
           <i className="ti ti-alert-circle" /> {error}
         </p>
       )}
@@ -1565,7 +1565,7 @@ function PhotoAnnotationField({
   const v = value as Record<string, unknown> | null;
   const image = (v?.image as string) || "";
   const notes = Array.isArray(v?.notes) ? (v?.notes as Array<{ x: number; y: number; text: string }>) : [];
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1585,10 +1585,10 @@ function PhotoAnnotationField({
   if (!image) {
     return (
       <label className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl cursor-pointer transition-colors"
-        style={{ border: "2px dashed #d9bb8c", background: "#fbf3e7" }}>
-        <i className="ti ti-photo-edit text-2xl" style={{ color: "#c48a42" }} />
-        <span className="text-sm font-semibold" style={{ color: "#5c3f13" }}>Tirar ou escolher uma foto</span>
-        <span className="text-xs" style={{ color: "#a06d28" }}>Depois, toque na imagem para marcar pontos comentados</span>
+        style={{ border: "2px dashed rgb(var(--color-ink-600))", background: "rgb(var(--color-ink-950))" }}>
+        <i className="ti ti-photo-edit text-2xl" style={{ color: "rgb(var(--color-brand-500))" }} />
+        <span className="text-sm font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>Tirar ou escolher uma foto</span>
+        <span className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Depois, toque na imagem para marcar pontos comentados</span>
         <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
       </label>
     );
@@ -1602,30 +1602,30 @@ function PhotoAnnotationField({
         {notes.map((n, i) => (
           <div key={i}
             className="absolute w-6 h-6 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center text-xs font-bold pointer-events-none"
-            style={{ left: `${n.x}%`, top: `${n.y}%`, background: "#c48a42", color: "#fff", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+            style={{ left: `${n.x}%`, top: `${n.y}%`, background: "rgb(var(--color-brand-500))", color: "#fff", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
             {i + 1}
           </div>
         ))}
       </div>
-      <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>Toque na foto para marcar um ponto e descreva-o abaixo.</p>
+      <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>Toque na foto para marcar um ponto e descreva-o abaixo.</p>
       {notes.map((n, i) => (
         <div key={i} className="flex items-center gap-2 mt-2">
           <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-            style={{ background: "#fbf3e7", color: "#c48a42", border: BRD }}>{i + 1}</span>
+            style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))", border: BRD }}>{i + 1}</span>
           <input
             value={n.text}
             onChange={e => onChange({ image, notes: notes.map((note, j) => j === i ? { ...note, text: e.target.value } : note) })}
             placeholder="Comentário do ponto..."
             className="flex-1 px-3 py-2 rounded-lg text-sm border focus:outline-none"
-            style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" }}
           />
           <button onClick={() => onChange({ image, notes: notes.filter((_, j) => j !== i) })}
-            className="w-6 h-6 flex items-center justify-center" style={{ color: "#c0392b" }}>
+            className="w-6 h-6 flex items-center justify-center" style={{ color: "rgb(var(--color-coral-500))" }}>
             <i className="ti ti-x text-xs" />
           </button>
         </div>
       ))}
-      <button onClick={() => onChange(null)} className="text-xs font-semibold mt-2" style={{ color: "#c0392b" }}>
+      <button onClick={() => onChange(null)} className="text-xs font-semibold mt-2" style={{ color: "rgb(var(--color-coral-500))" }}>
         Remover foto
       </button>
     </div>
@@ -1643,7 +1643,7 @@ function DocCaptureField({
   const v = value as Record<string, unknown> | null;
   const image = (v?.image as string) || "";
   const transcript = (v?.transcript as string) || "";
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1658,7 +1658,7 @@ function DocCaptureField({
       {image ? (
         <div className="relative rounded-xl overflow-hidden" style={{ border: BRD }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- imagem local (data URL) do respondente, next/image não se aplica */}
-          <img src={image} alt="Documento capturado" className="w-full block" style={{ maxHeight: 260, objectFit: "contain", background: "#fbf3e7" }} />
+          <img src={image} alt="Documento capturado" className="w-full block" style={{ maxHeight: 260, objectFit: "contain", background: "rgb(var(--color-ink-950))" }} />
           <button onClick={() => onChange(transcript ? { image: "", transcript } : null)}
             className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
             style={{ background: "rgba(0,0,0,0.55)" }}>
@@ -1667,9 +1667,9 @@ function DocCaptureField({
         </div>
       ) : (
         <label className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl cursor-pointer transition-colors"
-          style={{ border: "2px dashed #d9bb8c", background: "#fbf3e7" }}>
-          <i className="ti ti-scan text-2xl" style={{ color: "#c48a42" }} />
-          <span className="text-sm font-semibold" style={{ color: "#5c3f13" }}>Fotografar o documento</span>
+          style={{ border: "2px dashed rgb(var(--color-ink-600))", background: "rgb(var(--color-ink-950))" }}>
+          <i className="ti ti-scan text-2xl" style={{ color: "rgb(var(--color-brand-500))" }} />
+          <span className="text-sm font-semibold" style={{ color: "rgb(var(--color-ink-100))" }}>Fotografar o documento</span>
           <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
         </label>
       )}
@@ -1684,7 +1684,7 @@ function DocCaptureField({
         className="w-full px-4 py-3 rounded-xl text-sm border focus:outline-none resize-none"
         style={inputStyle}
       />
-      <p className="text-xs" style={{ color: "#a06d28" }}>
+      <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
         A extração automática de texto (OCR) ainda não está disponível — transcreva os campos importantes.
       </p>
     </div>
@@ -1699,7 +1699,7 @@ function PairwiseField({
   value: AnswerValue;
   onChange: (val: AnswerValue) => void;
 }) {
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
   const pairs: Array<[string, string]> = [];
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) pairs.push([items[i], items[j]]);
@@ -1710,7 +1710,7 @@ function PairwiseField({
   const idx = choices.length;
 
   if (pairs.length === 0) {
-    return <p className="text-xs" style={{ color: "#a06d28" }}>Nenhum item configurado para comparação.</p>;
+    return <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>Nenhum item configurado para comparação.</p>;
   }
 
   function pick(winner: string) {
@@ -1727,19 +1727,19 @@ function PairwiseField({
     const ranked = [...items].sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0));
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: "#4c6b3c" }}>
+        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: "rgb(var(--color-brand-500))" }}>
           <i className="ti ti-check" /> Comparações concluídas — ranking calculado:
         </p>
         {ranked.map((item, i) => (
           <div key={item} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium"
-            style={{ border: BRD, background: "#fff", color: "#3d2a0d" }}>
+            style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" }}>
             <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-              style={{ background: "#fbf3e7", color: "#c48a42", border: BRD }}>{i + 1}</span>
+              style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))", border: BRD }}>{i + 1}</span>
             <span className="flex-1">{item}</span>
-            <span className="text-xs font-bold" style={{ color: "#c48a42" }}>{scores[item] ?? 0} pt{(scores[item] ?? 0) === 1 ? "" : "s"}</span>
+            <span className="text-xs font-bold" style={{ color: "rgb(var(--color-brand-500))" }}>{scores[item] ?? 0} pt{(scores[item] ?? 0) === 1 ? "" : "s"}</span>
           </div>
         ))}
-        <button onClick={() => onChange(null)} className="self-start text-xs font-semibold" style={{ color: "#c0392b" }}>
+        <button onClick={() => onChange(null)} className="self-start text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>
           Refazer comparações
         </button>
       </div>
@@ -1749,19 +1749,19 @@ function PairwiseField({
   const [optionA, optionB] = pairs[idx];
   return (
     <div>
-      <p className="text-xs mb-2 font-medium" style={{ color: "#a06d28" }}>
+      <p className="text-xs mb-2 font-medium" style={{ color: "rgb(var(--color-ink-500))" }}>
         Comparação {idx + 1} de {pairs.length} — qual você prioriza?
       </p>
       <div className="flex items-stretch gap-3">
         <button onClick={() => pick(optionA)}
           className="flex-1 px-4 py-6 rounded-xl text-sm font-semibold transition-all"
-          style={{ border: "2px solid #d2a05c", background: "#fff", color: "#3d2a0d" }}>
+          style={{ border: "2px solid rgb(var(--color-gold))", background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" }}>
           {optionA}
         </button>
-        <span className="self-center text-xs font-bold" style={{ color: "#c48a42" }}>vs</span>
+        <span className="self-center text-xs font-bold" style={{ color: "rgb(var(--color-brand-500))" }}>vs</span>
         <button onClick={() => pick(optionB)}
           className="flex-1 px-4 py-6 rounded-xl text-sm font-semibold transition-all"
-          style={{ border: "2px solid #d2a05c", background: "#fff", color: "#3d2a0d" }}>
+          style={{ border: "2px solid rgb(var(--color-gold))", background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" }}>
           {optionB}
         </button>
       </div>
@@ -1809,21 +1809,21 @@ function EquationField({
   return (
     <div>
       <div className="px-4 py-3 rounded-xl flex items-center justify-between"
-        style={{ border: "1px solid #e8d8be", background: "#fbf3e7" }}>
-        <span className="text-xs font-medium flex items-center gap-1.5" style={{ color: "#a06d28" }}>
+        style={{ border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))" }}>
+        <span className="text-xs font-medium flex items-center gap-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>
           <i className="ti ti-math" /> Valor calculado automaticamente
         </span>
-        <span className="text-lg font-bold" style={{ color: result !== null ? "#7a5218" : "#d9bb8c" }}>
+        <span className="text-lg font-bold" style={{ color: result !== null ? "rgb(var(--color-amber-600))" : "rgb(var(--color-ink-600))" }}>
           {result !== null ? result.toLocaleString("pt-BR") : "—"}
         </span>
       </div>
       {formula && missing && (
-        <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
+        <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>
           Aguardando as respostas numéricas usadas na fórmula.
         </p>
       )}
       {!formula && (
-        <p className="text-xs mt-1.5" style={{ color: "#a06d28" }}>
+        <p className="text-xs mt-1.5" style={{ color: "rgb(var(--color-ink-500))" }}>
           Nenhuma fórmula configurada para este campo.
         </p>
       )}
@@ -1840,7 +1840,7 @@ function FieldDiaryField({
   inputStyle: React.CSSProperties;
 }) {
   const [draft, setDraft] = useState("");
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
   const entries = Array.isArray(value) ? (value as unknown as Array<{ text: string; at: string }>) : [];
 
   function addEntry() {
@@ -1859,17 +1859,17 @@ function FieldDiaryField({
   return (
     <div className="flex flex-col gap-2">
       {entries.map((entry, i) => (
-        <div key={i} className="px-4 py-3 rounded-xl" style={{ border: BRD, background: "#fff" }}>
+        <div key={i} className="px-4 py-3 rounded-xl" style={{ border: BRD, background: "rgb(var(--color-ink-900))" }}>
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs font-semibold flex items-center gap-1" style={{ color: "#c48a42" }}>
+            <p className="text-xs font-semibold flex items-center gap-1" style={{ color: "rgb(var(--color-brand-500))" }}>
               <i className="ti ti-clock" />
               {new Date(entry.at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
             </p>
-            <button onClick={() => removeEntry(i)} className="text-xs font-semibold" style={{ color: "#c0392b" }}>
+            <button onClick={() => removeEntry(i)} className="text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>
               Remover
             </button>
           </div>
-          <p className="text-sm whitespace-pre-wrap" style={{ color: "#3d2a0d" }}>{entry.text}</p>
+          <p className="text-sm whitespace-pre-wrap" style={{ color: "rgb(var(--color-ink-50))" }}>{entry.text}</p>
         </div>
       ))}
       <textarea
@@ -1882,10 +1882,10 @@ function FieldDiaryField({
       />
       <button onClick={addEntry} disabled={!draft.trim()}
         className="self-start flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-        style={{ background: "#c48a42", color: "#fff" }}>
+        style={{ background: "rgb(var(--color-brand-500))", color: "#fff" }}>
         <i className="ti ti-plus" /> Adicionar registro
       </button>
-      <p className="text-xs" style={{ color: "#a06d28" }}>
+      <p className="text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
         Cada registro recebe carimbo de data/hora automático, formando um log cronológico.
       </p>
     </div>
@@ -1911,7 +1911,7 @@ function QrBarcodeField({
   const videoRef  = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef    = useRef<number | null>(null);
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
 
   useEffect(() => {
     return () => {
@@ -1972,20 +1972,20 @@ function QrBarcodeField({
           <video ref={videoRef} muted playsInline className="w-full rounded-xl"
             style={{ border: BRD, maxHeight: 260, objectFit: "cover", background: "#000" }} />
           <button onClick={stopScan}
-            className="self-start text-xs font-semibold" style={{ color: "#c0392b" }}>
+            className="self-start text-xs font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>
             Cancelar leitura
           </button>
         </div>
       ) : (
         <button onClick={startScan}
           className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold"
-          style={{ border: "2px solid #c48a42", background: "#fbf3e7", color: "#7a5218" }}>
+          style={{ border: "2px solid rgb(var(--color-brand-500))", background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-amber-600))" }}>
           <i className="ti ti-qrcode" /> Ler código com a câmera
         </button>
       )}
       {typeof value === "string" && value && (
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
-          style={{ border: BRD, background: "#eaf0e4", color: "#3a5430" }}>
+          style={{ border: BRD, background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-700))" }}>
           <i className="ti ti-check" /> Código lido: {value}
         </div>
       )}
@@ -1996,11 +1996,11 @@ function QrBarcodeField({
         placeholder="Ou digite o código manualmente..."
         className={inputCls}
         style={inputStyle}
-        onFocus={e => e.currentTarget.style.borderColor = "#c48a42"}
-        onBlur={e => e.currentTarget.style.borderColor = "#e8d8be"}
+        onFocus={e => e.currentTarget.style.borderColor = "rgb(var(--color-brand-500))"}
+        onBlur={e => e.currentTarget.style.borderColor = "rgb(var(--color-ink-700))"}
       />
       {error && (
-        <p className="text-xs flex items-center gap-1" style={{ color: "#c0392b" }}>
+        <p className="text-xs flex items-center gap-1" style={{ color: "rgb(var(--color-coral-500))" }}>
           <i className="ti ti-alert-circle" /> {error}
         </p>
       )}
@@ -2109,21 +2109,21 @@ export function RespondentClient({
     } finally { setSubmitting(false); }
   }
 
-  const BRD = "1px solid #e8d8be";
+  const BRD = "1px solid rgb(var(--color-ink-700))";
   const progress = totalSteps > 0 ? ((step) / totalSteps) * 100 : 0;
 
   // Tela de sucesso
   if (submitted) return (
-    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "#fbf3e7" }}>
+    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "rgb(var(--color-ink-950))" }}>
       <div className="text-center max-w-sm">
         <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
-          style={{ background: submittedOffline ? "#fbf0da" : "#eaf0e4", border: submittedOffline ? "2px solid #e3c07f" : "2px solid #a0d4b8" }}>
-          <i className={`ti ${submittedOffline ? "ti-cloud-off" : "ti-check"} text-4xl`} style={{ color: submittedOffline ? "#a06d28" : "#4c6b3c" }} />
+          style={{ background: submittedOffline ? "rgb(var(--color-amber-50))" : "rgb(var(--color-brand-50))", border: submittedOffline ? "2px solid rgb(var(--color-amber-500) / 0.5)" : "2px solid rgb(var(--color-brand-200))" }}>
+          <i className={`ti ${submittedOffline ? "ti-cloud-off" : "ti-check"} text-4xl`} style={{ color: submittedOffline ? "rgb(var(--color-ink-500))" : "rgb(var(--color-brand-500))" }} />
         </div>
-        <h1 className="text-2xl font-bold mb-2" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif" }}>
+        <h1 className="text-2xl font-bold mb-2" style={{ color: "rgb(var(--color-ink-50))", fontFamily: "var(--font-serif), Georgia, serif" }}>
           {isPreview ? "Prévia concluída!" : submittedOffline ? "Resposta salva neste aparelho" : "Resposta enviada!"}
         </h1>
-        <p className="text-sm mb-6" style={{ color: "#5c3f13" }}>
+        <p className="text-sm mb-6" style={{ color: "rgb(var(--color-ink-100))" }}>
           {isPreview
             ? "Esta era uma prévia do formulário. As respostas não foram salvas."
             : submittedOffline
@@ -2133,19 +2133,19 @@ export function RespondentClient({
 
         <button onClick={() => { setSubmitted(false); setSubmittedOffline(false); setStep(0); setAnswers({}); setErrors({}); }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={{ background: "#c48a42", color: "#fff" }}>
+          style={{ background: "rgb(var(--color-brand-500))", color: "#fff" }}>
           <i className="ti ti-refresh" />
           {isPreview ? "Reiniciar prévia" : "Enviar outra resposta"}
         </button>
 
         {!isPreview && (
-          <p className="mt-4 text-xs" style={{ color: "#a06d28" }}>
+          <p className="mt-4 text-xs" style={{ color: "rgb(var(--color-ink-500))" }}>
             Você pode registrar uma nova resposta sem recarregar a página.
           </p>
         )}
 
-        <div className="mt-6 text-xs" style={{ color: "#d9bb8c" }}>
-          Powered by <span style={{ color: "#c48a42", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
+        <div className="mt-6 text-xs" style={{ color: "rgb(var(--color-ink-600))" }}>
+          Powered by <span style={{ color: "rgb(var(--color-brand-500))", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
         </div>
       </div>
     </div>
@@ -2153,13 +2153,13 @@ export function RespondentClient({
 
   // Formulário vazio
   if (!form || totalSteps === 0) return (
-    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "#fbf3e7" }}>
+    <div className="min-h-dvh flex items-center justify-center p-6" style={{ background: "rgb(var(--color-ink-950))" }}>
       <div className="text-center max-w-sm">
-        <i className="ti ti-forms text-4xl block mb-3" style={{ color: "#d9bb8c" }} />
-        <h1 className="text-xl font-bold mb-2" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif" }}>
+        <i className="ti ti-forms text-4xl block mb-3" style={{ color: "rgb(var(--color-ink-600))" }} />
+        <h1 className="text-xl font-bold mb-2" style={{ color: "rgb(var(--color-ink-50))", fontFamily: "var(--font-serif), Georgia, serif" }}>
           Formulário em construção
         </h1>
-        <p className="text-sm" style={{ color: "#5c3f13" }}>
+        <p className="text-sm" style={{ color: "rgb(var(--color-ink-100))" }}>
           Este formulário ainda não tem perguntas adicionadas.
         </p>
       </div>
@@ -2167,29 +2167,32 @@ export function RespondentClient({
   );
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: "#fbf3e7" }}>
+    <div className="min-h-dvh flex flex-col" style={{ background: "rgb(var(--color-ink-950))" }}>
 
       {/* Banner de prévia */}
       {isPreview && (
         <div className="flex items-center justify-center gap-2 py-2 text-xs font-bold"
-          style={{ background: "#fbf3e7", borderBottom: BRD, color: "#7a5218" }}>
+          style={{ background: "rgb(var(--color-ink-950))", borderBottom: BRD, color: "rgb(var(--color-amber-600))" }}>
           <i className="ti ti-eye" /> Modo de prévia — as respostas não serão salvas
         </div>
       )}
 
       {/* Header */}
-      <header className="px-4 py-3 flex items-center justify-between"
-        style={{ background: "#fff", borderBottom: BRD }}>
-        <DataLogo className="text-sm" />
-        <div className="text-xs font-medium" style={{ color: "#a06d28" }}>
-          {step + 1} de {totalSteps}
+      <header className="sticky top-0 z-20 h-14 px-4 sm:px-6 flex items-center justify-between gap-4 bg-ink-900/95 backdrop-blur border-b border-ink-700">
+        <div className="flex items-center gap-3 min-w-0">
+          <DataLogo className="text-xl text-ink-50 flex-shrink-0" />
+          <span className="hidden sm:block h-5 w-px bg-ink-700" aria-hidden="true" />
+          <span className="hidden sm:block text-sm text-ink-300 truncate">{research.title}</span>
+        </div>
+        <div className="text-xs font-semibold text-ink-300 tabular flex-shrink-0" aria-live="polite">
+          Pergunta {Math.min(step + 1, totalSteps)} de {totalSteps}
         </div>
       </header>
 
       {/* Barra de progresso */}
-      <div className="h-1" style={{ background: "#e8d8be" }}>
+      <div className="h-1.5" style={{ background: "rgb(var(--color-ink-700))" }} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} aria-label="Progresso do formulário">
         <div className="h-full transition-all duration-500 rounded-r-full"
-          style={{ width: `${progress}%`, background: "#c48a42" }} />
+          style={{ width: `${progress}%`, background: "rgb(var(--color-brand-500))" }} />
       </div>
 
       {/* Conteúdo */}
@@ -2199,31 +2202,31 @@ export function RespondentClient({
           {/* Capa e título (só no primeiro campo) */}
           {step === 0 && (
             <div className="mb-8 text-center">
-              <h1 className="text-2xl font-bold mb-2" style={{ color: "#0f172a", fontFamily: "var(--font-serif), Georgia, serif", letterSpacing: "-0.4px" }}>
+              <h1 className="text-2xl font-bold mb-2" style={{ color: "rgb(var(--color-ink-50))", fontFamily: "var(--font-serif), Georgia, serif", letterSpacing: "-0.4px" }}>
                 {research.title}
               </h1>
               {research.description && (
-                <p className="text-sm" style={{ color: "#5c3f13" }}>{research.description}</p>
+                <p className="text-sm" style={{ color: "rgb(var(--color-ink-100))" }}>{research.description}</p>
               )}
             </div>
           )}
 
           {/* Campo atual */}
           {currentField && (
-            <div className="rounded-2xl p-6" style={{ background: "#fff", border: BRD, boxShadow: "0 2px 12px rgba(196,138,66,0.06)" }}>
+            <div className="rounded-2xl p-6" style={{ background: "rgb(var(--color-ink-900))", border: BRD, boxShadow: "0 2px 12px rgba(196,138,66,0.06)" }}>
               {/* Número da pergunta */}
               <div className="flex items-start gap-3 mb-4">
                 <span className="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0"
-                  style={{ background: "#fbf3e7", color: "#c48a42", border: BRD }}>
+                  style={{ background: "rgb(var(--color-ink-950))", color: "rgb(var(--color-brand-500))", border: BRD }}>
                   P{step + 1}
                 </span>
                 <div className="flex-1">
-                  <p className="text-base font-bold leading-snug" style={{ color: "#0f172a" }}>
+                  <p className="text-base font-bold leading-snug" style={{ color: "rgb(var(--color-ink-50))" }}>
                     {currentField.label}
                     {currentField.required && <span className="text-red-500 ml-1">*</span>}
                   </p>
                   {currentField.description && (
-                    <p className="text-xs mt-1" style={{ color: "#a06d28" }}>{currentField.description}</p>
+                    <p className="text-xs mt-1" style={{ color: "rgb(var(--color-ink-500))" }}>{currentField.description}</p>
                   )}
                 </div>
               </div>
@@ -2239,7 +2242,7 @@ export function RespondentClient({
 
               {/* Erro */}
               {errors[currentField.id] && (
-                <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "#c0392b" }}>
+                <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "rgb(var(--color-coral-500))" }}>
                   <i className="ti ti-alert-circle" /> {errors[currentField.id]}
                 </p>
               )}
@@ -2250,13 +2253,13 @@ export function RespondentClient({
           <div className="flex items-center justify-between mt-5">
             <button onClick={prev} disabled={step === 0}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-30"
-              style={{ border: BRD, background: "#fff", color: "#5c3f13" }}>
+              style={{ border: BRD, background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-100))" }}>
               <i className="ti ti-arrow-left" /> Anterior
             </button>
 
             <button onClick={next} disabled={submitting}
               className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-              style={{ background: "#c48a42", color: "#fff" }}>
+              style={{ background: "rgb(var(--color-brand-500))", color: "#fff" }}>
               {submitting ? (
                 <><i className="ti ti-loader-2 animate-spin" /> Enviando...</>
               ) : step === totalSteps - 1 ? (
@@ -2269,14 +2272,14 @@ export function RespondentClient({
 
           {/* Erro de envio (só quando a pesquisa não aceita coleta offline) */}
           {submitError && (
-            <p className="text-xs mt-3 text-center flex items-center justify-center gap-1" style={{ color: "#c0392b" }}>
+            <p className="text-xs mt-3 text-center flex items-center justify-center gap-1" style={{ color: "rgb(var(--color-coral-500))" }}>
               <i className="ti ti-alert-circle" /> {submitError}
             </p>
           )}
 
           {/* Rodapé */}
-          <p className="text-center text-xs mt-6" style={{ color: "#d9bb8c" }}>
-            Powered by <span style={{ color: "#c48a42", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
+          <p className="text-center text-xs mt-6" style={{ color: "rgb(var(--color-ink-600))" }}>
+            Powered by <span style={{ color: "rgb(var(--color-brand-500))", fontFamily: "var(--font-serif), Georgia, serif", fontWeight: 700 }}>Dataº</span>
             {research.allowAnonymous && " · Respostas anônimas"}
           </p>
         </div>

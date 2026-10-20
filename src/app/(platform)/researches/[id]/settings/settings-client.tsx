@@ -93,10 +93,10 @@ export function ResearchSettingsClient({ research, role }: Props) {
           <span className="text-ink-100">Configurações</span>
         </nav>
 
-        <h1 className="text-2xl font-bold font-condensed text-ink-100 mb-6">Configurações da pesquisa</h1>
+        <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight mb-6">Configurações da pesquisa</h1>
 
         <div className="rounded-lg p-4 mb-4 border border-ink-700 bg-ink-900">
-          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Identificação</p>
+          <p className="kicker mb-3">Identificação</p>
           <label htmlFor="pesquisa-titulo" className="text-xs font-semibold mb-1 block text-ink-100">Título</label>
           <input id="pesquisa-titulo" value={title} onChange={e => setTitle(e.target.value)} disabled={!canEdit}
             className={`${FIELD_CLASS} mb-3 disabled:opacity-60`} />
@@ -106,7 +106,7 @@ export function ResearchSettingsClient({ research, role }: Props) {
         </div>
 
         <div className="rounded-lg p-4 mb-4 border border-ink-700 bg-ink-900">
-          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Configurações de coleta</p>
+          <p className="kicker mb-3">Configurações de coleta</p>
           <div className="flex flex-col gap-3">
             {toggles.map(t => (
               <div key={t.key} className="flex items-center justify-between gap-3">
@@ -126,7 +126,7 @@ export function ResearchSettingsClient({ research, role }: Props) {
         </div>
 
         <div className="rounded-lg p-4 mb-4 border border-ink-700 bg-ink-900">
-          <p className="text-xs font-bold uppercase tracking-widest font-condensed text-brand-400 mb-3">Visibilidade no Mapa Geral</p>
+          <p className="kicker mb-3">Visibilidade no Mapa Geral</p>
           <p className="text-xs text-ink-300 mb-3">
             Só aparece se tiver ao menos uma entidade vinculada com localização também visível.
           </p>

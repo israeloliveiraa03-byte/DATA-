@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 
 import Link from "next/link";
+import { ResearchCover } from "@/components/researches/research-cover";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import type { Research, Entity, ResearchEntity } from "@/lib/types";
@@ -288,16 +289,15 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-ink-950">
+    <div className="bg-ink-950">
       {/* Capa da pesquisa */}
-      <div className="relative h-36 max-w-4xl mx-auto mt-6 rounded-lg overflow-hidden border border-ink-700 bg-ink-900">
+      <div className="max-w-page mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="relative h-40 rounded-xl overflow-hidden border border-ink-700 bg-ink-900">
         {coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element -- upload em base64 client-side, não é otimizável por next/image
           <img src={coverImage} alt="Capa da pesquisa" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <i className="ti ti-photo text-3xl text-ink-500" aria-hidden="true" />
-          </div>
+          <ResearchCover id={research.id} theme={research.theme} className="absolute inset-0" />
         )}
         <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} aria-label="Escolher imagem de capa" />
         <div className="absolute top-3 right-3 flex items-center gap-2">
@@ -313,12 +313,13 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
           </button>
         </div>
       </div>
+      </div>
 
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-page mx-auto">
 
         {/* Breadcrumb */}
         <nav aria-label="Você está em" className="flex items-center gap-2 text-xs mb-5 text-ink-300 flex-wrap">
-          <Link href="/dashboard" className="hover:underline text-brand-400">Dashboard</Link>
+          <Link href="/dashboard" className="hover:underline text-brand-400">Visão geral</Link>
           <i className="ti ti-chevron-right text-xs" aria-hidden="true" />
           <Link href="/researches" className="hover:underline text-brand-400">Pesquisas</Link>
           <i className="ti ti-chevron-right text-xs" aria-hidden="true" />
@@ -343,7 +344,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-bold font-condensed text-ink-100" style={{ letterSpacing: "-0.3px" }}>
+            <h1 className="font-serif text-3xl font-semibold text-ink-50 leading-tight">
               {research.title}
             </h1>
             {research.description && (
@@ -360,7 +361,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
               <i className="ti ti-table" aria-hidden="true" /> Respostas
             </Link>
             <Link href={`/researches/${research.id}/dashboard-builder`} className={PILL_BTN}>
-              <i className="ti ti-chart-bar" aria-hidden="true" /> Dashboard
+              <i className="ti ti-chart-bar" aria-hidden="true" /> Painéis
             </Link>
           </div>
         </div>

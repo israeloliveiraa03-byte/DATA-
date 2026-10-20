@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Sans_Condensed, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Source_Serif_4, IBM_Plex_Mono } from "next/font/google";
+// Ícones Tabler servidos junto com a aplicação (versão travada no
+// package.json) — antes vinham de um CDN externo com @latest, o que podia
+// quebrar ícones sem aviso a cada nova versão do pacote.
+import "@tabler/icons-webfont/dist/tabler-icons.min.css";
 import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -11,10 +15,10 @@ import { Toaster } from "@/components/ui/toaster";
 const THEME_INIT_SCRIPT = `
 (function () {
   try {
-    var mode = localStorage.getItem("dataz-color-mode") || "dark";
+    var mode = localStorage.getItem("dataz-color-mode") || "light";
     var theme = mode === "system"
       ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
-      : mode;
+      : (mode === "dark" ? "dark" : "light");
     var html = document.documentElement;
     html.setAttribute("data-theme", theme);
     html.setAttribute("data-contrast", localStorage.getItem("dataz-contrast") || "normal");
@@ -26,23 +30,25 @@ const THEME_INIT_SCRIPT = `
 })();
 `;
 
-const plexSans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-sans", display: "swap" });
-const plexCondensed = IBM_Plex_Sans_Condensed({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-condensed", display: "swap" });
+// Sistema visual "Confluência": Inter no corpo/interface, Source Serif 4 nos
+// títulos e números de destaque (mesmo par tipográfico dos painéis CONAQ),
+// IBM Plex Mono só para identificadores (ex.: COM-000245).
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["400", "600", "700"], style: ["normal", "italic"], variable: "--font-serif", display: "swap" });
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Dataº — Plataforma de pesquisa de campo", template: "%s | Dataº" },
+  title: { default: "Dataº — Infraestrutura de conhecimento para pesquisa e territórios", template: "%s · Dataº" },
   description: "Plataforma de coleta, sistematização e visualização de dados para pesquisadores, governos e territórios tradicionais.",
   robots: "index, follow",
 };
 
-export const viewport: Viewport = { themeColor: "#14140f", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f9f5ed" }, { media: "(prefers-color-scheme: dark)", color: "#11130f" }], width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${plexSans.variable} ${plexCondensed.variable} ${plexMono.variable}`} suppressHydrationWarning>
+    <html lang="pt-BR" className={`${inter.variable} ${sourceSerif.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="bg-ink-950 text-ink-100 antialiased font-sans">
