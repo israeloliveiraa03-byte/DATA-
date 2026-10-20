@@ -150,7 +150,7 @@ export function TerritorioClient({ loggedIn }: { loggedIn: boolean }) {
             Nossa equipe vai avaliar as informações enviadas. Quando aprovada, o acesso institucional gratuito é liberado direto na sua conta.
           </p>
         </div>
-        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgb(var(--color-brand-500))", color: "#fff", padding: "12px 24px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
+        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", padding: "12px 24px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
           <i className="ti ti-arrow-right" /> Ir para o painel
         </Link>
         <div style={{ marginTop: "16px" }}>
@@ -175,7 +175,7 @@ export function TerritorioClient({ loggedIn }: { loggedIn: boolean }) {
         <p style={{ fontSize: "14px", color: "rgb(var(--color-ink-100))", lineHeight: 1.75, marginBottom: "24px" }}>
           A candidatura ao Dataº Território fica vinculada à sua conta — assim, quando aprovada, o acesso institucional gratuito já é liberado direto nela.
         </p>
-        <Link href="/login" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgb(var(--color-brand-500))", color: "#fff", padding: "12px 24px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
+        <Link href="/login" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", padding: "12px 24px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
           <i className="ti ti-arrow-right" /> Entrar ou criar conta
         </Link>
       </div>
@@ -373,7 +373,7 @@ export function TerritorioClient({ loggedIn }: { loggedIn: boolean }) {
 
           {/* Botão */}
           <button onClick={handleSubmit} disabled={sending}
-            style={{ width: "100%", padding: "14px", background: sending ? "rgb(var(--color-gold))" : "rgb(var(--color-brand-500))", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: sending ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+            style={{ width: "100%", padding: "14px", background: sending ? "rgb(var(--color-gold))" : "rgb(var(--color-brand-500))", color: "rgb(var(--color-on-accent))", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: sending ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
             <i className={`ti ${sending ? "ti-loader-2" : "ti-send"}`} style={{ animation: sending ? "spin 1s linear infinite" : "none" }} />
             {sending ? "Enviando solicitação..." : "Enviar candidatura"}
           </button>

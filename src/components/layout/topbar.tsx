@@ -113,7 +113,7 @@ function UserMenu({ user }: { user: User }) {
   );
 }
 
-export function PlatformTopbar({ user, onOpenMenu }: { user: User; onOpenMenu?: () => void }) {
+export function PlatformTopbar({ user, onOpenMenu, onOpenSearch }: { user: User; onOpenMenu?: () => void; onOpenSearch?: () => void }) {
   const crumbs = useCrumbs();
   const pathname = usePathname();
   // Páginas que já têm o próprio botão de criar não repetem no topo.
@@ -144,6 +144,16 @@ export function PlatformTopbar({ user, onOpenMenu }: { user: User; onOpenMenu?: 
         </nav>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+          <button onClick={onOpenSearch} aria-label="Busca rápida (Ctrl+K)"
+            className="hidden md:flex h-9 w-64 items-center gap-2 rounded-md border border-ink-700 bg-ink-900 px-3 text-sm text-ink-500 shadow-xs hover:border-ink-600 transition-colors mr-1">
+            <i className="ti ti-search" aria-hidden="true" />
+            <span className="flex-1 text-left">Buscar…</span>
+            <kbd className="rounded border border-ink-700 bg-ink-800 px-1.5 font-mono text-2xs">⌘K</kbd>
+          </button>
+          <button onClick={onOpenSearch} aria-label="Busca rápida"
+            className="md:hidden flex h-9 w-9 items-center justify-center rounded-md text-ink-500 hover:bg-ink-800 hover:text-ink-100">
+            <i className="ti ti-search text-lg" aria-hidden="true" />
+          </button>
           {showNewResearch && (
             <Link href="/researches/new" className={buttonClasses("primary", "sm", "hidden sm:inline-flex mr-1")}>
               <i className="ti ti-plus text-sm" aria-hidden="true" /> Nova pesquisa

@@ -247,6 +247,14 @@ Modernização completa da interface pedida por Israel: o produto passa a seguir
 - **Widgets**: cores trocadas por variáveis (funcionam nos dois temas); paleta padrão "Confluência" (chave `terracota` mantida por compatibilidade); nova paleta `barro`; mapa coroplético com 5 classes discretas, legenda por faixa, enquadramento travado no Brasil. **Corrigido**: indicador de contagem com máximo ≤ 100 aparecia com "%".
 - **Mapa dos estados** para ilustrações: `src/components/layout/brazil-states-paths.ts`, gerado da malha IBGE por `scripts/gerar-estados-svg.mjs`.
 - **Capa gerada** de pesquisa sem imagem: `ResearchCover` (curvas de nível com semente no id).
+- **Ciclo 2 (out/2026)**:
+  - **Busca rápida ⌘K / Ctrl+K** (`src/components/layout/command-palette.tsx`): telas, ações, pesquisas (`GET /api/researches`) e entidades (`/api/entities/search`), carregadas só ao abrir.
+  - **Tipos de painel** na criação (`dashboard-list-client.tsx`, janela "Novo painel"): Coleta primária, Território em foco, Cruzamentos, Narrativo, Dados importados (sinalizado "Em desenvolvimento", sem ação) e Em branco. O editor abre com `?modelo=<id>` e aplica o modelo de `TEMPLATES` (ids `primary`, `map`, `compare`, `report`, `kpi`) só se o painel estiver vazio.
+  - **Painel público**: barra de seções (textos curtos em destaque viram âncoras), botão de **baixar dados agregados em CSV** (`src/lib/dashboard/export.ts`, separador `;` + BOM para o Excel) e **ampliar** cada indicador.
+  - **Cabeçalho dos editores** (`src/components/layout/focus-header.tsx`): voltar para a pesquisa, contexto, título com rótulo acessível, estado de salvamento.
+  - **Contraste WCAG AA**: tokens recalibrados; `on-accent` virou variável (branco no claro, verde-escuro no escuro, onde o botão primário é verde claro). Widgets clareiam a paleta de dados no tema escuro (`forDark` em `widget-renderer.tsx`), sem mudar a paleta salva.
+  - **Corrigido**: mapas do Leaflet passavam por cima de barras fixas e janelas (agora `.leaflet-container { isolation: isolate }`); widget não ligado a pergunta dizia "aguardando respostas" — agora orienta a escolher o campo.
+  - **Como foi verificado**: páginas de pré-visualização temporárias com dados de exemplo + Playwright + axe-core (WCAG 2 A/AA): 17 telas × claro/escuro × desktop/celular, zero violações graves, zero erros de console, zero rolagem horizontal. As páginas temporárias não ficam no repositório.
 - **Bugs corrigidos junto**: fila offline do site (`use-offline-storage.ts`) usava `IDBKeyRange.only(false)` — booleano não é chave válida no IndexedDB, então contagem e sincronização nunca funcionavam; botão ORCID no login agora só aparece com `ORCID_CLIENT_ID`/`ORCID_CLIENT_SECRET` definidos.
 
 ## Identidade visual (redesenhada em 2026-07-01 — substitui o azul/slate de 2026-06-30) — HISTÓRICO

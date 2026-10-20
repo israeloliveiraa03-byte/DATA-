@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { COLOR_PALETTES, resolveChartKind, type ColorPalette, type DisplayMode, type SupportedWidgetType, type TimeSeriesResult, type WidgetData } from "@/lib/dashboard/types";
-import { ChartLegend, EmptyState, formatNumber, TOOLTIP_STYLE, toPercent } from "@/components/dashboard/widgets/chart-common";
+import { ChartLegend, EmptyState, formatNumber, mixHex, TOOLTIP_STYLE, toPercent } from "@/components/dashboard/widgets/chart-common";
+import { useEffect, useRef, useState } from "react";
 import {
   AreaChartView, HistogramView, RadarChartView, ScatterView, StackedBarView, TreemapView,
 } from "@/components/dashboard/widgets/extra-charts";
@@ -28,7 +29,32 @@ interface WidgetRendererProps {
   palette?: string; // chave de COLOR_PALETTES — nível do dashboard, não do widget
 }
 
+// Tema efetivo do bloco onde o widget está (o painel público pode ter tema
+// próprio, diferente do app) — lido do color-scheme calculado pelo CSS.
+function useIsDarkHere<T extends HTMLElement>(): [React.RefObject<T | null>, boolean] {
+  const ref = useRef<T | null>(null);
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const read = () => { if (ref.current) setDark(getComputedStyle(ref.current).colorScheme.includes("dark")); };
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-contrast"] });
+    return () => obs.disconnect();
+  }, []);
+  return [ref, dark];
+}
+
+// No escuro, clareia as cores de dado (~30% rumo ao branco) para manter
+// contraste ≥ 3:1 dos elementos gráficos — a paleta salva não muda.
+function forDark(p: ColorPalette): ColorPalette {
+  const lift = (hex: string) => (hex.startsWith("#") && hex.length === 7 ? mixHex(hex, "#ffffff", 0.3) : hex);
+  const [r, g, b] = p.accent.split(",").map(n => Number(n.trim()));
+  const acc = [r, g, b].map(v => Math.round(v + (255 - v) * 0.3)).join(", ");
+  return { ...p, chartColors: p.chartColors.map(lift), accent: acc };
+}
+
 export function WidgetRenderer({ type, title, data, config, palette }: WidgetRendererProps) {
+  const [rootRef, isDark] = useIsDarkHere<HTMLDivElement>();
   // Aparência genérica (fundo/borda) — qualquer tipo de widget aceita.
   // Decorativos (divisória/bloco de cor) não têm padding: a cor precisa
   // preencher a caixa inteira, não uma caixa branca com um retângulo dentro.
@@ -38,10 +64,11 @@ export function WidgetRenderer({ type, title, data, config, palette }: WidgetRen
   // Tonalidade por widget (config.colorPalette, hoje configurável nos mapas)
   // vence a paleta do dashboard; sem ela, herda o comportamento de sempre.
   const widgetPalette = typeof config.colorPalette === "string" ? COLOR_PALETTES[config.colorPalette] : undefined;
-  const resolvedPalette = widgetPalette ?? COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota;
+  const basePalette = widgetPalette ?? COLOR_PALETTES[palette ?? ""] ?? COLOR_PALETTES.terracota;
+  const resolvedPalette = isDark ? forDark(basePalette) : basePalette;
 
   return (
-    <div className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-4 overflow-hidden"}
+    <div ref={rootRef} className={isDecorative ? "w-full h-full flex flex-col overflow-hidden" : "w-full h-full flex flex-col p-4 overflow-hidden"}
       style={{
         backgroundColor: appearance.backgroundColor,
         borderRadius: appearance.borderRadius,
@@ -57,6 +84,16 @@ export function WidgetRenderer({ type, title, data, config, palette }: WidgetRen
 }
 
 function WidgetBody({ type, data, config, palette }: Omit<WidgetRendererProps, "title" | "palette"> & { palette: ColorPalette }) {
+  // Widget ainda não ligado a uma pergunta (ex.: recém-criado por um modelo
+  // de painel) — diz o que falta, em vez de parecer falta de respostas.
+  const REQUIRED_FIELD: Partial<Record<SupportedWidgetType, string>> = {
+    bar_chart: "fieldId", pie_chart: "fieldId", donut_chart: "fieldId",
+    heatmap: "geoFieldId", map: "geoFieldId", crosstab: "fieldIdRows",
+  };
+  const required = REQUIRED_FIELD[type];
+  if (required && !config[required] && !resolveChartKind(config)) {
+    return <EmptyState icon="ti-plug-connected" message="Escolha a pergunta da pesquisa nas propriedades deste widget" />;
+  }
   // "globe" reaproveita os mesmos dados de map/heatmap (mesmo "kind"), só
   // troca a visualização — precisa vir antes das checagens genéricas de
   // data.kind === "map"/"heatmap" que renderizam a versão 2D.
@@ -257,7 +294,7 @@ function DividerView({ config }: { config: Record<string, unknown> }) {
 function NumberDisplay({ value, suffix, decimals }: { value: number; suffix?: string; decimals?: number }) {
   return (
     <div className="h-full flex flex-col justify-center">
-      <p className="font-serif font-semibold leading-none tabular text-brand-400" style={{ fontSize: "clamp(1.75rem, 4.2cqw + 1rem, 3.25rem)", letterSpacing: "-0.02em" }}>
+      <p className="font-serif font-semibold leading-none tabular text-brand-400" style={{ fontSize: "clamp(2rem, 13cqw, 3.75rem)", letterSpacing: "-0.025em" }}>
         {formatNumber(value, decimals)}
         {suffix && <span className="ml-1.5 text-[0.45em] font-sans font-medium text-ink-500 tracking-normal">{suffix}</span>}
       </p>
@@ -314,10 +351,12 @@ function PieChartView({ data, donut, colors, displayMode, totalResponses }: Choi
   const fmt = (v: number) => percent ? `${formatNumber(toPercent(v, totalResponses), 1)}%` : formatNumber(v);
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex-1 min-h-0">
+      {/* A legenda abaixo carrega rótulo e valor de cada fatia em texto — o
+          desenho em si fica fora da árvore de acessibilidade. */}
+      <div className="flex-1 min-h-0" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}>
+          <PieChart accessibilityLayer={false}>
+            <Pie rootTabIndex={-1} data={data} dataKey="count" nameKey="label" innerRadius={donut ? "50%" : 0} outerRadius="85%" paddingAngle={data.length > 1 ? 2 : 0}>
               {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} stroke="rgb(var(--color-ink-900))" strokeWidth={1.5} />)}
             </Pie>
             <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [fmt(Number(v)), String(name)]} />
@@ -416,8 +455,8 @@ function CrosstabView({ data, valueMode, palette }: { data: Extract<WidgetData, 
   const legendMax = valueMode === "count" ? maxCount : 100;
 
   return (
-    <div className="h-full flex flex-col gap-1.5">
-    <div className="flex-1 min-h-0 overflow-auto">
+    <div className="h-full flex flex-col gap-3">
+    <div className="min-h-0 overflow-auto">
       <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>

@@ -21,7 +21,7 @@ const ENTITY_TYPE_MAP: Record<string, { label: string; icon: string }> = {
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   draft:     { label: "Rascunho",  bg: "bg-ink-800",    text: "text-ink-300",   dot: "bg-ink-300" },
-  active:    { label: "Ativa",     bg: "bg-brand-50",   text: "text-brand-700", dot: "bg-brand-500" },
+  active:    { label: "Ativa",     bg: "bg-brand-50",   text: "text-brand-400", dot: "bg-brand-500" },
   paused:    { label: "Pausada",   bg: "bg-amber-50",   text: "text-amber-500", dot: "bg-amber-500" },
   closed:    { label: "Encerrada", bg: "bg-coral-50",   text: "text-coral-500", dot: "bg-coral-500" },
   published: { label: "Publicada", bg: "bg-chart-1/15", text: "text-chart-1",   dot: "bg-chart-1" },
@@ -784,7 +784,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                     </div>
                     {isOwner ? (
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <select value={m.role} onChange={e => changeMemberRole(m.id, e.target.value as "editor" | "viewer")}
+                        <select aria-label={`Papel de ${m.user?.name ?? m.user?.email ?? "membro"}`} value={m.role} onChange={e => changeMemberRole(m.id, e.target.value as "editor" | "viewer")}
                           className="text-2xs rounded border border-ink-700 bg-ink-950 text-ink-100 px-1.5 py-1">
                           <option value="editor">Editor</option>
                           <option value="viewer">Visualizador</option>
@@ -830,7 +830,7 @@ export function ResearchPageClient({ research, linkedEntities, availableEntities
                     placeholder="E-mail de quem você quer convidar"
                     className={`w-full ${FIELD_CLASS}`}
                   />
-                  <select value={teamRole} onChange={e => setTeamRole(e.target.value as "editor" | "viewer")}
+                  <select aria-label="Papel da pessoa convidada" value={teamRole} onChange={e => setTeamRole(e.target.value as "editor" | "viewer")}
                     className={`w-full ${FIELD_CLASS}`}>
                     <option value="viewer">Visualizador — só acompanha</option>
                     <option value="editor">Editor — pode editar formulário e dashboard</option>

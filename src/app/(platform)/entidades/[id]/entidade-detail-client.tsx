@@ -353,7 +353,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                 <CardContent>
                   <div className="flex flex-wrap gap-1.5">
                     {municipalities.map(m => (
-                      <span key={m.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 text-xs px-2.5 py-1">
+                      <span key={m.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-400 text-xs px-2.5 py-1">
                         {m.cityName}/{m.stateCode}
                       </span>
                     ))}
@@ -377,7 +377,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                           <p className="text-sm font-semibold text-ink-100 mb-1">{d.name}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {d.cities.map(c => (
-                              <span key={c.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 text-xs px-2.5 py-1">
+                              <span key={c.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-400 text-xs px-2.5 py-1">
                                 {c.cityName}/{c.stateCode}
                               </span>
                             ))}
