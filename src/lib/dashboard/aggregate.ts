@@ -583,16 +583,33 @@ export function aggregateHistogram(responses: Response[], fieldId: string, binsO
   if (min === max) return { kind: "histogram", bins: [{ label: fmt(min), count: values.length }], total: values.length };
 
   const k = Math.min(20, Math.max(2, binsOverride ?? Math.min(12, Math.max(5, Math.ceil(Math.log2(values.length) + 1)))));
-  const width = (max - min) / k;
-  const counts = new Array<number>(k).fill(0);
-  for (const v of values) {
-    const i = Math.min(k - 1, Math.floor((v - min) / width)); // max cai no último bin
-    counts[i]++;
+  if (binsOverride) {
+    const width = (max - min) / k;
+    const counts = new Array<number>(k).fill(0);
+    for (const v of values) counts[Math.min(k - 1, Math.floor((v - min) / width))]++;
+    const bins = counts.map((count, i) => ({ label: `${fmt(min + i * width)}–${fmt(min + (i + 1) * width)}`, count }));
+    return { kind: "histogram", bins, total: values.length };
   }
-  const bins = counts.map((count, i) => ({
-    label: `${fmt(min + i * width)}–${fmt(min + (i + 1) * width)}`,
-    count,
-  }));
+  // Faixas "redondas" (1, 2, 2,5, 5 × 10ⁿ) começando num múltiplo da largura —
+  // "0–49, 50–99" em vez de "20–57,1, 57,1–94,3".
+  const raw = (max - min) / k;
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const f = raw / pow;
+  // A largura "redonda" mais próxima da ideal.
+  const nice = [1, 2, 2.5, 5, 10].reduce((best, c) => (Math.abs(c - f) < Math.abs(best - f) ? c : best), 1);
+  let step = nice * pow;
+  if (allInts) step = Math.max(1, Math.ceil(step));
+  const start = Math.floor(min / step) * step;
+  const n = Math.min(20, Math.max(1, Math.floor((max - start) / step) + 1));
+  const counts = new Array<number>(n).fill(0);
+  for (const v of values) counts[Math.min(n - 1, Math.floor((v - start) / step))]++;
+  const bins = counts.map((count, i) => {
+    const a0 = start + i * step;
+    const label = allInts && Number.isInteger(step)
+      ? (step === 1 ? fmt(a0) : `${fmt(a0)}–${fmt(a0 + step - 1)}`)
+      : `${fmt(a0)}–${fmt(a0 + step)}`;
+    return { label, count };
+  });
   return { kind: "histogram", bins, total: values.length };
 }
 

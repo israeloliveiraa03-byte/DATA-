@@ -21,6 +21,14 @@
      300 texto secundário · 100 texto principal · 50 texto de máximo contraste
    ========================================================================== */
 
+:root {
+  /* Cópias fixas das fontes do app — a identidade visual de um painel pode
+     redefinir --font-sans/--font-serif no bloco dele e ainda voltar a estas. */
+  --font-app-sans: var(--font-sans);
+  --font-app-serif: var(--font-serif);
+  --font-app-mono: var(--font-mono);
+}
+
 :root,
 [data-theme="light"] {
   --color-ink-50:  23 19 13;
@@ -335,3 +343,15 @@ html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-mo
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
 }
+
+/* Mapa sem mapa-base: o contêiner do Leaflet fica transparente e deixa ver
+   a cor/imagem de fundo do widget (ex.: PNG de um território desenhado). */
+.map-transparent .leaflet-container { background: transparent; }
+
+/* Rótulo de valor fixo sobre cada estado no mapa coroplético. */
+.leaflet-tooltip.map-value-label {
+  background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important;
+  font: 600 10px/1 var(--font-sans), sans-serif !important; color: rgb(var(--color-ink-50)) !important;
+  text-shadow: 0 0 3px rgb(var(--color-ink-900)), 0 0 3px rgb(var(--color-ink-900)), 0 0 2px rgb(var(--color-ink-900));
+}
+.leaflet-tooltip.map-value-label::before { display: none; }

@@ -17,7 +17,7 @@ import type { BasemapKey } from "@/lib/dashboard/types";
 
 // Provedores XYZ gratuitos, sem chave de API (regra do projeto: nada de
 // Mapbox/Google Maps). maxZoom respeita o limite real de cada provedor.
-const BASEMAPS: Record<BasemapKey, { label: string; url: string; attribution: string; maxZoom: number }> = {
+const BASEMAPS: Record<Exclude<BasemapKey, "none">, { label: string; url: string; attribution: string; maxZoom: number }> = {
   light: {
     label: "Claro",
     url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
@@ -44,7 +44,7 @@ const BASEMAPS: Record<BasemapKey, { label: string; url: string; attribution: st
   },
 };
 
-const BASEMAP_ORDER: BasemapKey[] = ["light", "dark", "satellite", "topo"];
+const BASEMAP_ORDER: Exclude<BasemapKey, "none">[] = ["light", "dark", "satellite", "topo"];
 
 // Controle de camadas do Leaflet com os 4 mapas-base ("tipos de relevo").
 // `defaultBasemap` vem do config do widget (escolhido no builder); o leitor
@@ -52,7 +52,10 @@ const BASEMAP_ORDER: BasemapKey[] = ["light", "dark", "satellite", "topo"];
 // O `key` força remontagem quando o padrão muda no editor — o `checked` do
 // LayersControl.BaseLayer só é lido na montagem, não é reativo.
 export function BasemapLayers({ defaultBasemap }: { defaultBasemap?: string }) {
-  const active: BasemapKey = (BASEMAP_ORDER as string[]).includes(defaultBasemap ?? "") ? (defaultBasemap as BasemapKey) : "light";
+  // "none": sem mapa-base — o contêiner fica transparente (classe
+  // .map-transparent no widget) e aparece a imagem/cor de fundo do widget.
+  if (defaultBasemap === "none") return null;
+  const active: Exclude<BasemapKey, "none"> = (BASEMAP_ORDER as string[]).includes(defaultBasemap ?? "") ? (defaultBasemap as Exclude<BasemapKey, "none">) : "light";
   return (
     <LayersControl key={active} position="topright">
       {BASEMAP_ORDER.map(k => {
@@ -88,4 +91,10 @@ export function ScrollZoomOnFocus() {
     };
   }, [map]);
   return null;
+}
+
+/** Classe do contêiner do mapa conforme o mapa-base escolhido. */
+export function mapContainerClass(basemap: string | undefined): string {
+  if (basemap === "none") return "map-transparent";
+  return !basemap || basemap === "light" ? "map-editorial" : "";
 }

@@ -6,6 +6,8 @@ import { DataLogo } from "@/components/layout/data-logo";
 import { cn } from "@/lib/utils";
 import type { FilterCondition, PublicFilterField, SupportedWidgetType, WidgetData } from "@/lib/dashboard/types";
 import { downloadWidgetCsv, widgetRows } from "@/lib/dashboard/export";
+import { brandCssVars, DENSITY_GAP, type DashboardBrand } from "@/lib/dashboard/brand";
+import { cardClasses, cardRadiusStyle, HeaderPatternArt, useBrandFonts } from "@/components/dashboard/brand-kit";
 
 interface PublicWidget {
   id: string; type: SupportedWidgetType; title: string | null;
@@ -19,8 +21,12 @@ interface PublicDashboard {
   showAds: boolean; widgets: PublicWidget[];
   theme: string | null; coverUrl: string | null; colorPalette: string | null;
   canvasColor: string | null;
+  brand: DashboardBrand | null;
   filterFields: PublicFilterField[];
 }
+
+// Tipos que aceitam filtro por clique (a opção clicada vira condição do painel).
+const CLICK_FILTER_TYPES = new Set(["bar_chart", "pie_chart", "donut_chart"]);
 
 const fieldCls =
   "h-8 rounded-md border border-ink-700 bg-ink-900 px-2.5 text-xs text-ink-100 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20";
@@ -139,7 +145,7 @@ function WidgetActions({ w, onExpand }: { w: PublicWidget; onExpand: () => void 
   );
 }
 
-function ExpandedWidget({ w, palette, onClose }: { w: PublicWidget; palette?: string; onClose: () => void }) {
+function ExpandedWidget({ w, palette, brand, onClose }: { w: PublicWidget; palette?: string; brand?: DashboardBrand | null; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -165,7 +171,7 @@ function ExpandedWidget({ w, palette, onClose }: { w: PublicWidget; palette?: st
           </button>
         </div>
         <div className="flex-1 min-h-0 p-2 sm:p-4">
-          <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={palette} />
+          <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={palette} brand={brand} />
         </div>
       </div>
     </div>
@@ -187,6 +193,7 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
   const [expanded, setExpanded] = useState<PublicWidget | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const desktop = useIsDesktop();
+  useBrandFonts(dashboard?.brand);
 
   const conditionsKey = JSON.stringify(conditions);
 
@@ -276,6 +283,34 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
   }
 
   const dark = dashboard.theme === "dark";
+  const brand = dashboard.brand ?? {};
+  const brandVars = brandCssVars(dashboard.brand, dark);
+  const gap = DENSITY_GAP[brand.density ?? "normal"];
+  const headerStyle = brand.header ?? "editorial";
+  const organization = brand.organization?.trim();
+
+  // Filtro por clique: a opção clicada num gráfico vira (ou sai de) uma
+  // condição do painel — o mesmo recorte do botão Filtros, aplicado a tudo.
+  function clickFilterFor(w: PublicWidget) {
+    const fieldId = w.config.fieldId as string | undefined;
+    if (!fieldId || !CLICK_FILTER_TYPES.has(w.type) || w.config.chartKind || w.config.compareFieldId) return {};
+    const field = (dashboard?.filterFields ?? []).find(f => f.id === fieldId && f.kind === "choice");
+    if (!field) return {};
+    const current = conditions.find(c => c.kind === "choice" && c.fieldId === fieldId) as Extract<FilterCondition, { kind: "choice" }> | undefined;
+    return {
+      activeOptionIds: current?.optionIds,
+      onSelectCategory: (optionId: string) => {
+        setConditions(prev => {
+          const idx = prev.findIndex(c => c.kind === "choice" && c.fieldId === fieldId);
+          if (idx < 0) return [...prev, { kind: "choice", fieldId, optionIds: [optionId] }];
+          const c = prev[idx] as Extract<FilterCondition, { kind: "choice" }>;
+          const ids = c.optionIds.includes(optionId) ? c.optionIds.filter(id => id !== optionId) : [...c.optionIds, optionId];
+          return ids.length === 0 ? prev.filter((_, i) => i !== idx) : prev.map((x, i) => i === idx ? { ...c, optionIds: ids } : x);
+        });
+      },
+    };
+  }
+  const hasClickFilter = dashboard.widgets.some(w => !!clickFilterFor(w).onSelectCategory);
   const totalHeightPx = Math.max(300, dashboard.widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) + 16);
   const hasFilter = !!(from || to || conditions.length > 0);
   const activeCount = (from ? 1 : 0) + (to ? 1 : 0) + conditions.length;
@@ -302,15 +337,17 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
 
   // [&>div>p:first-child]:pr-16 = espaço para os botões de ação ao lado do título
   const frame = (w: PublicWidget) => isFramed(w)
-    ? "rounded-xl border border-ink-700 bg-ink-900 shadow-xs overflow-hidden transition-shadow hover:shadow-md [&>div>p:first-child]:pr-16"
+    ? `${cardClasses(brand.card)} overflow-hidden transition-shadow [&>div>p:first-child]:pr-16`
     : "overflow-hidden";
+  const frameStyle = (w: PublicWidget) => (isFramed(w) ? cardRadiusStyle(dashboard.brand) : {});
 
   return (
-    <div data-theme={dark ? "dark" : "light"} className="min-h-dvh bg-ink-950 text-ink-100">
+    <div data-theme={dark ? "dark" : "light"} className="min-h-dvh bg-ink-950 text-ink-100 font-sans" style={brandVars}>
       {/* Faixa institucional */}
+      {brand.showBand !== false && (
       <div className="bg-brand-700 text-white/85 text-xs">
         <div className="max-w-page mx-auto px-4 sm:px-8 h-9 flex items-center justify-between gap-4">
-          <span className="truncate"><strong className="font-semibold text-white">Painel de pesquisa</strong> · {dashboard.researchTitle}</span>
+          <span className="truncate"><strong className="font-semibold text-white">{organization || "Painel de pesquisa"}</strong> · {dashboard.researchTitle}</span>
           <span className="hidden sm:inline-flex items-center gap-1.5 flex-shrink-0">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full rounded-full bg-white/60 animate-pulse-soft" />
@@ -320,34 +357,64 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
           </span>
         </div>
       </div>
+      )}
 
-      {/* Cabeçalho editorial */}
-      <header className="relative overflow-hidden border-b border-ink-700 bg-ink-900">
+      {/* Cabeçalho — quatro composições à escolha na identidade visual */}
+      <header className={cn(
+        "relative overflow-hidden border-b border-ink-700",
+        headerStyle === "banner" ? "bg-brand-700 text-white" : "bg-ink-900",
+      )}>
         {dashboard.coverUrl ? (
           <>
             <div className="absolute inset-0 bg-cover bg-center opacity-90" style={{ backgroundImage: `url(${dashboard.coverUrl})` }} />
-            <div className="absolute inset-0 bg-gradient-to-r from-ink-900 via-ink-900/90 to-ink-900/40" />
+            <div className={cn("absolute inset-0", headerStyle === "banner" ? "bg-brand-700/80" : headerStyle === "centered" ? "bg-ink-900/85" : "bg-gradient-to-r from-ink-900 via-ink-900/90 to-ink-900/40")} />
           </>
         ) : (
-          <svg className="motif-roots absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 1000 260" preserveAspectRatio="none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M940,260 C910,190 960,150 910,90 C880,50 910,10 860,-10" />
-            <path d="M940,260 C900,210 870,205 850,150 C835,115 790,110 780,60" />
-            <path d="M940,260 C960,200 930,170 960,120 C980,90 960,60 985,20" />
-            <path d="M850,150 C820,140 805,110 770,105" />
-            <path d="M910,90 C940,75 945,50 980,45" />
-            <path d="M720,260 C740,200 700,175 720,120 C735,85 710,55 730,10" />
-          </svg>
+          <HeaderPatternArt pattern={brand.pattern} className={headerStyle === "banner" ? "opacity-30 text-white" : undefined} />
         )}
-        <div className="relative max-w-page mx-auto px-4 sm:px-8 pt-10 sm:pt-14 pb-8 sm:pb-10">
-          <div className="border-l-4 border-gold pl-5 sm:pl-6 max-w-3xl">
-            <p className="kicker mb-3">{dashboard.researchTitle}</p>
-            <h1 className="font-serif text-4xl sm:text-5xl font-semibold leading-[1.05] text-ink-50">{dashboard.title}</h1>
-            {dashboard.description && <p className="mt-4 font-serif text-lg text-ink-300 leading-relaxed">{dashboard.description}</p>}
+        <div className={cn(
+          "relative max-w-page mx-auto px-4 sm:px-8",
+          headerStyle === "minimal" ? "pt-7 pb-6" : "pt-10 sm:pt-14 pb-8 sm:pb-10",
+          headerStyle === "centered" && "text-center",
+        )}>
+          <div className={cn(
+            headerStyle === "editorial" && "border-l-4 border-gold pl-5 sm:pl-6 max-w-3xl",
+            headerStyle === "centered" && "mx-auto max-w-3xl",
+            headerStyle === "banner" && "max-w-3xl",
+            headerStyle === "minimal" && "flex items-center gap-4 max-w-4xl",
+          )}>
+            {brand.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- logo enviada pelo pesquisador (data URL)
+              <img src={brand.logoUrl} alt={organization ? `Logo — ${organization}` : "Logo"}
+                className={cn(
+                  "object-contain",
+                  headerStyle === "minimal" ? "h-12 w-auto max-w-[9rem] flex-shrink-0" : "h-14 sm:h-16 w-auto max-w-[12rem] mb-5",
+                  headerStyle === "centered" && "mx-auto",
+                )} />
+            )}
+            <div className="min-w-0">
+              <p className={cn("mb-3", headerStyle === "banner" ? "text-xs font-semibold uppercase tracking-[0.14em] text-white/80" : "kicker", headerStyle === "minimal" && "mb-1.5")}>
+                {organization && headerStyle !== "editorial" ? `${organization} · ` : ""}{dashboard.researchTitle}
+              </p>
+              <h1 className={cn(
+                "font-serif font-semibold leading-[1.05]",
+                headerStyle === "minimal" ? "text-3xl sm:text-4xl" : headerStyle === "centered" ? "text-4xl sm:text-6xl" : "text-4xl sm:text-5xl",
+                headerStyle === "banner" ? "text-white" : "text-ink-50",
+              )}>{dashboard.title}</h1>
+              {dashboard.description && headerStyle !== "minimal" && (
+                <p className={cn("mt-4 font-serif text-lg leading-relaxed", headerStyle === "banner" ? "text-white/85" : "text-ink-300", headerStyle === "centered" && "mx-auto max-w-2xl")}>{dashboard.description}</p>
+              )}
+            </div>
           </div>
-          <div className="mt-7 pt-5 border-t border-ink-700 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink-500">
-            <span><strong className="font-semibold text-ink-100">Fonte:</strong> dados primários da pesquisa</span>
-            <span><strong className="font-semibold text-ink-100">Indicadores:</strong> {indicatorCount}</span>
-            <span><strong className="font-semibold text-ink-100">Atualização:</strong> contínua, a cada resposta recebida</span>
+          <div className={cn(
+            "mt-7 pt-5 border-t flex flex-wrap gap-x-8 gap-y-2 text-sm",
+            headerStyle === "banner" ? "border-white/20 text-white/75" : "border-ink-700 text-ink-500",
+            headerStyle === "centered" && "justify-center",
+            headerStyle === "minimal" && "mt-5 pt-4",
+          )}>
+            <span><strong className={cn("font-semibold", headerStyle === "banner" ? "text-white" : "text-ink-100")}>Fonte:</strong> {brand.sourceNote?.trim() || "dados primários da pesquisa"}</span>
+            <span><strong className={cn("font-semibold", headerStyle === "banner" ? "text-white" : "text-ink-100")}>Indicadores:</strong> {indicatorCount}</span>
+            <span><strong className={cn("font-semibold", headerStyle === "banner" ? "text-white" : "text-ink-100")}>Atualização:</strong> contínua, a cada resposta recebida</span>
           </div>
         </div>
       </header>
@@ -375,7 +442,7 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
                 </button>
               )}
               <span className="ml-auto text-xs text-ink-500 flex items-center gap-1.5" aria-live="polite">
-                {refetching ? <><i className="ti ti-loader-2 animate-spin" aria-hidden="true" /> Recalculando…</> : hasFilter ? "Recorte aplicado a todo o painel" : "Mostrando todas as respostas"}
+                {refetching ? <><i className="ti ti-loader-2 animate-spin" aria-hidden="true" /> Recalculando…</> : hasFilter ? "Recorte aplicado a todo o painel" : hasClickFilter ? <><i className="ti ti-hand-click" aria-hidden="true" /> Clique numa barra ou fatia para filtrar o painel</> : "Mostrando todas as respostas"}
               </span>
             </div>
 
@@ -440,23 +507,23 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
             {dashboard.widgets.map(w => (
               <section key={w.id} id={sectionTitle(w) ? `secao-${w.id}` : undefined} aria-label={w.title ?? undefined}
                 className={cn("absolute group scroll-mt-28", frame(w))}
-                style={{ left: `calc(${w.x}% + 6px)`, top: w.y + 6, width: `calc(${w.w}% - 12px)`, height: w.h - 12 }}>
-                <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} />
+                style={{ left: `calc(${w.x}% + ${gap}px)`, top: w.y + gap, width: `calc(${w.w}% - ${gap * 2}px)`, height: w.h - gap * 2, ...frameStyle(w) }}>
+                <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} brand={dashboard.brand} {...clickFilterFor(w)} />
                 {isFramed(w) && <WidgetActions w={w} onExpand={() => setExpanded(w)} />}
               </section>
             ))}
           </div>
         ) : (
           /* Celular/tablet: empilha na ordem de leitura (de cima pra baixo, da esquerda pra direita) */
-          <div className="grid grid-cols-2 gap-3 transition-opacity duration-200" style={{ opacity: refetching ? 0.55 : 1 }}>
+          <div className="grid grid-cols-2 transition-opacity duration-200" style={{ opacity: refetching ? 0.55 : 1, gap: gap * 2 }}>
             {stacked.map(w => {
               const isMap = w.type === "map" || w.type === "heatmap" || w.type === "globe";
               const isNumber = w.type === "number_card";
               const h = isNumber ? 132 : isMap ? Math.max(360, Math.min(w.h, 480)) : w.type === "text" ? undefined : Math.max(200, Math.min(w.h, 420));
               return (
                 <section key={w.id} id={sectionTitle(w) ? `secao-${w.id}` : undefined} aria-label={w.title ?? undefined}
-                  className={cn("relative group scroll-mt-28", frame(w), isNumber ? "col-span-1" : "col-span-2")} style={{ height: h, minHeight: w.type === "text" ? 40 : undefined }}>
-                  <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} />
+                  className={cn("relative group scroll-mt-28", frame(w), isNumber ? "col-span-1" : "col-span-2")} style={{ height: h, minHeight: w.type === "text" ? 40 : undefined, ...frameStyle(w) }}>
+                  <WidgetRenderer type={w.type} title={w.title} data={w.data} config={w.config} palette={dashboard.colorPalette ?? undefined} brand={dashboard.brand} {...clickFilterFor(w)} />
                   {isFramed(w) && !isNumber && <WidgetActions w={w} onExpand={() => setExpanded(w)} />}
                 </section>
               );
@@ -467,23 +534,36 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
 
       {/* Rodapé institucional */}
       <footer className="mt-6 bg-brand-700 text-white/75">
-        <div className="max-w-page mx-auto px-4 sm:px-8 py-10 grid gap-8 sm:grid-cols-3 text-sm">
-          <div>
-            <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Sobre este painel</p>
-            <p className="leading-relaxed">Indicadores calculados a partir das respostas do instrumento da pesquisa <em>{dashboard.researchTitle}</em>. Os números mudam à medida que novas respostas chegam.</p>
+        {brand.showFooterInfo !== false && (
+          <div className="max-w-page mx-auto px-4 sm:px-8 py-10 grid gap-8 sm:grid-cols-3 text-sm">
+            <div>
+              <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Sobre este painel</p>
+              <p className="leading-relaxed">Indicadores calculados a partir das respostas do instrumento da pesquisa <em>{dashboard.researchTitle}</em>. Os números mudam à medida que novas respostas chegam.</p>
+            </div>
+            <div>
+              <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Como ler</p>
+              <p className="leading-relaxed">Passe o cursor (ou toque) sobre gráficos e mapas para ver valores e bases. Use os filtros — ou clique nas barras e fatias — para recortar todo o painel ao mesmo tempo.</p>
+            </div>
+            <div>
+              <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Proteção de dados</p>
+              <p className="leading-relaxed">Este painel exibe apenas dados agregados. Respostas individuais não são publicadas (LGPD, Lei nº 13.709/2018).</p>
+            </div>
           </div>
-          <div>
-            <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Como ler</p>
-            <p className="leading-relaxed">Passe o cursor (ou toque) sobre gráficos e mapas para ver valores e bases. Use os filtros para recortar todo o painel ao mesmo tempo.</p>
-          </div>
-          <div>
-            <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-white mb-2">Proteção de dados</p>
-            <p className="leading-relaxed">Este painel exibe apenas dados agregados. Respostas individuais não são publicadas (LGPD, Lei nº 13.709/2018).</p>
-          </div>
-        </div>
-        <div className="border-t border-white/15">
-          <div className="max-w-page mx-auto px-4 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-3 text-xs text-white/55">
-            <span>Painel publicado pela equipe da pesquisa.</span>
+        )}
+        <div className={cn(brand.showFooterInfo !== false && "border-t border-white/15")}>
+          <div className="max-w-page mx-auto px-4 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-3 text-xs text-white/85">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {brand.logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- logo enviada pelo pesquisador
+                <img src={brand.logoUrl} alt="" className="h-7 w-auto max-w-[7rem] object-contain rounded-sm bg-white/95 p-0.5" />
+              )}
+              <span>{brand.footerNote?.trim() || (organization ? `Painel publicado por ${organization}.` : "Painel publicado pela equipe da pesquisa.")}</span>
+              {(brand.links ?? []).map(l => (
+                <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-white/85 underline-offset-4 hover:underline hover:text-white">
+                  {l.label} <i className="ti ti-external-link text-xs" aria-hidden="true" />
+                </a>
+              ))}
+            </div>
             <a href="/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-white/80 hover:text-white">
               Construído com <DataLogo className="text-sm text-white" animated={false} />
             </a>
@@ -491,7 +571,7 @@ export function PublicDashboardClient({ slug }: { slug: string }) {
         </div>
       </footer>
 
-      {expanded && <ExpandedWidget w={expanded} palette={dashboard.colorPalette ?? undefined} onClose={() => setExpanded(null)} />}
+      {expanded && <ExpandedWidget w={expanded} palette={dashboard.colorPalette ?? undefined} brand={dashboard.brand} onClose={() => setExpanded(null)} />}
 
       <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Voltar ao topo"
         className={cn(
