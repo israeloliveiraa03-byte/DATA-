@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { entities } from "@/lib/db/schema";
 import { and, inArray, isNull, isNotNull, ne } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getEntityEditContext, canEditEntity } from "@/lib/entities/access";
 
 // Contornos de territórios/comunidades já cadastrados — usado pelo editor
 // de mapa pra detectar sobreposição com territórios vizinhos enquanto o
@@ -33,9 +34,19 @@ export async function GET(request: Request) {
       code:            entities.code,
       name:            entities.name,
       boundaryPolygon: entities.boundaryPolygon,
+      createdBy:       entities.createdBy,
+      locationDisclosure: entities.locationDisclosure,
     })
     .from(entities)
     .where(and(...conditions));
 
-  return apiSuccess(rows);
+  // Contorno só sai pra quem pode editar a entidade ou quando quem criou
+  // escolheu exposição "exata" — contorno de território oculto não vaza
+  // pelo detector de sobreposição.
+  const ctx = await getEntityEditContext(session.user.id);
+  const visible = rows
+    .filter(r => r.locationDisclosure === "exact" || canEditEntity(r, ctx))
+    .map(({ id, code, name, boundaryPolygon }) => ({ id, code, name, boundaryPolygon }));
+
+  return apiSuccess(visible);
 }

@@ -10,6 +10,7 @@ import { generateEntityCode } from "@/lib/db/entity-code";
 import { desc, isNull } from "drizzle-orm";
 import { createEntitySchema } from "@/lib/validations/entity";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getEntityEditContext, entityForViewer } from "@/lib/entities/access";
 
 export async function GET(request: Request) {
   // Cookie de sessão (site) ou token de dispositivo (app de campo, que lista
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
     where: isNull(entities.deletedAt),
     orderBy: desc(entities.createdAt),
   });
-  return apiSuccess(data);
+  const ctx = await getEntityEditContext(userId);
+  return apiSuccess(data.map(e => entityForViewer(e, ctx)));
 }
 
 export async function POST(request: Request) {

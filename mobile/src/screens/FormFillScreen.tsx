@@ -32,7 +32,33 @@ function conditionMet(cfg: Record<string, unknown>, answers: Answers): boolean {
   if (operator === "equals")     return values.includes(target);
   if (operator === "not_equals") return !values.includes(target);
   if (operator === "contains")   return values.some(v => v.toLowerCase().includes(target.toLowerCase()));
+  if (operator === "gt" || operator === "lt") {
+    const n = Number(String(answer).replace(",", "."));
+    const t = Number(target.replace(",", "."));
+    if (!Number.isFinite(n) || !Number.isFinite(t)) return false;
+    return operator === "gt" ? n > t : n < t;
+  }
   return true;
+}
+
+// Qualquer campo pode ter condição; seção com condição esconde as perguntas
+// dela até a próxima seção. Só respostas de campos visíveis contam (cadeia).
+function visibleFieldList(fields: ApiFormField[], answers: Answers): ApiFormField[] {
+  const out: ApiFormField[] = [];
+  const effective: Answers = {};
+  let sectionOpen = true;
+  for (const f of fields) {
+    const cfg = (f.config ?? {}) as Record<string, unknown>;
+    if (f.type === "section") {
+      sectionOpen = conditionMet(cfg, effective);
+      if (sectionOpen) out.push(f);
+      continue;
+    }
+    if (!sectionOpen || !conditionMet(cfg, effective)) continue;
+    out.push(f);
+    if (f.id in answers) effective[f.id] = answers[f.id];
+  }
+  return out;
 }
 
 // ─── Campo individual ────────────────────────────────────────────────────────
@@ -417,9 +443,7 @@ export function FormFillScreen({ form, onDone, onBack }: Props) {
   const [savedOffline, setSavedOffline] = useState<boolean | null>(null);
 
   const visibleFields = useMemo(
-    () => form.fields.filter(f =>
-      f.type !== "conditional" || conditionMet((f.config ?? {}) as Record<string, unknown>, answers)
-    ),
+    () => visibleFieldList(form.fields, answers),
     [form.fields, answers]
   );
 
@@ -453,7 +477,8 @@ export function FormFillScreen({ form, onDone, onBack }: Props) {
         id:         responseId,
         formId:     form.id,
         researchId: form.researchId,
-        data:       answers,
+        // Respostas de perguntas que ficaram ocultas não vão para o banco.
+        data:       Object.fromEntries(Object.entries(answers).filter(([k]) => visibleFields.some(f => f.id === k))),
         latitude,
         longitude,
         capturedAt: new Date().toISOString(),

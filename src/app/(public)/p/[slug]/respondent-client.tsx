@@ -18,31 +18,14 @@ const GeoMapField = dynamic(() => import("./geo-map-field"), {
   ),
 });
 
+import { visibleFieldIds, onlyVisibleAnswers } from "@/lib/forms/conditions";
+
 // ─── Tipos de resposta ────────────────────────────────────────────────────────
 type AnswerValue = string | string[] | number | boolean | Record<string, unknown> | Record<string, unknown>[] | null;
 type Answers = Record<string, AnswerValue>;
 type Opt = { id: string; label: string; weight?: number };
 
-// ─── Lógica de exibição condicional ──────────────────────────────────────────
-// Um campo do tipo "conditional" só aparece quando a condição configurada no
-// form-builder (config.condDependsOn/condOperator/condValue) for satisfeita
-// pela resposta já dada em outra pergunta.
-function conditionMet(cfg: Record<string, unknown>, answers: Answers): boolean {
-  const dependsOn = cfg.condDependsOn as string | undefined;
-  if (!dependsOn) return true; // sem condição configurada → sempre visível
-  const operator = (cfg.condOperator as string) || "answered";
-  const target   = String(cfg.condValue ?? "");
-  const answer   = answers[dependsOn];
-  const answered = answer !== null && answer !== undefined && answer !== ""
-    && !(Array.isArray(answer) && answer.length === 0);
-  if (operator === "answered") return answered;
-  if (!answered) return false;
-  const values = Array.isArray(answer) ? answer.map(String) : [String(answer)];
-  if (operator === "equals")     return values.includes(target);
-  if (operator === "not_equals") return !values.includes(target);
-  if (operator === "contains")   return values.some(v => v.toLowerCase().includes(target.toLowerCase()));
-  return true;
-}
+// Lógica de exibição condicional: src/lib/forms/conditions.ts (compartilhada e testada).
 
 const UFS_BY_REGIAO: Record<string, string[]> = {
   "Norte":         ["AC","AP","AM","PA","RO","RR","TO"],
@@ -676,7 +659,7 @@ function FieldInput({
       );
 
     case "conditional":
-      // A visibilidade é controlada em RespondentClient (conditionMet) — quando
+      // A visibilidade é controlada em RespondentClient (visibleFieldIds, em src/lib/forms/conditions.ts) — quando
       // este campo aparece, a resposta em si é registrada como texto curto.
       return (
         <input
@@ -2034,12 +2017,12 @@ export function RespondentClient({
   useEffect(() => { syncPending(); }, [syncPending]);
 
   // Filtra campos visíveis (ignora seções e instruções para navegação).
-  // Campos condicionais só entram na sequência quando a condição configurada
-  // no form-builder é satisfeita pelas respostas já dadas.
+  // Perguntas com condição (ou dentro de seção com condição) só entram na
+  // sequência quando a condição é satisfeita pelas respostas já dadas.
+  const visibleIds = visibleFieldIds(fields, answers);
   const questionFields = fields
     .filter(f => f.type !== "section" && f.type !== "instruction")
-    .filter(f => (f.type as string) !== "conditional"
-      || conditionMet((f.config ?? {}) as Record<string, unknown>, answers));
+    .filter(f => visibleIds.has(f.id));
   const totalSteps     = questionFields.length;
   const currentField   = questionFields[step];
 
@@ -2080,11 +2063,12 @@ export function RespondentClient({
 
     setSubmitting(true);
     setSubmitError("");
+    const finalAnswers = onlyVisibleAnswers(fields, answers);
     try {
       // Sem sinal e a pesquisa aceita coleta offline: nem tenta a rede, salva
       // local direto — mais rápido pra quem já sabe que está sem internet.
       if (research.offlineEnabled && !navigator.onLine) {
-        await saveOffline(form.id, research.id, answers);
+        await saveOffline(form.id, research.id, finalAnswers);
         setSubmittedOffline(true);
         setSubmitted(true);
         return;
@@ -2093,14 +2077,14 @@ export function RespondentClient({
       const res = await fetch(`/api/forms/${form.id}/responses`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ data: answers, completed: true }),
+        body:    JSON.stringify({ data: finalAnswers, completed: true }),
       });
       if (!res.ok) throw new Error("Falha ao enviar resposta");
       setSubmitted(true);
     } catch {
       // Rede caiu no meio do envio (não só "estava offline antes de começar").
       if (research.offlineEnabled) {
-        await saveOffline(form.id, research.id, answers);
+        await saveOffline(form.id, research.id, finalAnswers);
         setSubmittedOffline(true);
         setSubmitted(true);
       } else {

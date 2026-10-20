@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint-and-typecheck:
-    name: Lint & Type Check
+    name: Lint, Type Check & Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,3 +28,8 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      # Regras de permissão, privacidade de localização e lógica condicional
+      # dos instrumentos — ver a pasta tests/.
+      - name: Testes automáticos
+        run: npm test

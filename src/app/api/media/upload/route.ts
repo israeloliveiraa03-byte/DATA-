@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { put } from "@vercel/blob";
+import { storeResponseMedia } from "@/lib/media/storage";
 import { db } from "@/lib/db";
 import { formFields, responses } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -106,12 +106,9 @@ export async function POST(request: Request) {
   if (!ext) return apiError(`Tipo de arquivo não aceito (${file.type || "desconhecido"})`, 422);
 
   try {
-    const blob = await put(
-      `respostas/${responseId}/${fieldId}/${randomUUID()}.${ext}`,
-      file,
-      { access: "public", contentType: file.type }
-    );
-    return apiSuccess({ url: blob.url });
+    // Público ou privado conforme a configuração — ver src/lib/media/storage.ts.
+    const url = await storeResponseMedia(`respostas/${responseId}/${fieldId}/${randomUUID()}.${ext}`, file);
+    return apiSuccess({ url });
   } catch (err) {
     console.error("Falha no upload pro Vercel Blob", err);
     return apiError("Falha ao armazenar o arquivo — tente novamente", 500);
