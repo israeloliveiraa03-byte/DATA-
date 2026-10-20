@@ -748,6 +748,135 @@ function StrListEditor({ label, items, minItems = 1, addLabel, onChange }: {
 
 // ─── Painel direito ───────────────────────────────────────────────────────────
 
+// ─── Lógica de exibição (perguntas condicionais) ─────────────────────────────
+// A condição fica em três chaves do config (condDependsOn/condOperator/condValue),
+// que o salvamento já persistia para qualquer tipo de campo. A tela do
+// respondente (conditionMet em respondent-client.tsx) e o app de campo leem
+// as mesmas chaves.
+
+const NUMERIC_TYPES = ["number", "scale", "slider", "nps", "stars", "semantic_scale"];
+const OPTION_TYPES  = ["single_choice", "multiple_choice", "weighted", "consent"];
+
+function conditionCandidates(field: Field, allFields: Field[]): Field[] {
+  // Só perguntas ANTERIORES: a pessoa precisa já ter respondido quando chega
+  // aqui, e isso impede ciclos (A depende de B que depende de A).
+  const idx = allFields.findIndex(o => o.id === field.id);
+  return allFields.slice(0, idx < 0 ? allFields.length : idx)
+    .filter(o => !["section", "instruction"].includes(o.type));
+}
+
+const OPERATOR_LABEL: Record<string, string> = {
+  answered: "foi respondida", equals: "é", not_equals: "não é", contains: "contém", gt: "é maior que", lt: "é menor que",
+};
+
+/** Frase curta para o canvas: “Aparece se «Possui escola?» é Sim”. */
+function describeCondition(field: Field, allFields: Field[]): string | null {
+  if (!field.condDependsOn) return null;
+  const target = allFields.find(o => o.id === field.condDependsOn);
+  if (!target) return "Condição aponta para uma pergunta removida";
+  const op = field.condOperator || "answered";
+  const valueLabel = OPTION_TYPES.includes(target.type)
+    ? target.options.find(o => o.id === field.condValue)?.label ?? field.condValue
+    : field.condValue;
+  const name = target.label.length > 40 ? target.label.slice(0, 40) + "…" : target.label;
+  return op === "answered" ? `Aparece se «${name}» foi respondida` : `Aparece se «${name}» ${OPERATOR_LABEL[op] ?? op} ${valueLabel || "…"}`;
+}
+
+function ConditionEditor({ field, allFields, onChange }: { field: Field; allFields: Field[]; onChange: (p: Partial<Field>) => void }) {
+  const iS = { border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-900))", color: "rgb(var(--color-ink-50))" };
+  const iC = "w-full px-2 py-1.5 text-xs rounded border focus:outline-none focus:ring-1";
+  const hint = { color: "rgb(var(--color-ink-500))" };
+  const candidates = conditionCandidates(field, allFields);
+  const target = candidates.find(o => o.id === field.condDependsOn) ?? null;
+  const op = field.condOperator || "answered";
+  const isNumeric = !!target && NUMERIC_TYPES.includes(target.type);
+  const hasOptions = !!target && OPTION_TYPES.includes(target.type);
+
+  if (candidates.length === 0) {
+    return <p className="text-xs leading-relaxed" style={hint}>Adicione perguntas antes desta para poder criar uma condição — a condição sempre olha para respostas anteriores.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="block">
+        <span className="block text-xs mb-1" style={hint}>Depende da pergunta</span>
+        <select value={field.condDependsOn} onChange={e => onChange({ condDependsOn: e.target.value, condValue: "" })} className={iC} style={iS}>
+          <option value="">Selecione a pergunta...</option>
+          {candidates.map((o, i) => <option key={o.id} value={o.id}>{`P${i + 1}. ${o.label}`}</option>)}
+        </select>
+      </label>
+      {field.condDependsOn && (
+        <label className="block">
+          <span className="block text-xs mb-1" style={hint}>Condição</span>
+          <select value={op} onChange={e => onChange({ condOperator: e.target.value })} className={iC} style={iS}>
+            <option value="answered">Foi respondida (qualquer valor)</option>
+            <option value="equals">É igual a</option>
+            <option value="not_equals">É diferente de</option>
+            {!hasOptions && <option value="contains">Contém o texto</option>}
+            {isNumeric && <option value="gt">É maior que</option>}
+            {isNumeric && <option value="lt">É menor que</option>}
+          </select>
+        </label>
+      )}
+      {field.condDependsOn && op !== "answered" && (
+        <label className="block">
+          <span className="block text-xs mb-1" style={hint}>Valor comparado</span>
+          {hasOptions && op !== "contains" && target ? (
+            <select value={field.condValue} onChange={e => onChange({ condValue: e.target.value })} className={iC} style={iS}>
+              <option value="">Selecione a opção...</option>
+              {target.options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          ) : target && target.type === "yes_no" && op !== "contains" ? (
+            <select value={field.condValue} onChange={e => onChange({ condValue: e.target.value })} className={iC} style={iS}>
+              <option value="">Selecione...</option>
+              <option value="Sim">Sim</option>
+              <option value="Não">Não</option>
+            </select>
+          ) : target && target.type === "geo_zone" && op !== "contains" ? (
+            <select value={field.condValue} onChange={e => onChange({ condValue: e.target.value })} className={iC} style={iS}>
+              <option value="">Selecione a zona...</option>
+              {target.zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+          ) : (
+            <input value={field.condValue} onChange={e => onChange({ condValue: e.target.value })} className={iC} style={iS}
+              inputMode={isNumeric ? "decimal" : undefined} placeholder={isNumeric ? "Número..." : "Valor..."} />
+          )}
+        </label>
+      )}
+    </div>
+  );
+}
+
+function LogicPanel({ field, allFields, onChange }: { field: Field; allFields: Field[]; onChange: (p: Partial<Field>) => void }) {
+  const [open, setOpen] = useState(!!field.condDependsOn);
+  useEffect(() => { setOpen(!!field.condDependsOn); }, [field.id, field.condDependsOn]);
+  const isSection = field.type === "section";
+  return (
+    <div className="rounded-lg p-3" style={{ border: "1px solid rgb(var(--color-ink-700))", background: "rgb(var(--color-ink-950))" }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest" style={{ color: "rgb(var(--color-brand-500))", fontSize: "11px" }}>
+          <i className="ti ti-git-branch" aria-hidden="true" /> Lógica de exibição
+        </span>
+        <button type="button" role="switch" aria-checked={open} aria-label="Mostrar só quando uma condição for atendida"
+          onClick={() => { if (open) onChange({ condDependsOn: "", condOperator: "answered", condValue: "" }); setOpen(!open); }}
+          className="w-8 h-4 rounded-full relative transition-colors flex-shrink-0"
+          style={{ background: open ? "rgb(var(--color-brand-500))" : "rgb(var(--color-ink-700))" }}>
+          <span className={`absolute w-3 h-3 bg-white rounded-full top-0.5 transition-all ${open ? "left-4" : "left-0.5"}`} />
+        </button>
+      </div>
+      <p className="text-xs mt-1.5 leading-relaxed" style={{ color: "rgb(var(--color-ink-500))" }}>
+        {open
+          ? isSection
+            ? "Esta seção — e todas as perguntas dela, até a próxima seção — só aparece quando:"
+            : "Esta pergunta só aparece quando:"
+          : isSection
+            ? "Seção sempre visível. Ative para pular a seção inteira conforme uma resposta anterior."
+            : "Pergunta sempre visível. Ative para mostrá-la só conforme uma resposta anterior."}
+      </p>
+      {open && <div className="mt-2"><ConditionEditor field={field} allFields={allFields} onChange={onChange} /></div>}
+    </div>
+  );
+}
+
 function RightPanel({ field, allFields, onUpdate, onDelete, showCover, cover, coverImage, onSelectCover, onUploadImage }: {
   field: Field | null; allFields: Field[]; onUpdate: (f: Field) => void; onDelete: () => void;
   showCover: boolean; cover: string; coverImage: string | null;
@@ -1081,60 +1210,16 @@ function RightPanel({ field, allFields, onUpdate, onDelete, showCover, cover, co
         </div>
       )}
 
-      {/* Condicional — condição de exibição */}
-      {field.type === "conditional" && (() => {
-        const candidates = allFields.filter(o => o.id !== f.id && !["section", "instruction", "conditional"].includes(o.type));
-        const target = candidates.find(o => o.id === f.condDependsOn) ?? null;
-        const targetHasOptions = target !== null && ["single_choice", "multiple_choice", "weighted", "consent"].includes(target.type);
-        return (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={TS}>Condição de exibição</p>
-            <div>
-              <p className="text-xs mb-1" style={{ color: "rgb(var(--color-ink-500))" }}>Depende da pergunta</p>
-              <select value={f.condDependsOn} onChange={e => update({ condDependsOn: e.target.value, condValue: "" })} className={iC} style={iS}>
-                <option value="">Selecione a pergunta...</option>
-                {candidates.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <p className="text-xs mb-1" style={{ color: "rgb(var(--color-ink-500))" }}>Condição</p>
-              <select value={f.condOperator} onChange={e => update({ condOperator: e.target.value })} className={iC} style={iS}>
-                <option value="answered">Foi respondida (qualquer valor)</option>
-                <option value="equals">É igual a</option>
-                <option value="not_equals">É diferente de</option>
-                <option value="contains">Contém o texto</option>
-              </select>
-            </div>
-            {f.condOperator !== "answered" && (
-              <div>
-                <p className="text-xs mb-1" style={{ color: "rgb(var(--color-ink-500))" }}>Valor comparado</p>
-                {targetHasOptions && f.condOperator !== "contains" && target ? (
-                  <select value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS}>
-                    <option value="">Selecione a opção...</option>
-                    {target.options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
-                ) : target && target.type === "yes_no" && f.condOperator !== "contains" ? (
-                  <select value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS}>
-                    <option value="">Selecione...</option>
-                    <option value="Sim">Sim</option>
-                    <option value="Não">Não</option>
-                  </select>
-                ) : target && target.type === "geo_zone" && f.condOperator !== "contains" ? (
-                  <select value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS}>
-                    <option value="">Selecione a zona...</option>
-                    {target.zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
-                  </select>
-                ) : (
-                  <input value={f.condValue} onChange={e => update({ condValue: e.target.value })} className={iC} style={iS} placeholder="Valor..." />
-                )}
-              </div>
-            )}
-            <p className="text-xs leading-relaxed" style={{ color: "rgb(var(--color-ink-500))" }}>
-              Esta pergunta só aparece para o respondente quando a condição for satisfeita. A resposta é registrada como texto curto.
-            </p>
-          </div>
-        );
-      })()}
+      {/* Condicional (tipo legado: pergunta de texto curto que só aparece sob condição) */}
+      {field.type === "conditional" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={TS}>Condição de exibição</p>
+          <ConditionEditor field={f} allFields={allFields} onChange={update} />
+          <p className="text-xs leading-relaxed" style={{ color: "rgb(var(--color-ink-500))" }}>
+            A resposta desta pergunta é registrada como texto curto. Qualquer outra pergunta também pode ter condição — veja “Lógica de exibição”.
+          </p>
+        </div>
+      )}
 
       {/* Mapa — ponto / área */}
       {field.type === "geo_map" && (
@@ -1229,6 +1314,12 @@ function RightPanel({ field, allFields, onUpdate, onDelete, showCover, cover, co
       {field.type === "multi_upload" && (
         <StrListEditor label="Itens da lista (um arquivo por item)" addLabel="Item" items={f.uploadItems}
           onChange={v => update({ uploadItems: v })} />
+      )}
+
+      {/* Lógica de exibição — vale para QUALQUER pergunta (e para seções:
+          uma seção com condição esconde todas as perguntas até a próxima seção). */}
+      {field.type !== "conditional" && (
+        <LogicPanel field={f} allFields={allFields} onChange={update} />
       )}
 
       {/* Deletar */}
@@ -1478,6 +1569,12 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
                       <input value={field.label} onChange={e => updateField({ ...field, label: e.target.value })}
                         onClick={e => e.stopPropagation()} aria-label="Título da seção"
                         className="flex-1 bg-transparent border-none outline-none text-white text-sm font-semibold" />
+                      {field.condDependsOn && (
+                        <span title={describeCondition(field, fields) ?? ""}
+                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white whitespace-nowrap" style={{ background: "rgba(255,255,255,0.18)" }}>
+                          <i className="ti ti-git-branch" aria-hidden="true" /> Seção condicional
+                        </span>
+                      )}
                       <div className="flex gap-1">
                         {[
                           { icon: "ti-arrow-up",   label: "Mover seção para cima",  action: () => idx > 0 && moveField(idx, idx - 1) },
@@ -1544,6 +1641,12 @@ export function FormBuilderClient({ research, savedForm, savedFields }: { resear
                       <div className="pl-8">
                         <FieldPreview field={field} />
                         {field.required && <p className="text-xs mt-1 font-semibold" style={{ color: "rgb(var(--color-coral-500))" }}>* Obrigatório</p>}
+                        {field.type !== "conditional" && field.condDependsOn && (
+                          <p className="mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium"
+                            style={{ background: "rgb(var(--color-brand-50))", color: "rgb(var(--color-brand-600))" }}>
+                            <i className="ti ti-git-branch" aria-hidden="true" /> {describeCondition(field, fields)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );

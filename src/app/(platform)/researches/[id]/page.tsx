@@ -5,6 +5,7 @@ import { eq, isNull, desc, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getResearchAccess } from "@/lib/researches/access";
 import { ResearchPageClient } from "./research-page-client";
+import { getEntityEditContext, entityForViewer } from "@/lib/entities/access";
 
 export default async function ResearchPage({
   params,
@@ -28,7 +29,12 @@ export default async function ResearchPage({
     where: isNull(entities.deletedAt),
     orderBy: desc(entities.createdAt),
   });
-  const availableEntities = allEntities.filter(e => !linkedEntityIds.has(e.id));
+  // Tudo que vai pro navegador passa pela regra de exposição de localização.
+  const entityCtx = await getEntityEditContext(session!.user!.id!);
+  const availableEntities = allEntities
+    .filter(e => !linkedEntityIds.has(e.id))
+    .map(e => entityForViewer(e, entityCtx));
+  const linkedForViewer = linkedEntities.map(l => ({ ...l, entity: entityForViewer(l.entity, entityCtx) }));
 
   const teamMembers = await db.query.researchMembers.findMany({
     where: eq(researchMembers.researchId, id),
@@ -50,7 +56,7 @@ export default async function ResearchPage({
   return (
     <ResearchPageClient
       research={research}
-      linkedEntities={linkedEntities}
+      linkedEntities={linkedForViewer}
       availableEntities={availableEntities}
       role={access.role}
       teamOwner={teamOwner!}

@@ -6,12 +6,46 @@ import type { Research, FormField, Response } from "@/lib/types";
 
 const TOOL_BTN = "flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border border-ink-700 bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100 transition-colors duration-150";
 
+type MediaValue = { kind: "media"; url?: string; fileName?: string; mimeType?: string; pending?: boolean };
+
+function asMedia(value: unknown): MediaValue | null {
+  return value && typeof value === "object" && (value as { kind?: unknown }).kind === "media" ? (value as MediaValue) : null;
+}
+
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
+  const media = asMedia(value);
+  if (media) return media.pending ? `${media.fileName ?? "Arquivo"} (aguardando envio do aparelho)` : media.fileName ?? "Arquivo";
   if (Array.isArray(value)) return value.join(", ");
   if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+// Foto ou arquivo capturado no app de campo. O endereço pode ser do store
+// privado (/api/media/file/..., abre só com login e acesso à pesquisa) ou um
+// link público antigo — os dois funcionam aqui.
+function ResponseValue({ value, large = false }: { value: unknown; large?: boolean }) {
+  const media = asMedia(value);
+  if (!media) return <>{formatValue(value)}</>;
+  if (media.pending || !media.url) {
+    return <span className="inline-flex items-center gap-1 text-ink-500"><i className="ti ti-cloud-upload" aria-hidden="true" />{formatValue(value)}</span>;
+  }
+  const isImage = media.mimeType?.startsWith("image/");
+  if (isImage && large) {
+    return (
+      <a href={media.url} target="_blank" rel="noopener noreferrer" className="block mt-1">
+        {/* eslint-disable-next-line @next/next/no-img-element -- arquivo servido por rota autenticada */}
+        <img src={media.url} alt={media.fileName ?? "Foto da resposta"} className="max-h-48 rounded-md border border-ink-700 object-contain" />
+      </a>
+    );
+  }
+  return (
+    <a href={media.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-400 hover:underline">
+      <i className={isImage ? "ti ti-photo" : "ti ti-paperclip"} aria-hidden="true" />
+      {media.fileName ?? (isImage ? "Foto" : "Arquivo")}
+    </a>
+  );
 }
 
 function formatDate(date: Date | string): string {
@@ -320,7 +354,7 @@ export function ResponsesClient({
                             {questionFields.slice(0, 4).map(f => (
                               <td key={f.id} className="px-3 py-2.5 text-ink-100" style={{ maxWidth: "140px" }}>
                                 <span className="truncate block" style={{ maxWidth: "120px" }}>
-                                  {formatValue(data[f.id])}
+                                  <ResponseValue value={data[f.id]} />
                                 </span>
                               </td>
                             ))}
@@ -362,7 +396,7 @@ export function ResponsesClient({
                               {f.label.length > 20 ? f.label.slice(0, 20) + "..." : f.label}:
                             </span>
                             <span className="text-xs text-ink-300">
-                              {formatValue(data[f.id])}
+                              <ResponseValue value={data[f.id]} />
                             </span>
                           </div>
                         ))}
@@ -422,7 +456,7 @@ export function ResponsesClient({
                         return (
                           <div key={f.id} className="py-1.5 border-b border-ink-700 last:border-b-0">
                             <p className="text-xs font-semibold mb-0.5 text-ink-100">{f.label}</p>
-                            <p className={`text-xs ${val === "—" ? "text-ink-500" : "text-ink-300"}`}>{val}</p>
+                            <div className={`text-xs ${val === "—" ? "text-ink-500" : "text-ink-300"}`}><ResponseValue value={data[f.id]} large /></div>
                           </div>
                         );
                       })}

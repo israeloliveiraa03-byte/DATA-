@@ -1,11 +1,18 @@
 import { db } from "@/lib/db";
 import { researches, forms, formFields } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Rota de diagnóstico: antes era aberta a qualquer pessoa na internet e
+  // revelava título e situação de pesquisas. Agora só a equipe interna.
+  const session = await auth();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (role !== "admin" && role !== "support") return new Response("Not found", { status: 404 });
+
   const { id } = await params;
 
   // Detecta se é UUID ou slug

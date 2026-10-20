@@ -4,6 +4,7 @@ import { entities, entityVersions } from "@/lib/db/schema";
 import { eq, desc, isNull, and } from "drizzle-orm";
 import { updateEntitySchema } from "@/lib/validations/entity";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { getEntityEditContext, canEditEntity, entityForViewer } from "@/lib/entities/access";
 
 export async function GET(
   req: Request,
@@ -35,7 +36,10 @@ export async function GET(
     columns: { version: true },
   });
 
-  return apiSuccess({ ...entity, currentVersion: lastVersion?.version ?? 0 });
+  // Quem não pode editar recebe a localização no nível escolhido por quem
+  // criou a entidade (oculta/aproximada/exata) — ver src/lib/entities/access.ts.
+  const ctx = await getEntityEditContext(userId);
+  return apiSuccess({ ...entityForViewer(entity, ctx), currentVersion: lastVersion?.version ?? 0 });
 }
 
 export async function PATCH(
@@ -52,6 +56,13 @@ export async function PATCH(
     where: and(eq(entities.id, id), isNull(entities.deletedAt)),
   });
   if (!entity) return apiError("Não encontrada", 404);
+
+  // Antes desta checagem, qualquer conta logada conseguia renomear ou redesenhar
+  // o território de qualquer entidade do catálogo.
+  const ctx = await getEntityEditContext(userId);
+  if (!canEditEntity(entity, ctx)) {
+    return apiError("Só quem cadastrou a entidade (ou a equipe de uma pesquisa dessa pessoa vinculada a ela) pode editá-la", 403);
+  }
 
   const body = await request.json();
   const parsed = updateEntitySchema.safeParse(body);

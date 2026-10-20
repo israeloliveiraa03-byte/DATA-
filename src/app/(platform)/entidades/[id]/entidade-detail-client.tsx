@@ -90,9 +90,11 @@ interface Props {
   myResearches: Research[];
   notes: EntityNote[];
   currentUserId: string;
+  /** Pode renomear, redesenhar e captar em campo (ver src/lib/entities/access.ts). */
+  canEdit: boolean;
 }
 
-export function EntidadeDetailClient({ entity: initialEntity, versions: initialVersions, links: initialLinks, myResearches, notes: initialNotes, currentUserId }: Props) {
+export function EntidadeDetailClient({ entity: initialEntity, versions: initialVersions, links: initialLinks, myResearches, notes: initialNotes, currentUserId, canEdit }: Props) {
   const router = useRouter();
   const { municipalities, adminDivisions, orgDocument, personDetails, ...baseEntity } = initialEntity;
   const [entity,   setEntity]   = useState<Entity>(baseEntity);
@@ -332,7 +334,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
               {entity.cityName}{entity.stateCode ? ` — ${entity.stateCode}` : ""}
             </p>
           )}
-          {(entity.type === "territorio" || entity.type === "comunidade") && (
+          {canEdit && (entity.type === "territorio" || entity.type === "comunidade") && (
             <Link
               href={`/entidades/${entity.id}/campo`}
               className="inline-flex items-center gap-1 text-xs font-medium text-brand-400 hover:underline mt-3"
@@ -558,7 +560,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
               </CardContent>
             </Card>
 
-            {TERRITORIO_TYPES.includes(entity.type) && (
+            {canEdit && TERRITORIO_TYPES.includes(entity.type) && (
               <Card>
                 <CardHeader>
                   <CardTitle>Marcação no mapa</CardTitle>
@@ -663,7 +665,17 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
               </Card>
             )}
 
-            <Card>
+            {!canEdit && (
+              <div className="rounded-xl border border-ink-700 bg-ink-900 p-4 text-sm text-ink-300 flex gap-3">
+                <i className="ti ti-lock text-lg text-ink-500 flex-shrink-0" aria-hidden="true" />
+                <p>
+                  Só quem cadastrou esta entidade — ou a equipe de uma pesquisa dessa pessoa vinculada a ela — pode editar nome e contorno.
+                  {entity.locationDisclosure !== "exact" && " A localização precisa aparece apenas para essas pessoas, conforme a escolha de quem cadastrou."}
+                </p>
+              </div>
+            )}
+
+            {canEdit && <Card>
               <CardHeader>
                 <CardTitle>Editar nome</CardTitle>
               </CardHeader>
@@ -683,7 +695,7 @@ export function EntidadeDetailClient({ entity: initialEntity, versions: initialV
                   </div>
                 </form>
               </CardContent>
-            </Card>
+            </Card>}
           </div>
 
           <div className="flex flex-col gap-4">

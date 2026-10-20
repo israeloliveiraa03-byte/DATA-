@@ -5,6 +5,7 @@ import { entities, entityVersions, researchEntities, technicalNotes } from "@/li
 import { eq, desc, isNull, and, or } from "drizzle-orm";
 import { getMyResearches } from "@/lib/researches/access";
 import { EntidadeDetailClient } from "./entidade-detail-client";
+import { getEntityEditContext, entityForViewer, versionsForViewer } from "@/lib/entities/access";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -43,6 +44,8 @@ export default async function EntidadeDetailPage({ params }: { params: Promise<{
   const myResearches = mine.filter(m => m.role !== "viewer").map(m => m.research);
 
   const userId = session!.user!.id!;
+  const ctx = await getEntityEditContext(userId);
+  const viewed = entityForViewer(entity, ctx);
   // Notas específicas desta entidade: públicas de qualquer autor, ou privadas só do próprio autor.
   const notes = await db.query.technicalNotes.findMany({
     where: and(eq(technicalNotes.entityId, id), or(eq(technicalNotes.visibility, "public"), eq(technicalNotes.authorId, userId))),
@@ -52,8 +55,9 @@ export default async function EntidadeDetailPage({ params }: { params: Promise<{
 
   return (
     <EntidadeDetailClient
-      entity={entity}
-      versions={versions}
+      entity={viewed}
+      versions={versionsForViewer(versions, entity.locationDisclosure, viewed.canEdit)}
+      canEdit={viewed.canEdit}
       links={links}
       myResearches={myResearches}
       notes={notes}
